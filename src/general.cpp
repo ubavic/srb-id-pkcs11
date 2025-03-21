@@ -73,14 +73,38 @@ CK_FUNCTION_LIST pkcs11_2_40_functions = CK_FUNCTION_LIST{
 	&C_WaitForSlotEvent};
 
 CK_DECLARE_FUNCTION(CK_RV, C_Initialize)(CK_VOID_PTR pInitArgs) {
+	if(initialized) {
+		return CKR_CRYPTOKI_ALREADY_INITIALIZED;
+	}
+
+	initialized = true;
+
 	return CKR_OK;
 }
 
 CK_DECLARE_FUNCTION(CK_RV, C_Finalize)(CK_VOID_PTR pReserved) {
+	if(pReserved != NULL_PTR) {
+		return CKR_ARGUMENTS_BAD;
+	}
+
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
+	initialized = false;
+
 	return CKR_OK;
 }
 
 CK_DECLARE_FUNCTION(CK_RV, C_GetInfo)(CK_INFO_PTR pInfo) {
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
+	if(pInfo == NULL) {
+		return CKR_ARGUMENTS_BAD;
+	}
+
 	pInfo->cryptokiVersion.major = CRYPTOKI_VERSION_MAJOR;
 	pInfo->cryptokiVersion.minor = CRYPTOKI_VERSION_MINOR;
 	pInfo->flags				 = 0;
