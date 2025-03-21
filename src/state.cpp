@@ -1,6 +1,7 @@
-
 #include "state.h"
 
 bool initialized = false;
 
-SCARDCONTEXT hContext;
+SCARDCONTEXT smartCardContextHandle;
+
+std::map<CK_SLOT_ID, ReaderState> readerStates;

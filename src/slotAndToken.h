@@ -1,15 +1,25 @@
 #ifndef SLOTANDTOKEN_H
 #define SLOTANDTOKEN_H
 
+#include <algorithm>
+#include <cassert>
+#include <cstring>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #include <PCSC/pcsclite.h>
 #include <PCSC/winscard.h>
 #include <PCSC/wintypes.h>
 
+#include "pcsclite.h"
+#include "state.h"
+#include "winscard.h"
+
 #include "pkcs11.h"
 #include "state.h"
+
+#include "oasis/pkcs11t.h"
 
 extern "C" {
 CK_DECLARE_FUNCTION(CK_RV, C_GetSlotList)(
