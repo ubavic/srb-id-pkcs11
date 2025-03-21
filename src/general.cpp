@@ -77,6 +77,11 @@ CK_DECLARE_FUNCTION(CK_RV, C_Initialize)(CK_VOID_PTR pInitArgs) {
 		return CKR_CRYPTOKI_ALREADY_INITIALIZED;
 	}
 
+	LONG rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
+	if(rv != SCARD_S_SUCCESS) {
+		return CKR_FUNCTION_FAILED;
+	}
+
 	initialized = true;
 
 	return CKR_OK;
@@ -89,6 +94,11 @@ CK_DECLARE_FUNCTION(CK_RV, C_Finalize)(CK_VOID_PTR pReserved) {
 
 	if(!initialized) {
 		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
+	LONG rv = SCardReleaseContext(hContext);
+	if(rv != SCARD_S_SUCCESS) {
+		return CKR_FUNCTION_FAILED;
 	}
 
 	initialized = false;
