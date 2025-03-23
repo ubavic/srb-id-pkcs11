@@ -1,5 +1,4 @@
-#include "general.h"
-#include "oasis/pkcs11.h"
+#include "pkcs11General.h"
 
 CK_FUNCTION_LIST pkcs11_2_40_functions = CK_FUNCTION_LIST{
 	{0x02, 0x40},

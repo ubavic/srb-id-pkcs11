@@ -1,5 +1,5 @@
-#ifndef GENERAL_H
-#define GENERAL_H
+#ifndef PKCS11_GENERAL_H
+#define PKCS11_GENERAL_H
 
 #include <PCSC/pcsclite.h>
 #include <PCSC/winscard.h>
