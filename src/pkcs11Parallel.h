@@ -1,5 +1,5 @@
-#ifndef PARALLEL_H
-#define PARALLEL_H
+#ifndef PKCS11_PARALLEL_H
+#define PKCS11_PARALLEL_H
 
 #include "pkcs11.h"
 

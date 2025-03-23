@@ -1,4 +1,4 @@
-#include "random.h"
+#include "pkcs11Random.h"
 
 CK_DECLARE_FUNCTION(CK_RV, C_SeedRandom)(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSeed, CK_ULONG ulSeedLen) {
 	return CKR_FUNCTION_NOT_SUPPORTED;

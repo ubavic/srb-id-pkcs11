@@ -1,5 +1,5 @@
-#ifndef DUAL_PURPOSE_H
-#define DUAL_PURPOSE_H
+#ifndef PKCS11_DUAL_PURPOSE_H
+#define PKCS11_DUAL_PURPOSE_H
 
 #include "pkcs11.h"
 

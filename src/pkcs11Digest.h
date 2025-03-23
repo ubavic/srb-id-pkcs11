@@ -1,5 +1,5 @@
-#ifndef DIGEST_H
-#define DIGEST_H
+#ifndef PKCS11_DIGEST_H
+#define PKCS11_DIGEST_H
 
 #include "pkcs11.h"
 

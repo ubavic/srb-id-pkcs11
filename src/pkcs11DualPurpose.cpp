@@ -1,4 +1,4 @@
-#include "dualPurpose.h"
+#include "pkcs11DualPurpose.h"
 
 CK_DECLARE_FUNCTION(CK_RV, C_DigestEncryptUpdate)(
 	CK_SESSION_HANDLE hSession,

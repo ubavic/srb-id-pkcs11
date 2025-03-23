@@ -1,4 +1,4 @@
-#include "encryption.h"
+#include "pkcs11Encryption.h"
 
 CK_DECLARE_FUNCTION(CK_RV, C_EncryptInit)(
 	CK_SESSION_HANDLE hSession,

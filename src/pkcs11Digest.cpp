@@ -1,4 +1,4 @@
-#include "digest.h"
+#include "pkcs11Digest.h"
 
 CK_DECLARE_FUNCTION(CK_RV, C_DigestInit)(
 	CK_SESSION_HANDLE hSession,

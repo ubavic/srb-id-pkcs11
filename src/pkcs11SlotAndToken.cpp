@@ -1,4 +1,4 @@
-#include "slotAndToken.h"
+#include "pkcs11SlotAndToken.h"
 
 unsigned int nextReaderId = 1;
 

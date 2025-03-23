@@ -1,5 +1,5 @@
-#ifndef ENCRYPTION_H
-#define ENCRYPTION_H
+#ifndef PKCS11_ENCRYPTION_H
+#define PKCS11_ENCRYPTION_H
 
 #include "pkcs11.h"
 

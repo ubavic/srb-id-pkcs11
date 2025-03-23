@@ -1,5 +1,5 @@
-#ifndef SESSION_H
-#define SESSION_H
+#ifndef PKCS11_SESSION_H
+#define PKCS11_SESSION_H
 
 #include "pkcs11.h"
 

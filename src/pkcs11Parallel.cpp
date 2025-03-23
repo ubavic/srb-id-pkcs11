@@ -1,4 +1,4 @@
-#include "parallel.h"
+#include "pkcs11Parallel.h"
 
 CK_DECLARE_FUNCTION(CK_RV, C_GetFunctionStatus)(CK_SESSION_HANDLE hSession) {
 	return CKR_FUNCTION_NOT_SUPPORTED;

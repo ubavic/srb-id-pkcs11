@@ -2,21 +2,21 @@ CXX = g++
 CXXFLAGS += -I/usr/local/include -I/usr/include/PCSC -fPIC -Wall -std=c++20
 LDFLAGS = -shared
 
-SRC = decryption.cpp \
-	digest.cpp \
-	dualPurpose.cpp \
-	dualPurpose.cpp \
-	encryption.cpp \
-	general.cpp \
-	keyManagement.cpp \
-	objectManagement.cpp \
-	parallel.cpp \
-	random.cpp \
-	session.cpp \
-	sign.cpp \
-	slotAndToken.cpp \
+SRC = general.cpp \
 	state.cpp \
-	verify.cpp
+    pkcs11Decryption.cpp \
+	pkcs11Digest.cpp \
+	pkcs11DualPurpose.cpp \
+	pkcs11DualPurpose.cpp \
+	pkcs11Encryption.cpp \
+	pkcs11KeyManagement.cpp \
+	pkcs11ObjectManagement.cpp \
+	pkcs11Parallel.cpp \
+	pkcs11Random.cpp \
+	pkcs11Session.cpp \
+	pkcs11Sign.cpp \
+	pkcs11SlotAndToken.cpp \
+	pkcs11Verify.cpp
 BUILD_DIR = build
 OBJ = $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SRC))
 TARGET = srb-id-pkcs11-x64.so

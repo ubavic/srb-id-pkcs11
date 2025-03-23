@@ -1,5 +1,5 @@
-#ifndef RANDOM_H
-#define RANDOM_H
+#ifndef PKCS11_RANDOM_H
+#define PKCS11_RANDOM_H
 
 #include "pkcs11.h"
 

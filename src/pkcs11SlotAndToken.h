@@ -1,5 +1,5 @@
-#ifndef SLOTANDTOKEN_H
-#define SLOTANDTOKEN_H
+#ifndef PKCS11_SLOTANDTOKEN_H
+#define PKCS11_SLOTANDTOKEN_H
 
 #include <algorithm>
 #include <cassert>

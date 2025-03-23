@@ -1,4 +1,4 @@
-#include "session.h"
+#include "pkcs11Session.h"
 
 CK_DECLARE_FUNCTION(CK_RV, C_OpenSession)(
 	CK_SLOT_ID slotID,
