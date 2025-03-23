@@ -8,10 +8,6 @@
 #include "pkcs11.h"
 #include "state.h"
 
-#include "decryption.h"
-#include "digest.h"
-#include "dualPurpose.h"
-
 #define SRB_ID_PKCS11_VERSION_MAJOR 0
 #define SRB_ID_PKCS11_VERSION_MINOR 1
 
