@@ -114,6 +114,10 @@ CK_DECLARE_FUNCTION(CK_RV, C_GetSlotList)(
 CK_DECLARE_FUNCTION(CK_RV, C_GetSlotInfo)(
 	CK_SLOT_ID slotID,
 	CK_SLOT_INFO_PTR pInfo) {
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
 	if(pInfo == NULL) {
 		return CKR_ARGUMENTS_BAD;
 	}
@@ -160,6 +164,10 @@ CK_DECLARE_FUNCTION(CK_RV, C_GetSlotInfo)(
 CK_DECLARE_FUNCTION(CK_RV, C_GetTokenInfo)(
 	CK_SLOT_ID slotID,
 	CK_TOKEN_INFO_PTR pInfo) {
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
 	if(pInfo == NULL) {
 		return CKR_ARGUMENTS_BAD;
 	}
