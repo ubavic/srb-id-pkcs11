@@ -181,7 +181,6 @@ CK_DECLARE_FUNCTION(CK_RV, C_GetTokenInfo)(
 	char* readerName = new char[readerState.name.length()];
 	std::strcpy(readerName, readerState.name.c_str());
 
-	bool cardPresent = false;
 	SCARDHANDLE hCard;
 	DWORD dwActiveProtocol;
 
@@ -189,10 +188,9 @@ CK_DECLARE_FUNCTION(CK_RV, C_GetTokenInfo)(
 	delete[] readerName;
 
 	if(rv != SCARD_S_SUCCESS) {
-		cardPresent = true;
 		SCardDisconnect(smartCardContextHandle, SCARD_LEAVE_CARD);
 	} else if(rv != SCARD_E_NO_SMARTCARD) {
-		cardPresent = false;
+		return CKR_TOKEN_NOT_PRESENT;
 	} else if(rv == SCARD_W_UNPOWERED_CARD || rv == SCARD_W_UNRESPONSIVE_CARD || rv == SCARD_E_READER_UNAVAILABLE) {
 		return CKR_DEVICE_ERROR;
 	} else {
