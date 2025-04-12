@@ -1,20 +1,80 @@
 #include "pkcs11Session.h"
 
+unsigned int nextSessionId = 1;
+
 CK_DECLARE_FUNCTION(CK_RV, C_OpenSession)(
 	CK_SLOT_ID slotID,
 	CK_FLAGS flags,
 	CK_VOID_PTR pApplication,
 	CK_NOTIFY Notify,
 	CK_SESSION_HANDLE_PTR phSession) {
-	return CKR_FUNCTION_NOT_SUPPORTED;
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
+	if(!readerStates.contains(slotID)) {
+		return CKR_SLOT_ID_INVALID;
+	}
+
+	if((flags & CKF_SERIAL_SESSION) == 0) {
+		return CKR_SESSION_PARALLEL_NOT_SUPPORTED;
+	}
+
+	try {
+		SmartCard card			= SmartCard(smartCardContextHandle, slotID);
+		sessions[nextSessionId] = std::make_unique<Session>(std::move(card));
+		*phSession				= nextSessionId;
+
+		nextSessionId += 1;
+	} catch(SmartCardException& e) {
+		return CKR_DEVICE_ERROR;
+	} catch(...) {
+		return CKR_GENERAL_ERROR;
+	}
+
+	return CKR_OK;
 }
 
 CK_DECLARE_FUNCTION(CK_RV, C_CloseSession)(CK_SESSION_HANDLE hSession) {
-	return CKR_FUNCTION_NOT_SUPPORTED;
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
+	if(!sessions.contains(hSession)) {
+		return CKR_ARGUMENTS_BAD;
+	}
+
+	auto session = &sessions[hSession];
+
+	try {
+		session->get()->Close();
+	} catch(SmartCardException& e) {
+		return CKR_DEVICE_ERROR;
+	} catch(...) {
+		return CKR_GENERAL_ERROR;
+	}
+
+	return CKR_OK;
 }
 
 CK_DECLARE_FUNCTION(CK_RV, C_CloseAllSessions)(CK_SLOT_ID slotID) {
-	return CKR_FUNCTION_NOT_SUPPORTED;
+	if(!initialized) {
+		return CKR_CRYPTOKI_NOT_INITIALIZED;
+	}
+
+	if(!readerStates.contains(slotID)) {
+		return CKR_SLOT_ID_INVALID;
+	}
+
+	CK_RV error = CKR_OK;
+
+	for(auto& [sessionId, session] : sessions) {
+		if(session.get()->SlotId() == slotID && !session.get()->Closed()) {
+			error = C_CloseSession(sessionId);
+		}
+	}
+
+	return error;
 }
 
 CK_DECLARE_FUNCTION(CK_RV, C_GetSessionInfo)(

@@ -1,7 +1,16 @@
 #ifndef PKCS11_SESSION_H
 #define PKCS11_SESSION_H
 
+#include <memory>
+
 #include "pkcs11.h"
+
+#include "session.h"
+#include "smartCard.h"
+#include "smartCardException.h"
+#include "state.h"
+
+#include "state.h"
 
 extern "C" {
 CK_DECLARE_FUNCTION(CK_RV, C_OpenSession)(

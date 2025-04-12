@@ -13,12 +13,17 @@
 #include <PCSC/winscard.h>
 #include <PCSC/wintypes.h>
 
+#include "pkcs11.h"
+
 #include "smartCardException.h"
+
+#include "state.h"
 
 class SmartCard {
   private:
 	SCARDHANDLE hCard;
 	DWORD dwActiveProtocol;
+	CK_SLOT_ID slotID;
 
 	std::vector<uint8_t> Transmit(std::vector<uint8_t> apdu);
 
@@ -33,7 +38,7 @@ class SmartCard {
 	int PinTriesLeft(const std::vector<uint8_t>& rsp);
 
   public:
-	SmartCard(SCARDCONTEXT hContext, std::string reader);
+	SmartCard(SCARDCONTEXT hContext, CK_SLOT_ID slotID);
 
 	~SmartCard();
 
@@ -48,6 +53,8 @@ class SmartCard {
 	bool ResponseOK(const std::vector<uint8_t>& response);
 
 	bool ValidatePin(const std::string& pin);
+
+	CK_SLOT_ID SlotId() const;
 };
 
 #endif

@@ -84,9 +84,13 @@ SmartCard::PinTriesLeft(const std::vector<uint8_t>& rsp) {
 	return -1;
 }
 
-SmartCard::SmartCard(SCARDCONTEXT hContext, std::string reader) {
-	char* readerName = new char[reader.length()];
-	std::strcpy(readerName, reader.c_str());
+SmartCard::SmartCard(SCARDCONTEXT hContext, CK_SLOT_ID slotID) {
+	this->slotID = slotID;
+
+	auto readerNameString = readerStates[slotID].name;
+
+	char* readerName = new char[readerNameString.length()];
+	std::strcpy(readerName, readerNameString.c_str());
 
 	LONG rv = SCardConnect(hContext, readerName, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwActiveProtocol);
 	delete[] readerName;
@@ -241,4 +245,9 @@ ValidatePin(const std::string& pin) {
 	}
 
 	return std::all_of(pin.begin(), pin.end(), ::isdigit);
+}
+
+CK_SLOT_ID
+SmartCard::SlotId() const {
+	return this->slotID;
 }
