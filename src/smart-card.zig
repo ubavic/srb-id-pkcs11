@@ -322,8 +322,7 @@ test "Pad pin" {
     };
 
     for (test_cases) |tc| {
-        const result = try padPin(std.testing.allocator, tc.pin);
-        defer std.testing.allocator.free(result);
-        try std.testing.expectEqualSlices(u8, tc.expected, result);
+        const result = try padPin(tc.pin);
+        try std.testing.expectEqualSlices(u8, tc.expected, result[0..]);
     }
 }
