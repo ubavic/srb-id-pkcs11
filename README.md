@@ -1,12 +1,12 @@
 # PKCS11 module for Serbian ID
 
-This is an attempt to provide open source [PKCS11 v2.40](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html) module for Serbian ID smart cards produced by Gemalto. Module should provide at least functionalities that would enable user to log into state portals (like [eUprava](https://euprava.gov.rs/) ili [ePorezi](https://eporezi.purs.gov.rs/user/login.html)).
+This is open source [PKCS11 v2.40](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html) module for Serbian ID smart cards. It is designed for smart cards produced by Gemalto and aims to support the functionality required for authenticating and signing into official state portals (like [eUprava](https://euprava.gov.rs/) or [ePorezi](https://eporezi.purs.gov.rs/user/login.html)).
 
 ## Status
 
-The module is in the early development phase. All digest functions are implemented (except RIPEMD160), and the foundation for sign and verify functions is set up. Session and token management functions are generally implemented (except for login and logout). The biggest remaining task is the implementation of object management functions.
+Тhe module is currently in an early development phase. Digest functions are implemented (except RIPEMD160), session and token management functions are generally implemented. Signing and verification are next goals.
 
-Functions for security officers are not planned for implementation (at least for now). These are not needed for end users, and the module is much simpler without them.
+Functions intended for security officers (`CKU_SO`) are not planned for implementation at this stage. They are not required for end users, and omitting them reduces the code complexity.
 
 ## Compilation
 
@@ -19,13 +19,17 @@ curl --output include/pkcs11f.h $(OASIS_URL)/pkcs11f.h
 curl --output include/pkcs11t.h $(OASIS_URL)/pkcs11t.h
 ```
 
-Then run `zig build` and you are good to go.
+Then, build the project with:
+
+```
+zig build
+```
 
 You will maybe need to configure [PCSC lite](https://pcsclite.apdu.fr/) path in `build.zig`.
 
-## Warranty
+## Warranty Disclaimer
 
-There is absolutely no warranty of any kind.
+This software is provided *as is*, without any warranty of any kind. Use of this module is at your own risk, and it may potentially damage your token.
 
 ## License
 
