@@ -1,0 +1,89 @@
+name: "Build and release"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  ZIG_VERSION: "0.14.1"
+  OASIS_URL: "https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Linux deps
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential pkg-config libpcsclite-dev
+      - name: Install zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Download PKCS11
+        run: |
+          curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
+          curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
+          curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
+      - name: Test
+        run: |
+          zig test src/smart-card.zig
+          zig test src/apdu.zig
+
+  buildLinux:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Linux deps
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential pkg-config libpcsclite-dev
+      - name: Install zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Download PKCS11
+        run: |
+          curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
+          curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
+          curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
+      - name: Build
+        run: |
+          zig build
+          mkdir artifact
+          cp zig-out/lib/*.so.*.*.* artifact/.
+      - name: Upload library
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build-artifact
+          path: artifact/*
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [buildLinux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - name: Move files
+        run: |
+          mv linux-build-artifact/* .
+      - name: Generate release body
+        run: |
+          touch changelog.md
+          echo ''    >> changelog.md
+          echo '```' >> changelog.md
+          sha256sum *.so* >> changelog.md
+          echo '```' >> changelog.md
+          echo ''    >> changelog.md
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./*
+          body_path: changelog.md
+          tag_name: ${{github.ref_name}}
