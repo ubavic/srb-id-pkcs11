@@ -30,6 +30,21 @@ pub export fn C_Encrypt(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
+pub export fn C_EncryptUpdate(
+    session_handle: pkcs.CK_SESSION_HANDLE,
+    part: ?[*]const pkcs.CK_BYTE,
+    part_len: pkcs.CK_ULONG,
+    encrypted_part: ?[*]pkcs.CK_BYTE,
+    encrypted_part_len: ?*pkcs.CK_ULONG,
+) pkcs.CK_RV {
+    _ = session_handle;
+    _ = part;
+    _ = part_len;
+    _ = encrypted_part;
+    _ = encrypted_part_len;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+}
+
 pub export fn C_EncryptFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     last_encrypted_part: ?[*]pkcs.CK_BYTE,
