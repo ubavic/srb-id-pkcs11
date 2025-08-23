@@ -28,9 +28,27 @@ const p11_session = @import("p11_session.zig");
 const p11_sign = @import("p11_sign.zig");
 const p11_slot_and_token = @import("p11_slot_and_token.zig");
 
-export fn C_Initialize(_: pkcs.CK_VOID_PTR) pkcs.CK_RV {
+export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
     if (state.initialized)
         return pkcs.CKR_CRYPTOKI_ALREADY_INITIALIZED;
+
+    if (init_args != null) {
+        const args: *pkcs.CK_C_INITIALIZE_ARGS = @alignCast(@ptrCast(init_args));
+
+        if (args.*.pReserved != null)
+            return pkcs.CKR_ARGUMENTS_BAD;
+
+        const someNotNull = (args.*.CreateMutex != null) or (args.*.DestroyMutex != null) or (args.*.LockMutex != null) or (args.*.UnlockMutex != null);
+        const someNull = (args.*.CreateMutex == null) or (args.*.DestroyMutex == null) or (args.*.LockMutex == null) or (args.*.UnlockMutex == null);
+
+        if (someNotNull and someNull)
+            return pkcs.CKR_ARGUMENTS_BAD;
+
+        if (someNotNull) {
+            if (args.*.flags & pkcs.CKF_OS_LOCKING_OK == 0)
+                return pkcs.CKR_CANT_LOCK;
+        }
+    }
 
     const rv = pcsc.SCardEstablishContext(pcsc.SCARD_SCOPE_SYSTEM, null, null, &state.smart_card_context_handle);
     if (rv != pcsc.SCARD_S_SUCCESS)
