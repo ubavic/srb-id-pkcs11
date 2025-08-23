@@ -16,9 +16,8 @@ pub export fn digestInit(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null) {
+    if (mechanism == null)
         return pkcs.CKR_ARGUMENTS_BAD;
-    }
 
     var hash_mechanism: hasher.HasherType = undefined;
 
@@ -88,9 +87,8 @@ pub export fn digest(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    if (data_digest_len.?.* < required_digest_size) {
+    if (data_digest_len.?.* < required_digest_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
-    }
 
     const casted_data: [*]u8 = @ptrCast(data);
 
@@ -161,9 +159,8 @@ pub export fn digestFinal(
         return pkcs.CKR_OK;
     }
 
-    if (data_digest_len.?.* < required_digest_size) {
+    if (data_digest_len.?.* < required_digest_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
-    }
 
     const computed_digest = current_session.hasher.finalize(current_session.allocator) catch {
         current_session.resetDigestSession();

@@ -15,9 +15,8 @@ pub export fn signInit(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null) {
+    if (mechanism == null)
         return pkcs.CKR_ARGUMENTS_BAD;
-    }
 
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);

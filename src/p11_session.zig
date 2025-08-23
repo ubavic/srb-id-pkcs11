@@ -23,17 +23,14 @@ pub export fn openSession(
     _ = application;
     _ = notify;
 
-    if (!state.initialized) {
+    if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
-    }
 
-    if ((flags & pkcs.CKF_SERIAL_SESSION) == 0) {
+    if ((flags & pkcs.CKF_SERIAL_SESSION) == 0)
         return pkcs.CKR_SESSION_PARALLEL_NOT_SUPPORTED;
-    }
 
-    if (session_handle == null) {
+    if (session_handle == null)
         return pkcs.CKR_ARGUMENTS_BAD;
-    }
 
     const write_enabled = (flags & pkcs.CKF_RW_SESSION) != 0;
 
@@ -67,20 +64,17 @@ pub export fn getSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) pkcs.CK_RV {
-    if (!state.initialized) {
+    if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
-    }
 
-    if (session_info == null) {
+    if (session_info == null)
         return pkcs.CKR_ARGUMENTS_BAD;
-    }
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    if (current_session.closed) {
+    if (current_session.closed)
         return pkcs.CKR_SESSION_CLOSED;
-    }
 
     session_info.?.slotID = current_session.reader_id;
     session_info.?.flags = pkcs.CKF_SERIAL_SESSION | (if (current_session.write_enabled) pkcs.CKF_RW_SESSION else 0);
