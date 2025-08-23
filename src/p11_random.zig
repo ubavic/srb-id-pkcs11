@@ -9,7 +9,7 @@ const state = @import("state.zig");
 const session = @import("session.zig");
 
 // not supported in the original module
-pub export fn seedRandom(
+pub export fn C_SeedRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_BYTE_PTR,
     _: pkcs.CK_ULONG,
@@ -20,7 +20,7 @@ pub export fn seedRandom(
     return pkcs.CKR_RANDOM_SEED_NOT_SUPPORTED;
 }
 
-pub export fn generateRandom(
+pub export fn C_GenerateRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
     random_data: [*c]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,

@@ -13,7 +13,7 @@ const state = @import("state.zig");
 const reader = @import("reader.zig");
 const session = @import("session.zig");
 
-pub export fn openSession(
+pub export fn C_OpenSession(
     slot_id: pkcs.CK_SLOT_ID,
     flags: pkcs.CK_FLAGS,
     application: ?*anyopaque,
@@ -40,7 +40,7 @@ pub export fn openSession(
     return pkcs.CKR_OK;
 }
 
-pub export fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
+pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -50,7 +50,7 @@ pub export fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
     return pkcs.CKR_OK;
 }
 
-pub export fn closeAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
+pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -60,7 +60,7 @@ pub export fn closeAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     return session.closeAllSessions(slot_id);
 }
 
-pub export fn getSessionInfo(
+pub export fn C_GetSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) pkcs.CK_RV {
@@ -83,7 +83,7 @@ pub export fn getSessionInfo(
 }
 
 // not supported in the original module
-pub export fn getOperationState(
+pub export fn C_GetOperationState(
     session_handle: pkcs.CK_SESSION_HANDLE,
     operationS_state: ?[*]pkcs.CK_BYTE,
     operation_state_len: ?*pkcs.CK_ULONG,
@@ -96,7 +96,7 @@ pub export fn getOperationState(
 }
 
 // not supported in the original module
-pub export fn setOperationState(
+pub export fn C_SetOperationState(
     session_handle: pkcs.CK_SESSION_HANDLE,
     operation_state: ?[*]const pkcs.CK_BYTE,
     operation_state_len: pkcs.CK_ULONG,
@@ -112,7 +112,7 @@ pub export fn setOperationState(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn sessionLogin(
+pub export fn C_Login(
     session_handle: pkcs.CK_SESSION_HANDLE,
     user_type: pkcs.CK_USER_TYPE,
     pin: ?[*]const pkcs.CK_UTF8CHAR,
@@ -138,7 +138,7 @@ pub export fn sessionLogin(
     return pkcs.CKR_OK;
 }
 
-pub export fn sessionLogout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
+pub export fn C_Logout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 

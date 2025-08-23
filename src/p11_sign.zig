@@ -7,7 +7,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-pub export fn signInit(
+pub export fn C_SignInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -67,7 +67,7 @@ pub export fn signInit(
     return pkcs.CKR_OK;
 }
 
-pub export fn sign(
+pub export fn C_Sign(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -122,7 +122,7 @@ pub export fn sign(
     return pkcs.CKR_OK;
 }
 
-pub export fn signUpdate(
+pub export fn C_SignUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -146,7 +146,7 @@ pub export fn signUpdate(
     return pkcs.CKR_OK;
 }
 
-pub export fn signFinal(
+pub export fn C_SignFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
@@ -181,7 +181,7 @@ pub export fn signFinal(
     return pkcs.CKR_OK;
 }
 
-pub export fn signRecoverInit(
+pub export fn C_SignRecoverInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -194,7 +194,7 @@ pub export fn signRecoverInit(
     return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 }
 
-pub export fn signRecover(
+pub export fn C_SignRecover(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -212,7 +212,7 @@ pub export fn signRecover(
     return pkcs.CKR_OPERATION_NOT_INITIALIZED;
 }
 
-pub export fn verifyInit(
+pub export fn C_VerifyInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -273,7 +273,7 @@ pub export fn verifyInit(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn verify(
+pub export fn C_Verify(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -301,7 +301,7 @@ pub export fn verify(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn verifyUpdate(
+pub export fn C_VerifyUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -323,7 +323,7 @@ pub export fn verifyUpdate(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn verifyFinal(
+pub export fn C_VerifyFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
@@ -341,7 +341,7 @@ pub export fn verifyFinal(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn verifyRecoverInit(
+pub export fn C_VerifyRecoverInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -354,7 +354,7 @@ pub export fn verifyRecoverInit(
     return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 }
 
-pub export fn verifyRecover(
+pub export fn C_VerifyRecover(
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,

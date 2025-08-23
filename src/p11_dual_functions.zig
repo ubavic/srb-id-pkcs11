@@ -2,7 +2,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-pub export fn digestEncryptUpdate(
+pub export fn C_DigestEncryptUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -17,7 +17,7 @@ pub export fn digestEncryptUpdate(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn decryptDigestUpdate(
+pub export fn C_DecryptDigestUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     encrypted_part: ?[*]const pkcs.CK_BYTE,
     encrypted_part_len: pkcs.CK_ULONG,
@@ -32,7 +32,7 @@ pub export fn decryptDigestUpdate(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn signEncryptUpdate(
+pub export fn C_SignEncryptUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -47,7 +47,7 @@ pub export fn signEncryptUpdate(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn decryptVerifyUpdate(
+pub export fn C_DecryptVerifyUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     encrypted_part: ?[*]const pkcs.CK_BYTE,
     encrypted_part_len: pkcs.CK_ULONG,

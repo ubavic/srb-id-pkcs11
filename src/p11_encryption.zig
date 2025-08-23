@@ -4,7 +4,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-pub export fn encryptInit(
+pub export fn C_EncryptInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -15,7 +15,7 @@ pub export fn encryptInit(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn encrypt(
+pub export fn C_Encrypt(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -30,7 +30,7 @@ pub export fn encrypt(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn encryptFinal(
+pub export fn C_EncryptFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     last_encrypted_part: ?[*]pkcs.CK_BYTE,
     last_encrypted_part_len: ?*pkcs.CK_ULONG,

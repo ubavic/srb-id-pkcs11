@@ -9,7 +9,7 @@ const state = @import("state.zig");
 const session = @import("session.zig");
 const hasher = @import("hasher.zig");
 
-pub export fn digestInit(
+pub export fn C_DigestInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
 ) pkcs.CK_RV {
@@ -53,7 +53,7 @@ pub export fn digestInit(
     return pkcs.CKR_OK;
 }
 
-pub export fn digest(
+pub export fn C_Digest(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -108,7 +108,7 @@ pub export fn digest(
     return pkcs.CKR_OK;
 }
 
-pub export fn digestUpdate(
+pub export fn C_DigestUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -132,7 +132,7 @@ pub export fn digestUpdate(
     return pkcs.CKR_OK;
 }
 
-pub export fn digestKey(
+pub export fn C_DigestKey(
     session_handle: pkcs.CK_SESSION_HANDLE,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
@@ -142,7 +142,7 @@ pub export fn digestKey(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn digestFinal(
+pub export fn C_DigestFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,

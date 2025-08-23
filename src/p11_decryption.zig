@@ -4,7 +4,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-pub export fn decryptInit(
+pub export fn C_DecryptInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -15,7 +15,7 @@ pub export fn decryptInit(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn decrypt(
+pub export fn C_Decrypt(
     session_handle: pkcs.CK_SESSION_HANDLE,
     encrypted_data: ?[*]const pkcs.CK_BYTE,
     encrypted_data_len: pkcs.CK_ULONG,
@@ -30,7 +30,7 @@ pub export fn decrypt(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn decryptUpdate(
+pub export fn C_DecryptUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     encrypted_part: ?[*]const pkcs.CK_BYTE,
     encrypted_part_len: pkcs.CK_ULONG,
@@ -45,7 +45,7 @@ pub export fn decryptUpdate(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn decryptFinal(
+pub export fn C_DecryptFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     last_part: ?[*]pkcs.CK_BYTE,
     last_part_len: ?*pkcs.CK_ULONG,

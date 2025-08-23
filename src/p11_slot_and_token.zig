@@ -15,7 +15,7 @@ const state = @import("state.zig");
 const reader = @import("reader.zig");
 const pkcs_error = @import("pkcs_error.zig");
 
-pub export fn getSlotList(
+pub export fn C_GetSlotList(
     token_present: pkcs.CK_BBOOL,
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
@@ -59,7 +59,7 @@ pub export fn getSlotList(
     return pkcs.CKR_OK;
 }
 
-pub export fn getSlotInfo(
+pub export fn C_GetSlotInfo(
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
 ) pkcs.CK_RV {
@@ -93,7 +93,7 @@ pub export fn getSlotInfo(
     return pkcs.CKR_OK;
 }
 
-pub export fn getTokenInfo(
+pub export fn C_GetTokenInfo(
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
 ) pkcs.CK_RV {
@@ -120,7 +120,7 @@ pub export fn getTokenInfo(
     return pkcs.CKR_OK;
 }
 
-pub export fn getMechanismList(
+pub export fn C_GetMechanismList(
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
@@ -171,7 +171,7 @@ pub export fn getMechanismList(
     return pkcs.CKR_OK;
 }
 
-pub export fn getMechanismInfo(
+pub export fn C_GetMechanismInfo(
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
@@ -230,7 +230,7 @@ pub export fn getMechanismInfo(
     return pkcs.CKR_OK;
 }
 
-pub export fn initToken(
+pub export fn C_InitToken(
     _: pkcs.CK_SLOT_ID,
     _: ?*pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
@@ -239,7 +239,7 @@ pub export fn initToken(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn initPin(
+pub export fn C_InitPIN(
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_UTF8CHAR_PTR,
     _: pkcs.CK_ULONG,
@@ -247,7 +247,7 @@ pub export fn initPin(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn setPin(
+pub export fn C_SetPIN(
     session_handle: pkcs.CK_SESSION_HANDLE,
     old_pin: pkcs.CK_UTF8CHAR_PTR,
     old_pin_len: pkcs.CK_ULONG,
@@ -268,7 +268,7 @@ pub export fn setPin(
     return pkcs.CKR_OK;
 }
 
-pub export fn waitForSlotEvent(
+pub export fn C_WaitForSlotEvent(
     flags: pkcs.CK_FLAGS,
     slot: ?*pkcs.CK_SLOT_ID,
     reserved: ?*anyopaque,

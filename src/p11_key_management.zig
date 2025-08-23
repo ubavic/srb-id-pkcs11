@@ -2,7 +2,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-pub export fn generateKey(
+pub export fn C_GenerateKey(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     template: ?[*]pkcs.CK_ATTRIBUTE,
@@ -17,7 +17,7 @@ pub export fn generateKey(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn generateKeyPair(
+pub export fn C_GenerateKeyPair(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     public_key_template: ?[*]pkcs.CK_ATTRIBUTE,
@@ -38,7 +38,7 @@ pub export fn generateKeyPair(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn deriveKey(
+pub export fn C_DeriveKey(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     base_key: pkcs.CK_OBJECT_HANDLE,
@@ -56,7 +56,7 @@ pub export fn deriveKey(
 }
 
 // not supported in the original module
-pub export fn wrapKey(
+pub export fn C_WrapKey(
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,
@@ -68,7 +68,7 @@ pub export fn wrapKey(
 }
 
 // not supported in the original module
-pub export fn unwrapKey(
+pub export fn C_UnwrapKey(
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,

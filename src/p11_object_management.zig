@@ -10,7 +10,7 @@ const session = @import("session.zig");
 
 const PkcsError = pkcs_error.PkcsError;
 
-pub export fn createObject(
+pub export fn C_CreateObject(
     session_handle: pkcs.CK_SESSION_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
@@ -24,7 +24,7 @@ pub export fn createObject(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn copyObject(
+pub export fn C_CopyObject(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
@@ -40,7 +40,7 @@ pub export fn copyObject(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn destroyObject(
+pub export fn C_DestroyObject(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
@@ -50,7 +50,7 @@ pub export fn destroyObject(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn getObjectSize(
+pub export fn C_GetObjectSize(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     size: ?*pkcs.CK_ULONG,
@@ -62,7 +62,7 @@ pub export fn getObjectSize(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn getAttributeValue(
+pub export fn C_GetAttributeValue(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     template: [*c]pkcs.CK_ATTRIBUTE,
@@ -131,7 +131,7 @@ pub export fn getAttributeValue(
     return pkcs.CKR_OK;
 }
 
-pub export fn setAttributeValue(
+pub export fn C_SetAttributeValue(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
@@ -144,7 +144,7 @@ pub export fn setAttributeValue(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn findObjectsInit(
+pub export fn C_FindObjectsInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
@@ -176,7 +176,7 @@ pub export fn findObjectsInit(
     return pkcs.CKR_OK;
 }
 
-pub export fn findObjects(
+pub export fn C_FindObjects(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handles: ?[*]pkcs.CK_OBJECT_HANDLE,
     max_object_count: pkcs.CK_ULONG,
@@ -214,7 +214,7 @@ pub export fn findObjects(
     return pkcs.CKR_OK;
 }
 
-pub export fn findObjectsFinal(
+pub export fn C_FindObjectsFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
     const current_session = session.getSession(session_handle, false) catch |err|
