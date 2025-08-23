@@ -12,6 +12,9 @@ pub export fn C_SignInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -74,6 +77,9 @@ pub export fn C_Sign(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -127,6 +133,9 @@ pub export fn C_SignUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -151,6 +160,9 @@ pub export fn C_SignFinal(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -186,6 +198,9 @@ pub export fn C_SignRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     _ = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -201,6 +216,9 @@ pub export fn C_SignRecover(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     _ = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -217,6 +235,9 @@ pub export fn C_VerifyInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -280,6 +301,9 @@ pub export fn C_Verify(
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -306,6 +330,9 @@ pub export fn C_VerifyUpdate(
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -328,6 +355,9 @@ pub export fn C_VerifyFinal(
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -346,6 +376,9 @@ pub export fn C_VerifyRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     _ = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
@@ -361,6 +394,9 @@ pub export fn C_VerifyRecover(
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     _ = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 

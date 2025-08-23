@@ -20,6 +20,9 @@ pub export fn C_GetSlotList(
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -63,6 +66,9 @@ pub export fn C_GetSlotInfo(
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -97,6 +103,9 @@ pub export fn C_GetTokenInfo(
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -125,6 +134,9 @@ pub export fn C_GetMechanismList(
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const mechanisms = [_]pkcs.CK_MECHANISM_TYPE{
         // pkcs.CKM_RSA_PKCS_KEY_PAIR_GEN,
         // pkcs.CKM_RSA_PKCS,
@@ -176,6 +188,9 @@ pub export fn C_GetMechanismInfo(
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -254,6 +269,9 @@ pub export fn C_SetPIN(
     new_pin: pkcs.CK_UTF8CHAR_PTR,
     new_pin_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 

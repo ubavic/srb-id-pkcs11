@@ -7,6 +7,7 @@ const pkcs = @cImport({
 const pkcs_error = @import("pkcs_error.zig");
 const object = @import("object.zig");
 const session = @import("session.zig");
+const state = @import("state.zig");
 
 const PkcsError = pkcs_error.PkcsError;
 
@@ -68,6 +69,9 @@ pub export fn C_GetAttributeValue(
     template: [*c]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     var has_attribute_sensitive = false;
     var has_attribute_type_invalid = false;
     var has_small_buffer = false;
@@ -149,6 +153,9 @@ pub export fn C_FindObjectsInit(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
@@ -182,6 +189,9 @@ pub export fn C_FindObjects(
     max_object_count: pkcs.CK_ULONG,
     object_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
@@ -217,6 +227,9 @@ pub export fn C_FindObjects(
 pub export fn C_FindObjectsFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 

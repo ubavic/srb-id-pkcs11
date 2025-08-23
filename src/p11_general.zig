@@ -29,6 +29,10 @@ const p11_sign = @import("p11_sign.zig");
 const p11_slot_and_token = @import("p11_slot_and_token.zig");
 
 export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
+    if (!state.lock.tryLock())
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlock();
+
     if (state.initialized)
         return pkcs.CKR_CRYPTOKI_ALREADY_INITIALIZED;
 
@@ -64,6 +68,10 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
 }
 
 export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
+    if (!state.lock.tryLock())
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlock();
+
     if (reserved != null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
@@ -78,6 +86,9 @@ export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
 }
 
 export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 

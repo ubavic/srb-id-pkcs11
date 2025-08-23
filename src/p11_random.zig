@@ -14,6 +14,9 @@ pub export fn C_SeedRandom(
     _: pkcs.CK_BYTE_PTR,
     _: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     _ = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
@@ -25,6 +28,9 @@ pub export fn C_GenerateRandom(
     random_data: [*c]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 

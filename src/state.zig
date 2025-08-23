@@ -10,6 +10,8 @@ const pcsc = @cImport({
     @cInclude("wintypes.h");
 });
 
+pub var lock = std.Thread.RwLock{};
+
 pub var initialized: bool = false;
 pub var smart_card_context_handle: pcsc.SCARDHANDLE = 0;
 

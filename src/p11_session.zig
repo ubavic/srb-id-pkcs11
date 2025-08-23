@@ -16,12 +16,12 @@ const session = @import("session.zig");
 pub export fn C_OpenSession(
     slot_id: pkcs.CK_SLOT_ID,
     flags: pkcs.CK_FLAGS,
-    application: ?*anyopaque,
-    notify: pkcs.CK_NOTIFY,
+    _: ?*anyopaque,
+    _: pkcs.CK_NOTIFY,
     session_handle: ?*pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    _ = application;
-    _ = notify;
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -41,6 +41,9 @@ pub export fn C_OpenSession(
 }
 
 pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -51,6 +54,9 @@ pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV 
 }
 
 pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -64,6 +70,9 @@ pub export fn C_GetSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
@@ -118,6 +127,9 @@ pub export fn C_Login(
     pin: ?[*]const pkcs.CK_UTF8CHAR,
     pin_length: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
@@ -139,6 +151,9 @@ pub export fn C_Login(
 }
 
 pub export fn C_Logout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
+    state.lock.lockShared();
+    defer state.lock.unlockShared();
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
