@@ -111,7 +111,7 @@ export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
 }
 
 var functionList = pkcs.CK_FUNCTION_LIST{
-    .version = pkcs.CK_VERSION{ .major = 0x02, .minor = 0x40 },
+    .version = pkcs.CK_VERSION{ .major = 2, .minor = 40 },
     .C_Initialize = C_Initialize,
     .C_Finalize = C_Finalize,
     .C_GetInfo = C_GetInfo,
