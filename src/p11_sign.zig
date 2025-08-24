@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
@@ -64,7 +66,29 @@ pub export fn C_SignInit(
             return pkcs.CKR_HOST_MEMORY;
     }
 
-    current_session.key = key; // TODO: validate key handle
+    var key_found = false;
+    for (current_session.objects) |current_object| {
+        if (current_object.handle() == key) {
+            switch (current_object) {
+                .private_key => {
+                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+                    if (current_object.private_key.sign != pkcs.CK_TRUE)
+                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+                },
+                .certificate, .public_key => return pkcs.CKR_KEY_HANDLE_INVALID,
+            }
+
+            key_found = true;
+            break;
+        }
+    }
+
+    if (!key_found)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
+
+    current_session.key = key;
     current_session.operation = session.Operation.Sign;
 
     return pkcs.CKR_OK;
@@ -198,15 +222,38 @@ pub export fn C_SignRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
+    if (true)
+        return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+
     state.lock.lockShared();
     defer state.lock.unlockShared();
 
-    _ = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    _ = mechanism;
-    _ = key;
-    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+    var key_found = false;
+    for (current_session.objects) |current_object| {
+        if (current_object.handle() == key) {
+            switch (current_object) {
+                .private_key => {
+                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+                    if (current_object.private_key.sign_recover != pkcs.CK_TRUE)
+                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+                },
+                .certificate, .public_key => return pkcs.CKR_KEY_HANDLE_INVALID,
+            }
+
+            key_found = true;
+            break;
+        }
+    }
+
+    if (!key_found)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
+
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_SignRecover(
@@ -287,6 +334,28 @@ pub export fn C_VerifyInit(
         current_session.hasher = hasher.createAndInit(hash_mechanism, current_session.allocator) catch
             return pkcs.CKR_HOST_MEMORY;
     }
+
+    var key_found = false;
+    for (current_session.objects) |current_object| {
+        if (current_object.handle() == key) {
+            switch (current_object) {
+                .public_key => {
+                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+                    if (current_object.public_key.verify != pkcs.CK_TRUE)
+                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+                },
+                .certificate, .private_key => return pkcs.CKR_KEY_HANDLE_INVALID,
+            }
+
+            key_found = true;
+            break;
+        }
+    }
+
+    if (!key_found)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
     current_session.key = key;
     current_session.operation = session.Operation.Verify;
@@ -376,15 +445,38 @@ pub export fn C_VerifyRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
+    if (true)
+        return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+
     state.lock.lockShared();
     defer state.lock.unlockShared();
 
-    _ = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    _ = mechanism;
-    _ = key;
-    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+    var key_found = false;
+    for (current_session.objects) |current_object| {
+        if (current_object.handle() == key) {
+            switch (current_object) {
+                .public_key => {
+                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+                    if (current_object.public_key.verify_recover != pkcs.CK_TRUE)
+                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+                },
+                .certificate, .private_key => return pkcs.CKR_KEY_HANDLE_INVALID,
+            }
+
+            key_found = true;
+            break;
+        }
+    }
+
+    if (!key_found)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
+
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_VerifyRecover(

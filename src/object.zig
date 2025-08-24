@@ -21,6 +21,14 @@ pub const Object = union(enum) {
         };
     }
 
+    pub fn class(self: *const Object) pkcs.CK_OBJECT_CLASS {
+        return switch (self.*) {
+            .certificate => |o| o.class,
+            .private_key => |o| o.class,
+            .public_key => |o| o.class,
+        };
+    }
+
     pub fn getAttribute(self: *const Object, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!Attribute {
         const value = try switch (self.*) {
             .certificate => |o| o.getAttributeValue(allocator, attribute_type),
