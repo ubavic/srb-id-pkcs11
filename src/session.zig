@@ -303,9 +303,8 @@ pub fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
     defer lock.unlock();
 
     const session_entry = sessions.getPtr(session_handle);
-    if (session_entry == null) {
+    if (session_entry == null)
         return PkcsError.SessionHandleInvalid;
-    }
 
     const current_session = session_entry.?;
 
@@ -316,9 +315,10 @@ pub fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
 
     current_session.hasher.destroy(current_session.allocator);
 
-    _ = current_session.card.disconnect() catch {};
+    current_session.card.disconnect() catch {};
 
-    _ = sessions.remove(session_handle);
+    if (!sessions.remove(session_handle))
+        return PkcsError.GeneralError;
 }
 
 pub fn closeAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
