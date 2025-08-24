@@ -24,6 +24,8 @@ var next_session_id: pkcs.CK_SESSION_HANDLE = 1;
 
 var sessions: std.AutoHashMap(pkcs.CK_SESSION_HANDLE, Session) = undefined;
 
+var lock = std.Thread.RwLock{};
+
 pub const Operation = enum {
     None,
     Digest,
@@ -220,7 +222,11 @@ pub const Session = struct {
     }
 };
 
-pub fn initSessions(allocator: std.mem.Allocator) void {
+pub fn initSessions(allocator: std.mem.Allocator) PkcsError!void {
+    if (!lock.tryLock())
+        return PkcsError.FunctionFailed;
+    defer lock.unlock();
+
     sessions = std.AutoHashMap(pkcs.CK_SLOT_ID, Session).init(allocator);
 }
 
@@ -229,6 +235,10 @@ pub fn newSession(
     slot_id: pkcs.CK_SESSION_HANDLE,
     write_enabled: bool,
 ) PkcsError!pkcs.CK_SESSION_HANDLE {
+    if (!lock.tryLock())
+        return PkcsError.FunctionFailed;
+    defer lock.unlock();
+
     const session_id: pkcs.CK_SESSION_HANDLE = next_session_id;
     next_session_id += 1;
 
@@ -268,6 +278,10 @@ pub fn getSession(
     session_handle: pkcs.CK_SESSION_HANDLE,
     login_required: bool,
 ) PkcsError!*Session {
+    if (!lock.tryLockShared())
+        return PkcsError.FunctionFailed;
+    defer lock.unlockShared();
+
     if (!state.initialized)
         return PkcsError.CryptokiNotInitialized;
 
@@ -284,6 +298,10 @@ pub fn getSession(
 }
 
 pub fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
+    if (!lock.tryLock())
+        return PkcsError.FunctionFailed;
+    defer lock.unlock();
+
     const session_entry = sessions.getPtr(session_handle);
     if (session_entry == null) {
         return PkcsError.SessionHandleInvalid;
