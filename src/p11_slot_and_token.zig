@@ -39,9 +39,8 @@ pub export fn C_GetSlotList(
     var count: u32 = 0;
     var iter = reader.reader_states.iterator();
     while (iter.next()) |entry| {
-        if (entry.value_ptr.*.active and (!only_with_token or entry.value_ptr.*.card_present)) {
+        if (entry.value_ptr.*.active and (!only_with_token or entry.value_ptr.*.card_present))
             count += 1;
-        }
     }
 
     if (slot_list != null) {

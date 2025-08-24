@@ -89,7 +89,8 @@ pub const ReaderState = struct {
             idx += trimmed_after.len;
         }
 
-        if (idx < output.len) output[idx] = 0;
+        if (idx < output.len)
+            output[idx] = 0;
     }
 };
 
@@ -116,14 +117,12 @@ pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_context_handle: 
     resetStates();
 
     if (rv1 != sc.SCARD_E_NO_READERS_AVAILABLE) {
-        const reader_names = parseMultiString(allocator, readers_multi_string) catch {
+        const reader_names = parseMultiString(allocator, readers_multi_string) catch
             return PkcsError.GeneralError;
-        };
 
         for (reader_names) |reader_name| {
-            addIfNotExists(allocator, reader_name) catch {
+            addIfNotExists(allocator, reader_name) catch
                 return PkcsError.GeneralError;
-            };
         }
     }
 

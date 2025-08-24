@@ -56,9 +56,7 @@ pub export fn C_SignInit(
             use_hasher = false;
             return pkcs.CKR_MECHANISM_INVALID;
         },
-        else => {
-            return pkcs.CKR_MECHANISM_INVALID;
-        },
+        else => return pkcs.CKR_MECHANISM_INVALID,
     }
 
     if (use_hasher) {
@@ -131,9 +129,8 @@ pub export fn C_Sign(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    if (signature_len.?.* < required_signature_size) {
+    if (signature_len.?.* < required_signature_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
-    }
 
     const casted_data: [*]u8 = @ptrCast(data);
     current_session.signUpdate(casted_data[0..data_len]);
@@ -199,9 +196,8 @@ pub export fn C_SignFinal(
         return pkcs.CKR_OK;
     }
 
-    if (signature_len.?.* < required_signature_size) {
+    if (signature_len.?.* < required_signature_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
-    }
 
     const computed_signature = current_session.signFinalize() catch {
         current_session.resetSignSession();
@@ -288,9 +284,8 @@ pub export fn C_VerifyInit(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null) {
+    if (mechanism == null)
         return pkcs.CKR_ARGUMENTS_BAD;
-    }
 
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
@@ -325,9 +320,7 @@ pub export fn C_VerifyInit(
             use_hasher = false;
             return pkcs.CKR_MECHANISM_INVALID;
         },
-        else => {
-            return pkcs.CKR_MECHANISM_INVALID;
-        },
+        else => return pkcs.CKR_MECHANISM_INVALID,
     }
 
     if (use_hasher) {

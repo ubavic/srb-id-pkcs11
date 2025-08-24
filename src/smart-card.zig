@@ -34,17 +34,15 @@ pub const Card = struct {
             selection_option,
             name,
             ne,
-        ) catch {
+        ) catch
             return PkcsError.HostMemory;
-        };
         defer allocator.free(data_unit);
 
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
 
-        if (!responseOK(response)) {
+        if (!responseOK(response))
             return PkcsError.DeviceError;
-        }
     }
 
     // Allocates result buffer

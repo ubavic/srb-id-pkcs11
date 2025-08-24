@@ -74,9 +74,8 @@ pub const Hasher = struct {
     }
 
     pub fn digestLength(self: Hasher) usize {
-        if (self.hasherType == null) {
+        if (self.hasherType == null)
             return 0;
-        }
 
         return switch (self.hasherType.?) {
             HasherType.md5 => std.crypto.hash.Md5.digest_length,
