@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const atr = @import("atr.zig");
+const state = @import("state.zig");
+
 const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
@@ -44,8 +47,21 @@ pub const ReaderState = struct {
 
         switch (r) {
             sc.SCARD_S_SUCCESS => {
+                var card_state: sc.DWORD = 0;
+                var card_protocol: sc.DWORD = 0;
+                var card_atr: [*c]u8 = null;
+                var card_atr_len: sc.DWORD = sc.SCARD_AUTOALLOCATE;
+                var reader_name: [*c]u8 = null;
+                var reader_name_len: sc.DWORD = sc.SCARD_AUTOALLOCATE;
+
+                _ = sc.SCardStatus(card_handle, @ptrCast(&reader_name), &reader_name_len, &card_state, &card_protocol, @ptrCast(&card_atr), &card_atr_len);
+                defer _ = sc.SCardFreeMemory(state.smart_card_context_handle, reader_name);
+                defer _ = sc.SCardFreeMemory(state.smart_card_context_handle, card_atr);
+
                 self.card_present = true;
                 _ = sc.SCardDisconnect(card_handle, sc.SCARD_LEAVE_CARD);
+
+                self.recognized = atr.validATR(card_atr[0..card_atr_len]);
             },
             sc.SCARD_E_NO_SMARTCARD => {
                 self.card_present = false;
@@ -135,7 +151,7 @@ pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_context_handle: 
     }
 }
 
-pub fn addIfNotExists(allocator: std.mem.Allocator, reader_name: [*:0]const u8) std.mem.Allocator.Error!void {
+fn addIfNotExists(allocator: std.mem.Allocator, reader_name: [*:0]const u8) std.mem.Allocator.Error!void {
     const reader_name_slice = std.mem.sliceTo(reader_name, 0);
 
     var iter = reader_states.iterator();
@@ -155,7 +171,7 @@ pub fn addIfNotExists(allocator: std.mem.Allocator, reader_name: [*:0]const u8) 
             .name = allocated_name,
             .active = true,
             .card_present = false,
-            .recognized = true, // TODO
+            .recognized = false,
             .user_type = UserType.None,
         },
     );

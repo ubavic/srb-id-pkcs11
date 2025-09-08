@@ -248,6 +248,12 @@ pub fn newSession(
 
     const reader_state = reader_entry.?;
 
+    if (!reader_state.card_present)
+        return PkcsError.TokenNoPresent;
+
+    if (!reader_state.recognized)
+        return PkcsError.TokenNotRecognized;
+
     const card = try smart_card.connect(
         allocator,
         state.smart_card_context_handle,
