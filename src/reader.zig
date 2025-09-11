@@ -19,6 +19,8 @@ var next_reader_id: pkcs.CK_SLOT_ID = 1;
 
 pub var reader_states: std.AutoHashMap(pkcs.CK_SLOT_ID, ReaderState) = undefined;
 
+pub var lock = std.Thread.RwLock{};
+
 pub const UserType = enum {
     None,
     User,
@@ -209,6 +211,9 @@ fn parseMultiString(allocator: std.mem.Allocator, input: [*:0]const u8) std.mem.
 }
 
 pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
+    lock.lock();
+    defer lock.unlock();
+
     const reader_entry = reader_states.getPtr(slot_id);
     if (reader_entry == null)
         return;
@@ -217,6 +222,9 @@ pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
 }
 
 pub fn getUserType(slot_id: pkcs.CK_SLOT_ID) UserType {
+    lock.lockShared();
+    defer lock.unlockShared();
+
     const reader_entry = reader_states.get(slot_id);
     if (reader_entry == null)
         return UserType.None;

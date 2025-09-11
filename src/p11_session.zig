@@ -60,10 +60,15 @@ pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
+    reader.lock.lock();
+    defer reader.lock.unlock();
+
     if (!reader.reader_states.contains(slot_id))
         return pkcs.CKR_SLOT_ID_INVALID;
 
     return session.closeAllSessions(slot_id);
+
+    // TODO: refresh reader status;
 }
 
 pub export fn C_GetSessionInfo(

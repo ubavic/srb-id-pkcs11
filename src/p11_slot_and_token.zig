@@ -74,7 +74,10 @@ pub export fn C_GetSlotInfo(
     if (slot_info == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    const reader_entry = reader.reader_states.get(slot_ID);
+    reader.lock.lock();
+    defer reader.lock.unlock();
+
+    const reader_entry = reader.reader_states.getPtr(slot_ID);
     if (reader_entry == null)
         return pkcs.CKR_SLOT_ID_INVALID;
 
@@ -111,7 +114,10 @@ pub export fn C_GetTokenInfo(
     if (token_info == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    const reader_entry = reader.reader_states.get(slot_id);
+    reader.lock.lock();
+    defer reader.lock.unlock();
+
+    const reader_entry = reader.reader_states.getPtr(slot_id);
     if (reader_entry == null)
         return pkcs.CKR_SLOT_ID_INVALID;
 
@@ -157,7 +163,10 @@ pub export fn C_GetMechanismList(
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    const reader_entry = reader.reader_states.get(slot_id);
+    reader.lock.lockShared();
+    defer reader.lock.unlockShared();
+
+    const reader_entry = reader.reader_states.getPtr(slot_id);
     if (reader_entry == null)
         return pkcs.CKR_SLOT_ID_INVALID;
 
@@ -192,6 +201,9 @@ pub export fn C_GetMechanismInfo(
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+
+    reader.lock.lockShared();
+    defer reader.lock.unlockShared();
 
     const reader_entry = reader.reader_states.get(slot_id);
     if (reader_entry == null)

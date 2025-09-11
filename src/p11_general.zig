@@ -34,6 +34,10 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
         return pkcs.CKR_FUNCTION_FAILED;
     defer state.lock.unlock();
 
+    if (!reader.lock.tryLock())
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer reader.lock.unlock();
+
     if (state.initialized)
         return pkcs.CKR_CRYPTOKI_ALREADY_INITIALIZED;
 
