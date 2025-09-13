@@ -11,7 +11,7 @@ const sc = @cImport({
 });
 
 const object = @import("object.zig");
-const openssl = @import("openssl.zig");
+const certificate = @import("certificate.zig");
 const hasher = @import("hasher.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("reader.zig");
@@ -190,21 +190,18 @@ pub const Session = struct {
                 continue;
             defer allocator.free(certificate_file);
 
-            const certificate = try decompressCertificate(allocator, certificate_file);
-            defer allocator.free(certificate);
-
-            const x509 = openssl.parseX509(certificate) catch
-                continue;
-            defer openssl.freeX509(x509);
+            const certificate_data = try decompressCertificate(allocator, certificate_file);
+            defer allocator.free(certificate_data);
 
             const object_ids = ids[i];
 
-            const cert_objects = openssl.loadObjects(
+            const cert_objects = certificate.loadObjects(
                 allocator,
-                x509,
+                certificate_data,
                 object_ids[0],
                 object_ids[1],
                 object_ids[2],
+                i == 0,
             ) catch
                 continue;
 
@@ -217,8 +214,6 @@ pub const Session = struct {
 
         self.objects = object_list.toOwnedSlice() catch
             return PkcsError.HostMemory;
-
-        std.debug.print("objects: {d}\n", .{self.objects.len});
     }
 };
 
@@ -344,17 +339,17 @@ pub fn closeAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     return err;
 }
 
-fn decompressCertificate(allocator: std.mem.Allocator, certificate: []u8) PkcsError![]u8 {
-    if (certificate.len < 8)
+fn decompressCertificate(allocator: std.mem.Allocator, certificate_data: []u8) PkcsError![]u8 {
+    if (certificate_data.len < 8)
         return PkcsError.GeneralError;
 
-    var list = std.ArrayList(u8).initCapacity(allocator, 2 * certificate.len) catch
+    var list = std.ArrayList(u8).initCapacity(allocator, 2 * certificate_data.len) catch
         return PkcsError.HostMemory;
     defer list.deinit();
 
     const writer = list.writer();
 
-    var cert_stream = std.io.fixedBufferStream(certificate[6..]);
+    var cert_stream = std.io.fixedBufferStream(certificate_data[6..]);
     const stream_reader = cert_stream.reader();
 
     std.compress.zlib.decompress(stream_reader, writer) catch

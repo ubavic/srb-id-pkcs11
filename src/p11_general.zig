@@ -14,7 +14,6 @@ const version = @import("version.zig");
 const state = @import("state.zig");
 const reader = @import("reader.zig");
 const session = @import("session.zig");
-const openssl = @import("openssl.zig");
 const pkcs_error = @import("pkcs_error.zig");
 
 const p11_decryption = @import("p11_decryption.zig");
@@ -66,8 +65,6 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
     reader.reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, reader.ReaderState).init(state.allocator);
     session.initSessions(state.allocator) catch |err|
         return pkcs_error.toRV(err);
-
-    openssl.init();
 
     state.initialized = true;
     return pkcs.CKR_OK;

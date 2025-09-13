@@ -24,7 +24,6 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
 
     lib.linkSystemLibrary("pcsclite");
-    lib.linkSystemLibrary("openssl");
 
     b.installArtifact(lib);
 
