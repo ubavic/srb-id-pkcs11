@@ -2,12 +2,6 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-const pcsc = @cImport({
-    @cInclude("pcsclite.h");
-    @cInclude("winscard.h");
-    @cInclude("wintypes.h");
-});
-
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const reader = @import("reader.zig");
