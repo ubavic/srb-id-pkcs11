@@ -21,9 +21,20 @@ pub fn build(b: *std.Build) void {
     });
 
     lib.addIncludePath(b.path("include"));
-    lib.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
 
-    lib.linkSystemLibrary("pcsclite");
+    switch (target.result.os.tag) {
+        .windows => {
+            lib.linkSystemLibrary("Winscard");
+        },
+        .linux => {
+            lib.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
+            lib.linkSystemLibrary("pcsclite");
+        },
+        .macos => {
+            lib.linkFramework("PCSC");
+        },
+        else => unreachable,
+    }
 
     b.installArtifact(lib);
 

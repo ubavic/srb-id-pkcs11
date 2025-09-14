@@ -2,18 +2,13 @@ const std = @import("std");
 
 const atr = @import("atr.zig");
 const state = @import("state.zig");
+const sc = @import("smart-card_lib.zig").sc;
 
 const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
 const PkcsError = @import("pkcs_error.zig").PkcsError;
-
-const sc = @cImport({
-    @cInclude("pcsclite.h");
-    @cInclude("winscard.h");
-    @cInclude("wintypes.h");
-});
 
 var next_reader_id: pkcs.CK_SLOT_ID = 1;
 

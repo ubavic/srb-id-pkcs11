@@ -4,17 +4,12 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-const pcsc = @cImport({
-    @cInclude("pcsclite.h");
-    @cInclude("winscard.h");
-    @cInclude("wintypes.h");
-});
-
-const version = @import("version.zig");
-const state = @import("state.zig");
-const reader = @import("reader.zig");
-const session = @import("session.zig");
 const pkcs_error = @import("pkcs_error.zig");
+const reader = @import("reader.zig");
+const sc = @import("smart-card_lib.zig").sc;
+const session = @import("session.zig");
+const state = @import("state.zig");
+const version = @import("version.zig");
 
 const p11_decryption = @import("p11_decryption.zig");
 const p11_digest = @import("p11_digest.zig");
@@ -58,8 +53,8 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
         }
     }
 
-    const rv = pcsc.SCardEstablishContext(pcsc.SCARD_SCOPE_SYSTEM, null, null, &state.smart_card_context_handle);
-    if (rv != pcsc.SCARD_S_SUCCESS)
+    const rv = sc.SCardEstablishContext(sc.SCARD_SCOPE_SYSTEM, null, null, &state.smart_card_context_handle);
+    if (rv != sc.SCARD_S_SUCCESS)
         return pkcs.CKR_FUNCTION_FAILED;
 
     reader.reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, reader.ReaderState).init(state.allocator);
@@ -81,8 +76,8 @@ export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    const rv = pcsc.SCardReleaseContext(state.smart_card_context_handle);
-    if (rv != pcsc.SCARD_S_SUCCESS)
+    const rv = sc.SCardReleaseContext(state.smart_card_context_handle);
+    if (rv != sc.SCARD_S_SUCCESS)
         return pkcs.CKR_FUNCTION_FAILED;
 
     return pkcs.CKR_OK;

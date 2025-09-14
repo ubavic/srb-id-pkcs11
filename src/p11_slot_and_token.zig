@@ -4,12 +4,6 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-const sc = @cImport({
-    @cInclude("pcsclite.h");
-    @cInclude("winscard.h");
-    @cInclude("wintypes.h");
-});
-
 const session = @import("session.zig");
 const state = @import("state.zig");
 const reader = @import("reader.zig");

@@ -6,11 +6,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-const sc = @cImport({
-    @cInclude("pcsclite.h");
-    @cInclude("winscard.h");
-    @cInclude("wintypes.h");
-});
+const sc = @import("smart-card_lib.zig").sc;
 
 const apdu = @import("apdu.zig");
 

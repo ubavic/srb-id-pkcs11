@@ -4,12 +4,6 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-const sc = @cImport({
-    @cInclude("pcsclite.h");
-    @cInclude("winscard.h");
-    @cInclude("wintypes.h");
-});
-
 const object = @import("object.zig");
 const certificate = @import("certificate.zig");
 const hasher = @import("hasher.zig");
