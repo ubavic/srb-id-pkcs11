@@ -120,6 +120,28 @@ pub export fn C_GetTokenInfo(
     reader_state.refreshCardPresent(state.smart_card_context_handle) catch |err|
         return pkcs_error.toRV(err);
 
+    @memset(&token_info.?.label, 0);
+    std.mem.copyForwards(u8, &token_info.?.label, "NetSeT's CardEdge Token");
+
+    @memset(&token_info.?.manufacturerID, 0);
+    std.mem.copyForwards(u8, &token_info.?.manufacturerID, "NetSeT Global Solutions");
+
+    @memset(&token_info.?.model, 0);
+    std.mem.copyForwards(u8, &token_info.?.model, "SSCD v1");
+
+    @memset(&token_info.?.serialNumber, 0); // TODO
+
+    token_info.?.ulMinPinLen = 4;
+    token_info.?.ulMaxPinLen = 8;
+    token_info.?.flags = pkcs.CKF_TOKEN_INITIALIZED | pkcs.CKF_LOGIN_REQUIRED | pkcs.CKF_RNG;
+    token_info.?.ulMaxSessionCount = pkcs.CK_EFFECTIVELY_INFINITE;
+    token_info.?.ulMaxSessionCount = pkcs.CK_EFFECTIVELY_INFINITE;
+    session.countSessions(slot_id, &token_info.?.ulSessionCount, &token_info.?.ulRwSessionCount);
+    token_info.?.hardwareVersion.major = 1;
+    token_info.?.hardwareVersion.minor = 0;
+    token_info.?.firmwareVersion.major = 1;
+    token_info.?.firmwareVersion.minor = 0;
+
     token_info.?.ulTotalPublicMemory = pkcs.CK_UNAVAILABLE_INFORMATION;
     token_info.?.ulFreePublicMemory = pkcs.CK_UNAVAILABLE_INFORMATION;
     token_info.?.ulTotalPrivateMemory = pkcs.CK_UNAVAILABLE_INFORMATION;

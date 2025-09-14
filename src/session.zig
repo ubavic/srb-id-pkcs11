@@ -354,3 +354,20 @@ fn decompressCertificate(allocator: std.mem.Allocator, certificate_data: []u8) P
 
     return decompressed_certificate;
 }
+
+pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sessions: *c_ulong) void {
+    lock.lockShared();
+    defer lock.unlockShared();
+
+    total_sessions.* = 0;
+    rw_sessions.* = 0;
+
+    var it = sessions.iterator();
+    while (it.next()) |entry| {
+        if (entry.value_ptr.*.reader_id == slot_id) {
+            total_sessions.* += 1;
+            if (entry.value_ptr.write_enabled)
+                rw_sessions.* += 1;
+        }
+    }
+}
