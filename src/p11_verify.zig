@@ -74,23 +74,33 @@ pub export fn C_Verify(
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
+    defer current_session.resetSignSession();
 
     current_session.assertOperation(session.Operation.Verify) catch |err|
         return pkcs_error.toRV(err);
 
-    if (current_session.multipart_operation) {
-        current_session.resetSignSession();
+    if (data == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
+
+    if (signature == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
+
+    if (current_session.multipart_operation)
         return pkcs.CKR_FUNCTION_CANCELED;
-    }
 
-    //TODO: Implementation
+    if (signature_len != current_session.signatureSize())
+        return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    _ = data;
-    _ = data_len;
-    _ = signature;
-    _ = signature_len;
+    current_session.signUpdate(data.?[0..data_len]);
 
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    const computed_signature = current_session.signFinalize() catch
+        return pkcs.CKR_HOST_MEMORY;
+    defer current_session.allocator.free(computed_signature);
+
+    if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
+        return pkcs.CKR_SIGNATURE_INVALID;
+
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_VerifyUpdate(
@@ -112,10 +122,10 @@ pub export fn C_VerifyUpdate(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    //TODO: Implementation
+    current_session.multipart_operation = true;
+    current_session.signUpdate(part.?[0..part_len]);
 
-    _ = part_len;
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_VerifyFinal(
@@ -129,14 +139,25 @@ pub export fn C_VerifyFinal(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
+    defer current_session.resetSignSession();
+
     current_session.assertOperation(session.Operation.Verify) catch |err|
         return pkcs_error.toRV(err);
 
-    //TODO: Implementation
+    if (signature == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
 
-    _ = signature;
-    _ = signature_len;
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    if (signature_len != current_session.signatureSize())
+        return pkcs.CKR_SIGNATURE_LEN_RANGE;
+
+    const computed_signature = current_session.signFinalize() catch
+        return pkcs.CKR_HOST_MEMORY;
+    defer current_session.allocator.free(computed_signature);
+
+    if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
+        return pkcs.CKR_SIGNATURE_INVALID;
+
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_VerifyRecoverInit(

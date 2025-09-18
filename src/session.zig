@@ -106,21 +106,6 @@ pub const Session = struct {
         unreachable;
     }
 
-    pub fn verifyUpdate(self: *Session, data: []const u8) void {
-        _ = self;
-        _ = data;
-        unreachable;
-    }
-
-    pub fn verifyFinalize(
-        self: *Session,
-        allocator: std.mem.Allocator,
-    ) std.mem.Allocator.Error![]u8 {
-        _ = self;
-        _ = allocator;
-        unreachable;
-    }
-
     pub fn findObjects(
         self: *Session,
         attributes: []object.Attribute,
