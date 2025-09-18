@@ -41,7 +41,6 @@ pub const Session = struct {
     multipart_operation: bool = false,
     operation_key: pkcs.CK_OBJECT_HANDLE = 0,
     hasher: hasher.Hasher = undefined,
-    pin: [8]u8 = undefined,
     objects: []object.Object,
     search_index: usize = 0,
     found_objects: ?[]pkcs.CK_OBJECT_HANDLE = null,
