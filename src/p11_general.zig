@@ -22,6 +22,7 @@ const p11_random = @import("p11_random.zig");
 const p11_session = @import("p11_session.zig");
 const p11_sign = @import("p11_sign.zig");
 const p11_slot_and_token = @import("p11_slot_and_token.zig");
+const p11_verify = @import("p11_verify.zig");
 
 export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
     if (!state.lock.tryLock())
@@ -158,12 +159,12 @@ var functionList = pkcs.CK_FUNCTION_LIST{
     .C_SignFinal = p11_sign.C_SignFinal,
     .C_SignRecoverInit = p11_sign.C_SignRecoverInit,
     .C_SignRecover = p11_sign.C_SignRecover,
-    .C_VerifyInit = p11_sign.C_VerifyInit,
-    .C_Verify = p11_sign.C_Verify,
-    .C_VerifyUpdate = p11_sign.C_VerifyUpdate,
-    .C_VerifyFinal = p11_sign.C_VerifyFinal,
-    .C_VerifyRecoverInit = p11_sign.C_VerifyRecoverInit,
-    .C_VerifyRecover = p11_sign.C_VerifyRecover,
+    .C_VerifyInit = p11_verify.C_VerifyInit,
+    .C_Verify = p11_verify.C_Verify,
+    .C_VerifyUpdate = p11_verify.C_VerifyUpdate,
+    .C_VerifyFinal = p11_verify.C_VerifyFinal,
+    .C_VerifyRecoverInit = p11_verify.C_VerifyRecoverInit,
+    .C_VerifyRecover = p11_verify.C_VerifyRecover,
     .C_DigestEncryptUpdate = p11_dual_functions.C_DigestEncryptUpdate,
     .C_DecryptDigestUpdate = p11_dual_functions.C_DecryptDigestUpdate,
     .C_SignEncryptUpdate = p11_dual_functions.C_SignEncryptUpdate,

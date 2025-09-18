@@ -9,7 +9,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-pub export fn C_SignInit(
+pub export fn C_VerifyInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -38,14 +38,14 @@ pub export fn C_SignInit(
     for (current_session.objects) |current_object| {
         if (current_object.handle() == key) {
             switch (current_object) {
-                .private_key => {
-                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+                .public_key => {
+                    // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                    //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 
-                    if (current_object.private_key.sign != pkcs.CK_TRUE)
+                    if (current_object.public_key.verify != pkcs.CK_TRUE)
                         return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
                 },
-                .certificate, .public_key => return pkcs.CKR_KEY_HANDLE_INVALID,
+                .certificate, .private_key => return pkcs.CKR_KEY_HANDLE_INVALID,
             }
 
             key_found = true;
@@ -57,17 +57,17 @@ pub export fn C_SignInit(
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
     current_session.operation_key = key;
-    current_session.operation = session.Operation.Sign;
+    current_session.operation = session.Operation.Verify;
 
-    return pkcs.CKR_OK;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn C_Sign(
+pub export fn C_Verify(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    data: ?[*]pkcs.CK_BYTE,
+    data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
-    signature: ?[*]pkcs.CK_BYTE,
-    signature_len: ?*pkcs.CK_ULONG,
+    signature: ?[*]const pkcs.CK_BYTE,
+    signature_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared();
     defer state.lock.unlockShared();
@@ -75,7 +75,7 @@ pub export fn C_Sign(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Sign) catch |err|
+    current_session.assertOperation(session.Operation.Verify) catch |err|
         return pkcs_error.toRV(err);
 
     if (current_session.multipart_operation) {
@@ -83,45 +83,19 @@ pub export fn C_Sign(
         return pkcs.CKR_FUNCTION_CANCELED;
     }
 
-    if (signature_len == null) {
-        current_session.resetSignSession();
-        return pkcs.CKR_ARGUMENTS_BAD;
-    }
+    //TODO: Implementation
 
-    const required_signature_size = current_session.signatureSize();
-    if (signature == null) {
-        signature_len.?.* = required_signature_size;
-        return pkcs.CKR_OK;
-    }
+    _ = data;
+    _ = data_len;
+    _ = signature;
+    _ = signature_len;
 
-    if (data == null) {
-        current_session.resetSignSession();
-        return pkcs.CKR_ARGUMENTS_BAD;
-    }
-
-    if (signature_len.?.* < required_signature_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
-
-    const casted_data: [*]u8 = @ptrCast(data);
-    current_session.signUpdate(casted_data[0..data_len]);
-    const computed_signature = current_session.signFinalize() catch {
-        current_session.resetSignSession();
-        return pkcs.CKR_HOST_MEMORY;
-    };
-
-    const signature_casted: [*]u8 = @ptrCast(signature);
-
-    @memcpy(signature_casted, computed_signature);
-    current_session.allocator.free(computed_signature);
-
-    current_session.resetSignSession();
-
-    return pkcs.CKR_OK;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn C_SignUpdate(
+pub export fn C_VerifyUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    part: ?[*]pkcs.CK_BYTE,
+    part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared();
@@ -130,7 +104,7 @@ pub export fn C_SignUpdate(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Sign) catch |err|
+    current_session.assertOperation(session.Operation.Verify) catch |err|
         return pkcs_error.toRV(err);
 
     if (part == null) {
@@ -138,18 +112,16 @@ pub export fn C_SignUpdate(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    current_session.multipart_operation = true;
+    //TODO: Implementation
 
-    const casted_part: [*]u8 = @ptrCast(part);
-    current_session.signUpdate(casted_part[0..part_len]);
-
-    return pkcs.CKR_OK;
+    _ = part_len;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn C_SignFinal(
+pub export fn C_VerifyFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    signature: ?[*]pkcs.CK_BYTE,
-    signature_len: ?*pkcs.CK_ULONG,
+    signature: ?[*]const pkcs.CK_BYTE,
+    signature_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared();
     defer state.lock.unlockShared();
@@ -157,33 +129,17 @@ pub export fn C_SignFinal(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Sign) catch |err|
+    current_session.assertOperation(session.Operation.Verify) catch |err|
         return pkcs_error.toRV(err);
 
-    const required_signature_size = current_session.signatureSize();
-    if (signature == null) {
-        signature_len.?.* = required_signature_size;
-        return pkcs.CKR_OK;
-    }
+    //TODO: Implementation
 
-    if (signature_len.?.* < required_signature_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
-
-    const computed_signature = current_session.signFinalize() catch {
-        current_session.resetSignSession();
-        return pkcs.CKR_HOST_MEMORY;
-    };
-
-    const signature_casted: [*]u8 = @ptrCast(signature);
-
-    @memcpy(signature_casted, computed_signature);
-    current_session.allocator.free(computed_signature);
-
-    current_session.resetSignSession();
-    return pkcs.CKR_OK;
+    _ = signature;
+    _ = signature_len;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn C_SignRecoverInit(
+pub export fn C_VerifyRecoverInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -195,18 +151,18 @@ pub export fn C_SignRecoverInit(
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
-pub export fn C_SignRecover(
+pub export fn C_VerifyRecover(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    data: ?[*]const pkcs.CK_BYTE,
-    data_len: pkcs.CK_ULONG,
-    signature: ?[*]pkcs.CK_BYTE,
-    signature_len: ?*pkcs.CK_ULONG,
+    signature: ?[*]const pkcs.CK_BYTE,
+    signature_len: pkcs.CK_ULONG,
+    data: ?[*]pkcs.CK_BYTE,
+    data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     _ = session_handle;
-    _ = data;
-    _ = data_len;
     _ = signature;
     _ = signature_len;
+    _ = data;
+    _ = data_len;
 
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
