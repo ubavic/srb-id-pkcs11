@@ -233,6 +233,7 @@ pub const PublicKeyObject = struct {
         allocator.free(self.allowed_mechanisms);
         allocator.free(self.subject);
         allocator.free(self.public_key_info);
+        allocator.free(self.wrap_template);
     }
 
     pub fn getAttributeValue(self: *const PublicKeyObject, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {

@@ -22,7 +22,7 @@ pub fn loadObjects(
     const parsed = Certificate.parse(cert) catch
         return PkcsError.GeneralError;
 
-    const id = try allocEmptySlice(allocator); // TODO
+    const id = try allocEmptySlice(u8, allocator); // TODO
     errdefer allocator.free(id);
 
     const certificate_value = try clone(allocator, buffer);
@@ -33,15 +33,15 @@ pub fn loadObjects(
     errdefer allocator.free(serial_number);
 
     // empty on the original token
-    const certificate_url = try allocEmptySlice(allocator);
+    const certificate_url = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(certificate_url);
-    const public_key_hash = try allocEmptySlice(allocator);
+    const public_key_hash = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_hash);
-    const check_value = try allocEmptySlice(allocator);
+    const check_value = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(check_value);
 
     // invalid on the original token
-    const public_key_info = try allocEmptySlice(allocator);
+    const public_key_info = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_info);
     const name_hash_algorithm = 0;
 
@@ -81,82 +81,92 @@ pub fn loadObjects(
 
     const priv_id = try clone(allocator, id);
     errdefer allocator.free(priv_id);
-    const private_key_label = try allocEmptySlice(allocator);
+    const private_key_label = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_label);
-    const private_key_subject = try allocEmptySlice(allocator);
+    const private_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_subject);
+    const always_authenticate = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
+    errdefer allocator.free(always_authenticate);
 
     // invalid on original token
-    const priv_public_key_info = try allocEmptySlice(allocator);
+    const priv_public_key_info = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(priv_public_key_info);
+    const private_allowed_mechanisms: []c_ulong = try allocEmptySlice(c_ulong, allocator);
+    errdefer allocator.free(private_allowed_mechanisms);
+    const unwrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
+    errdefer allocator.free(unwrap_template);
 
     const private_key_object: object.PrivateKeyObject = object.PrivateKeyObject{
         .handle = private_key_handle,
         .class = pkcs.CKO_PRIVATE_KEY,
         .token = pkcs.CK_TRUE,
         .private = pkcs.CK_TRUE,
-        .modifiable = pkcs.CK_FALSE,
+        .modifiable = pkcs.CK_TRUE,
         .label = private_key_label,
-        .copyable = pkcs.CK_FALSE,
-        .destroyable = pkcs.CK_FALSE,
-        .key_type = undefined,
+        .copyable = pkcs.CK_FALSE, // invalid on original token
+        .destroyable = pkcs.CK_FALSE, // invalid on original token
+        .key_type = pkcs.CKK_RSA,
         .id = priv_id,
         .start_date = pkcs.CK_DATE{},
         .end_date = pkcs.CK_DATE{},
         .derive = pkcs.CK_FALSE,
         .local = pkcs.CK_TRUE,
-        .key_gen_mechanism = undefined,
-        .allowed_mechanisms = undefined,
+        .key_gen_mechanism = 0, // invalid on original token
+        .allowed_mechanisms = private_allowed_mechanisms,
         .subject = private_key_subject,
-        .sensitive = undefined,
-        .decrypt = pkcs.CK_TRUE,
+        .sensitive = pkcs.CK_TRUE,
+        .decrypt = if (alow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
         .sign = pkcs.CK_TRUE,
-        .sign_recover = undefined,
-        .unwrap = undefined,
+        .sign_recover = pkcs.CK_FALSE,
+        .unwrap = pkcs.CK_FALSE,
         .extractable = pkcs.CK_FALSE,
         .always_sensitive = pkcs.CK_TRUE,
         .never_extractable = pkcs.CK_TRUE,
-        .wrap_with_trusted = undefined,
-        .unwrap_template = undefined,
-        .always_authenticate = undefined,
+        .wrap_with_trusted = if (alow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
+        .unwrap_template = unwrap_template,
+        .always_authenticate = always_authenticate,
         .public_key_info = priv_public_key_info,
     };
 
     const pub_id = try clone(allocator, id);
     errdefer allocator.free(pub_id);
-    const public_key_label = try allocEmptySlice(allocator);
+    const public_key_label = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_label);
-    const public_key_subject = try allocEmptySlice(allocator);
+    const public_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_subject);
 
     // invalid on original token
-    const pub_public_key_info = try allocEmptySlice(allocator);
+    const pub_public_key_info = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(pub_public_key_info);
+    const public_allowed_mechanisms: []c_ulong = try allocEmptySlice(c_ulong, allocator);
+    errdefer allocator.free(public_allowed_mechanisms);
+    const wrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
+    errdefer allocator.free(wrap_template);
 
     const public_key_object: object.PublicKeyObject = object.PublicKeyObject{
         .handle = public_key_handle,
         .class = pkcs.CKO_PUBLIC_KEY,
         .token = pkcs.CK_TRUE,
         .private = pkcs.CK_FALSE,
-        .modifiable = undefined,
+        .modifiable = pkcs.CK_TRUE,
         .label = public_key_label,
-        .copyable = undefined,
-        .destroyable = undefined,
-        .key_type = undefined,
+        .copyable = pkcs.CK_FALSE, // invalid on original token
+        .destroyable = pkcs.CK_FALSE, // invalid on original token
+        .key_type = pkcs.CKK_RSA,
         .id = pub_id,
         .start_date = pkcs.CK_DATE{},
         .end_date = pkcs.CK_DATE{},
         .derive = pkcs.CK_FALSE,
         .local = pkcs.CK_TRUE,
-        .key_gen_mechanism = undefined,
-        .allowed_mechanisms = undefined,
+        .key_gen_mechanism = 0, // invalid on original token
+        .allowed_mechanisms = public_allowed_mechanisms,
         .subject = public_key_subject,
         .encrypt = if (alow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
         .verify = pkcs.CK_TRUE,
         .verify_recover = pkcs.CK_FALSE,
         .wrap = pkcs.CK_FALSE,
         .trusted = pkcs.CK_FALSE,
-        .wrap_template = undefined,
+        .wrap_template = wrap_template,
         .public_key_info = pub_public_key_info,
     };
 
@@ -167,8 +177,8 @@ pub fn loadObjects(
     return [3]object.Object{ object1, object2, object3 };
 }
 
-fn allocEmptySlice(allocator: std.mem.Allocator) PkcsError![]u8 {
-    return allocator.alloc(u8, 0) catch
+fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T {
+    return allocator.alloc(T, 0) catch
         return PkcsError.HostMemory;
 }
 
