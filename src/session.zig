@@ -39,7 +39,7 @@ pub const Session = struct {
     write_enabled: bool,
     operation: Operation = Operation.None,
     multipart_operation: bool = false,
-    key: pkcs.CK_OBJECT_HANDLE = 0,
+    operation_key: pkcs.CK_OBJECT_HANDLE = 0,
     hasher: hasher.Hasher = undefined,
     pin: [8]u8 = undefined,
     objects: []object.Object,
@@ -79,7 +79,7 @@ pub const Session = struct {
     }
 
     pub fn resetSignSession(self: *Session) void {
-        self.key = 0;
+        self.operation_key = 0;
         self.resetDigestSession();
     }
 

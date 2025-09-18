@@ -26,43 +26,13 @@ pub export fn C_SignInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    var hash_mechanism: hasher.HasherType = undefined;
-    var use_hasher = false;
-    switch (mechanism.?.*.mechanism) {
-        pkcs.CKM_MD5_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.md5;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA1_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha1;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA256_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha256;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA384_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha384;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA512_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha512;
-            use_hasher = true;
-        },
-        pkcs.CKM_RSA_PKCS,
-        pkcs.CKM_RSA_X_509,
-        => {
-            // TODO: Implement these algorithms
-            use_hasher = false;
-            return pkcs.CKR_MECHANISM_INVALID;
-        },
-        else => return pkcs.CKR_MECHANISM_INVALID,
-    }
+    const hash_mechanism = hasher.fromMechanism(mechanism.?.mechanism) catch |err|
+        return pkcs_error.toRV(err);
 
-    if (use_hasher) {
-        current_session.hasher = hasher.createAndInit(hash_mechanism, current_session.allocator) catch
+    if (hash_mechanism != null) {
+        current_session.hasher = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
             return pkcs.CKR_HOST_MEMORY;
-    }
+    } else return pkcs.CKR_MECHANISM_INVALID;
 
     var key_found = false;
     for (current_session.objects) |current_object| {
@@ -86,7 +56,7 @@ pub export fn C_SignInit(
     if (!key_found)
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    current_session.key = key;
+    current_session.operation_key = key;
     current_session.operation = session.Operation.Sign;
 
     return pkcs.CKR_OK;
@@ -218,38 +188,11 @@ pub export fn C_SignRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    if (true)
-        return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    _ = session_handle;
+    _ = mechanism;
+    _ = key;
 
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
-
-    const current_session = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
-
-    var key_found = false;
-    for (current_session.objects) |current_object| {
-        if (current_object.handle() == key) {
-            switch (current_object) {
-                .private_key => {
-                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
-
-                    if (current_object.private_key.sign_recover != pkcs.CK_TRUE)
-                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-                },
-                .certificate, .public_key => return pkcs.CKR_KEY_HANDLE_INVALID,
-            }
-
-            key_found = true;
-            break;
-        }
-    }
-
-    if (!key_found)
-        return pkcs.CKR_KEY_HANDLE_INVALID;
-
-    return pkcs.CKR_OK;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
 pub export fn C_SignRecover(
@@ -259,18 +202,13 @@ pub export fn C_SignRecover(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
-
-    _ = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
-
+    _ = session_handle;
     _ = data;
     _ = data_len;
     _ = signature;
     _ = signature_len;
 
-    return pkcs.CKR_OPERATION_NOT_INITIALIZED;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
 pub export fn C_VerifyInit(
@@ -290,51 +228,21 @@ pub export fn C_VerifyInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    var hash_mechanism: hasher.HasherType = undefined;
-    var use_hasher = false;
-    switch (mechanism.?.*.mechanism) {
-        pkcs.CKM_MD5_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.md5;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA1_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha1;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA256_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha256;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA384_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha384;
-            use_hasher = true;
-        },
-        pkcs.CKM_SHA512_RSA_PKCS => {
-            hash_mechanism = hasher.HasherType.sha512;
-            use_hasher = true;
-        },
-        pkcs.CKM_RSA_PKCS,
-        pkcs.CKM_RSA_X_509,
-        => {
-            // TODO: Implement these algorithms
-            use_hasher = false;
-            return pkcs.CKR_MECHANISM_INVALID;
-        },
-        else => return pkcs.CKR_MECHANISM_INVALID,
-    }
+    const hash_mechanism = hasher.fromMechanism(mechanism.?.mechanism) catch |err|
+        return pkcs_error.toRV(err);
 
-    if (use_hasher) {
-        current_session.hasher = hasher.createAndInit(hash_mechanism, current_session.allocator) catch
+    if (hash_mechanism != null) {
+        current_session.hasher = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
             return pkcs.CKR_HOST_MEMORY;
-    }
+    } else return pkcs.CKR_MECHANISM_INVALID;
 
     var key_found = false;
     for (current_session.objects) |current_object| {
         if (current_object.handle() == key) {
             switch (current_object) {
                 .public_key => {
-                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+                    // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                    //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 
                     if (current_object.public_key.verify != pkcs.CK_TRUE)
                         return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
@@ -350,7 +258,7 @@ pub export fn C_VerifyInit(
     if (!key_found)
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    current_session.key = key;
+    current_session.operation_key = key;
     current_session.operation = session.Operation.Verify;
 
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
@@ -438,38 +346,11 @@ pub export fn C_VerifyRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    if (true)
-        return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    _ = session_handle;
+    _ = mechanism;
+    _ = key;
 
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
-
-    const current_session = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
-
-    var key_found = false;
-    for (current_session.objects) |current_object| {
-        if (current_object.handle() == key) {
-            switch (current_object) {
-                .public_key => {
-                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
-
-                    if (current_object.public_key.verify_recover != pkcs.CK_TRUE)
-                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-                },
-                .certificate, .private_key => return pkcs.CKR_KEY_HANDLE_INVALID,
-            }
-
-            key_found = true;
-            break;
-        }
-    }
-
-    if (!key_found)
-        return pkcs.CKR_KEY_HANDLE_INVALID;
-
-    return pkcs.CKR_OK;
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
 
 pub export fn C_VerifyRecover(
@@ -479,15 +360,11 @@ pub export fn C_VerifyRecover(
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
-
-    _ = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
-
+    _ = session_handle;
     _ = signature;
     _ = signature_len;
     _ = data;
     _ = data_len;
-    return pkcs.CKR_OPERATION_NOT_INITIALIZED;
+
+    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }

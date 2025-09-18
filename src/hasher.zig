@@ -2,6 +2,10 @@ const std = @import("std");
 
 const PkcsError = @import("pkcs_error.zig").PkcsError;
 
+const pkcs = @cImport({
+    @cInclude("pkcs.h");
+});
+
 pub const HasherType = enum { md5, sha1, sha256, sha384, sha512 };
 
 pub const Hasher = struct {
@@ -124,4 +128,16 @@ pub fn createAndInit(
     }
 
     return hasher;
+}
+
+pub fn fromMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!?HasherType {
+    return switch (mechanism) {
+        pkcs.CKM_MD5_RSA_PKCS => HasherType.md5,
+        pkcs.CKM_SHA1_RSA_PKCS => HasherType.sha1,
+        pkcs.CKM_SHA256_RSA_PKCS => HasherType.sha256,
+        pkcs.CKM_SHA384_RSA_PKCS => HasherType.sha384,
+        pkcs.CKM_SHA512_RSA_PKCS => HasherType.sha512,
+        pkcs.CKM_RSA_PKCS, pkcs.CKM_RSA_X_509 => null,
+        else => return PkcsError.MechanismInvalid,
+    };
 }
