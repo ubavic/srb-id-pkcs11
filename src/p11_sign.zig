@@ -102,17 +102,14 @@ pub export fn C_Sign(
     if (signature_len.?.* < required_signature_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
 
-    const casted_data: [*]u8 = @ptrCast(data);
-    current_session.signUpdate(casted_data[0..data_len]);
+    current_session.signUpdate(data.?[0..data_len]);
     const computed_signature = current_session.signFinalize() catch {
         current_session.resetSignSession();
         return pkcs.CKR_HOST_MEMORY;
     };
+    defer current_session.allocator.free(computed_signature);
 
-    const signature_casted: [*]u8 = @ptrCast(signature);
-
-    @memcpy(signature_casted, computed_signature);
-    current_session.allocator.free(computed_signature);
+    @memcpy(signature.?, computed_signature);
 
     current_session.resetSignSession();
 
@@ -139,9 +136,7 @@ pub export fn C_SignUpdate(
     }
 
     current_session.multipart_operation = true;
-
-    const casted_part: [*]u8 = @ptrCast(part);
-    current_session.signUpdate(casted_part[0..part_len]);
+    current_session.signUpdate(part.?[0..part_len]);
 
     return pkcs.CKR_OK;
 }
@@ -169,17 +164,14 @@ pub export fn C_SignFinal(
     if (signature_len.?.* < required_signature_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
 
-    const computed_signature = current_session.signFinalize() catch {
-        current_session.resetSignSession();
+    defer current_session.resetSignSession();
+
+    const computed_signature = current_session.signFinalize() catch
         return pkcs.CKR_HOST_MEMORY;
-    };
 
-    const signature_casted: [*]u8 = @ptrCast(signature);
-
-    @memcpy(signature_casted, computed_signature);
+    @memcpy(signature.?, computed_signature);
     current_session.allocator.free(computed_signature);
 
-    current_session.resetSignSession();
     return pkcs.CKR_OK;
 }
 
