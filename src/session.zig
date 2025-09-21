@@ -4,6 +4,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
+const consts = @import("consts.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
 const certificate = @import("certificate.zig");
@@ -129,9 +130,11 @@ pub const Session = struct {
             [_]u8{ 0x71, 0x03 },
         };
 
-        const ids: [2][3]c_ulong = [2][3]c_ulong{
-            [_]c_ulong{ 0x80000028, 0x80000010, 0x80000008 },
-            [_]c_ulong{ 0x80000030, 0x80000020, 0x80000018 },
+        // TODO determine handles of objects when only the auth cert is present on token
+
+        const ids = [_]consts.ObjectConstants{
+            consts.AuthCert,
+            consts.SignCert,
         };
 
         for (files, 0..) |file, i| {
@@ -142,14 +145,12 @@ pub const Session = struct {
             const certificate_data = try decompressCertificate(allocator, certificate_file);
             defer allocator.free(certificate_data);
 
-            const object_ids = ids[i];
-
             const cert_objects = certificate.loadObjects(
                 allocator,
                 certificate_data,
-                object_ids[0],
-                object_ids[1],
-                object_ids[2],
+                ids[i].certificate_handle,
+                ids[i].private_key_handle,
+                ids[i].public_key_handle,
                 i == 0,
             ) catch
                 continue;

@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const consts = @import("consts.zig");
 const operation = @import("operation.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
@@ -58,11 +59,14 @@ pub export fn C_VerifyInit(
     if (!key_found)
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
+    const private_key_handle = consts.getPrivateKeyFormPublicKey(key) catch |err|
+        return pkcs_error.toRV(err);
+
     current_session.operation = operation.Operation{
         .verify = operation.Verify{
             .hasher = hash,
             .multipart_operation = false,
-            .private_key = key,
+            .private_key = private_key_handle,
         },
     };
 
@@ -107,7 +111,10 @@ pub export fn C_Verify(
         return pkcs.CKR_HOST_MEMORY;
     defer current_session.allocator.free(sign_request);
 
-    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
+        return pkcs_error.toRV(err);
+
+    const computed_signature = current_session.card.sign(key_id, sign_request) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
@@ -172,7 +179,10 @@ pub export fn C_VerifyFinal(
         return pkcs.CKR_HOST_MEMORY;
     defer current_session.allocator.free(sign_request);
 
-    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
+        return pkcs_error.toRV(err);
+
+    const computed_signature = current_session.card.sign(key_id, sign_request) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 

@@ -1,7 +1,8 @@
 const std = @import("std");
 
-const pkcs_error = @import("pkcs_error.zig");
+const consts = @import("consts.zig");
 const operation = @import("operation.zig");
+const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
 const hasher = @import("hasher.zig");
@@ -117,7 +118,10 @@ pub export fn C_Sign(
         return pkcs.CKR_HOST_MEMORY;
     defer current_session.allocator.free(sign_request);
 
-    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
+        return pkcs_error.toRV(err);
+
+    const computed_signature = current_session.card.sign(key_id, sign_request) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
@@ -184,7 +188,10 @@ pub export fn C_SignFinal(
         return pkcs.CKR_HOST_MEMORY;
     defer current_session.allocator.free(sign_request);
 
-    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
+        return pkcs_error.toRV(err);
+
+    const computed_signature = current_session.card.sign(key_id, sign_request) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 

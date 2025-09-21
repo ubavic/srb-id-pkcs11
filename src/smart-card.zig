@@ -235,10 +235,10 @@ pub const Card = struct {
 
     pub fn sign(
         self: *const Card,
-        key_name: u8,
+        key_id: u8,
         sign_request: []u8,
     ) PkcsError![]u8 {
-        _ = key_name;
+        _ = key_id;
         _ = sign_request;
         _ = self;
 
