@@ -83,6 +83,9 @@ pub const Session = struct {
         for (self.objects) |current_object| {
             var matches = true;
 
+            if (current_object.private() and !self.loggedIn())
+                continue;
+
             for (attributes) |attribute| {
                 const has_attribute_value = try current_object.hasAttributeValue(self.allocator, attribute);
 
@@ -92,10 +95,9 @@ pub const Session = struct {
                 }
             }
 
-            if (matches) {
+            if (matches)
                 object_list.append(current_object.handle()) catch
                     return PkcsError.HostMemory;
-            }
         }
 
         return object_list.toOwnedSlice() catch
@@ -104,9 +106,11 @@ pub const Session = struct {
 
     pub fn getObject(self: *Session, object_handle: pkcs.CK_OBJECT_HANDLE) PkcsError!*object.Object {
         for (self.objects) |*current_object| {
-            if (current_object.handle() == object_handle) {
+            if (current_object.private() and !self.loggedIn())
+                break;
+
+            if (current_object.handle() == object_handle)
                 return current_object;
-            }
         }
 
         return PkcsError.ObjectHandleInvalid;
@@ -152,7 +156,7 @@ pub const Session = struct {
 
             for (cert_objects) |o| {
                 object_list.append(o) catch {
-                    // deinit o;
+                    // TODO deinit o;
                 };
             }
         }

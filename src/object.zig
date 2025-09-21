@@ -49,6 +49,14 @@ pub const Object = union(enum) {
         return std.mem.eql(u8, object_attribute.value, attribute.value);
     }
 
+    pub fn private(self: *const Object) bool {
+        return switch (self.*) {
+            .certificate => |o| o.private == pkcs.CK_TRUE,
+            .private_key => |o| o.private == pkcs.CK_TRUE,
+            .public_key => |o| o.private == pkcs.CK_TRUE,
+        };
+    }
+
     pub fn deinit(self: *const Object, allocator: std.mem.Allocator) void {
         switch (self.*) {
             .certificate => |o| o.deinit(allocator),
