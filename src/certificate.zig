@@ -221,3 +221,25 @@ fn printHex(data: []const u8) void {
     }
     std.debug.print("\n\n", .{});
 }
+
+pub fn decompressCertificate(allocator: std.mem.Allocator, certificate_data: []u8) PkcsError![]u8 {
+    if (certificate_data.len < 8)
+        return PkcsError.GeneralError;
+
+    var list = std.ArrayList(u8).initCapacity(allocator, 2 * certificate_data.len) catch
+        return PkcsError.HostMemory;
+    defer list.deinit();
+
+    const writer = list.writer();
+
+    var cert_stream = std.io.fixedBufferStream(certificate_data[6..]);
+    const stream_reader = cert_stream.reader();
+
+    std.compress.zlib.decompress(stream_reader, writer) catch
+        return PkcsError.GeneralError;
+
+    const decompressed_certificate = list.toOwnedSlice() catch
+        return PkcsError.HostMemory;
+
+    return decompressed_certificate;
+}
