@@ -87,6 +87,12 @@ pub export fn C_GetSessionInfo(
     session_info.?.slotID = current_session.reader_id;
     session_info.?.flags = pkcs.CKF_SERIAL_SESSION | (if (current_session.write_enabled) pkcs.CKF_RW_SESSION else 0);
 
+    if (current_session.loggedIn()) {
+        session_info.?.state = if (current_session.write_enabled) pkcs.CKS_RW_USER_FUNCTIONS else pkcs.CKS_RO_USER_FUNCTIONS;
+    } else {
+        session_info.?.state = if (current_session.write_enabled) pkcs.CKS_RW_PUBLIC_SESSION else pkcs.CKS_RO_PUBLIC_SESSION;
+    }
+
     return pkcs.CKR_OK;
 }
 
