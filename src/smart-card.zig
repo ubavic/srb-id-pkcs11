@@ -235,16 +235,38 @@ pub const Card = struct {
 
     pub fn sign(
         self: *const Card,
+        allocator: std.mem.Allocator,
         key_id: u8,
         sign_request: []u8,
     ) PkcsError![]u8 {
-        _ = key_id;
-        _ = sign_request;
-        _ = self;
+        const body = [_]u8{ 0x80, 0x01, 0x02, 0x84, 0x02, 0x60, key_id };
+        const select_key_data_unit = apdu.build(allocator, 0, 0x22, 0x41, 0xb6, body[0..body.len], 0) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(select_key_data_unit);
 
-        // TODO implementation
+        const select_key_response = try self.transmit(allocator, select_key_data_unit);
+        defer allocator.free(select_key_response);
 
-        return PkcsError.FunctionFailed;
+        if (!responseOK(select_key_response))
+            return PkcsError.GeneralError;
+
+        const sign_request_data_unit = apdu.build(allocator, 0, 0x22, 0x41, 0xb6, sign_request, 0x100) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(select_key_data_unit);
+
+        const sign_request_response = try self.transmit(allocator, sign_request_data_unit);
+        defer allocator.free(sign_request_response);
+        if (!responseOK(select_key_response))
+            return PkcsError.GeneralError;
+
+        if (sign_request_response.len <= 2)
+            return PkcsError.GeneralError;
+
+        const signature = allocator.alloc(u8, sign_request_response.len - 2) catch
+            return PkcsError.HostMemory;
+        std.mem.copyForwards(u8, signature, sign_request_response[0 .. sign_request_response.len - 2]);
+
+        return signature;
     }
 };
 

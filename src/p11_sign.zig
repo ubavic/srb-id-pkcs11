@@ -121,7 +121,7 @@ pub export fn C_Sign(
     const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
         return pkcs_error.toRV(err);
 
-    const computed_signature = current_session.card.sign(key_id, sign_request) catch |err|
+    const computed_signature = current_session.card.sign(current_session.allocator, key_id, sign_request) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
@@ -191,7 +191,7 @@ pub export fn C_SignFinal(
     const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
         return pkcs_error.toRV(err);
 
-    const computed_signature = current_session.card.sign(key_id, sign_request) catch |err|
+    const computed_signature = current_session.card.sign(current_session.allocator, key_id, sign_request) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
