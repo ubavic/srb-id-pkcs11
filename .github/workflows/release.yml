@@ -30,8 +30,7 @@ jobs:
           curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
       - name: Test
         run: |
-          zig test src/smart-card.zig
-          zig test src/apdu.zig
+          zig build test
 
   buildLinux:
     runs-on: ubuntu-latest

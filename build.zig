@@ -20,32 +20,37 @@ pub fn build(b: *std.Build) void {
         .version = semver,
     });
 
+    const lib_test = b.addTest(.{
+        .root_source_file = b.path("src/p11_general.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     lib.addIncludePath(b.path("include"));
+    lib_test.addIncludePath(b.path("include"));
 
     switch (target.result.os.tag) {
         .windows => {
             lib.linkSystemLibrary("Winscard");
+            lib_test.linkSystemLibrary("Winscard");
         },
         .linux => {
             lib.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
             lib.linkSystemLibrary("pcsclite");
+            lib_test.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
+            lib_test.linkSystemLibrary("pcsclite");
         },
         .macos => {
             lib.linkFramework("PCSC");
+            lib_test.linkFramework("PCSC");
         },
         else => unreachable,
     }
 
     b.installArtifact(lib);
 
-    const lib_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/p11_general.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
+    const lib_test_run = b.addRunArtifact(lib_test);
 
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_lib_unit_tests.step);
+    test_step.dependOn(&lib_test_run.step);
 }
