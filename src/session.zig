@@ -5,6 +5,7 @@ const pkcs = @cImport({
 });
 
 const object = @import("object.zig");
+const operation = @import("operation.zig");
 const certificate = @import("certificate.zig");
 const hasher = @import("hasher.zig");
 const pkcs_error = @import("pkcs_error.zig");
@@ -20,16 +21,6 @@ var sessions: std.AutoHashMap(pkcs.CK_SESSION_HANDLE, Session) = undefined;
 
 var lock = std.Thread.RwLock{};
 
-pub const Operation = enum {
-    None,
-    Digest,
-    Sign,
-    Verify,
-    Encrypt,
-    Decrypt,
-    Search,
-};
-
 pub const Session = struct {
     allocator: std.mem.Allocator,
     id: pkcs.CK_SESSION_HANDLE,
@@ -37,13 +28,8 @@ pub const Session = struct {
     reader_id: pkcs.CK_SLOT_ID,
     closed: bool = false,
     write_enabled: bool,
-    operation: Operation = Operation.None,
-    multipart_operation: bool = false,
-    operation_key: pkcs.CK_OBJECT_HANDLE = 0,
-    hasher: hasher.Hasher = undefined,
+    operation: operation.Operation,
     objects: []object.Object,
-    search_index: usize = 0,
-    found_objects: ?[]pkcs.CK_OBJECT_HANDLE = null,
 
     pub fn login(self: *Session, new_pin: []const u8) PkcsError!void {
         errdefer reader.setUserType(self.reader_id, reader.UserType.None);
@@ -60,56 +46,37 @@ pub const Session = struct {
     }
 
     pub fn assertNoOperation(self: *Session) PkcsError!void {
-        if (self.operation != Operation.None)
-            return PkcsError.OperationActive;
+        return switch (self.operation) {
+            .none => {},
+            else => PkcsError.OperationActive,
+        };
     }
 
-    pub fn assertOperation(self: *Session, operation: Operation) PkcsError!void {
-        if (self.operation != operation) {
-            return if (self.operation == Operation.None)
-                PkcsError.OperationNotInitialized
-            else
-                PkcsError.OperationActive;
-        }
+    pub fn assertOperation(self: *Session, kind: operation.Type) PkcsError!void {
+        return switch (self.operation) {
+            .none => if (kind == operation.Type.None) {} else PkcsError.OperationNotInitialized,
+            .digest => if (kind == operation.Type.Digest) {} else PkcsError.OperationActive,
+            .sign => if (kind == operation.Type.Sign) {} else PkcsError.OperationActive,
+            .verify => if (kind == operation.Type.Verify) {} else PkcsError.OperationActive,
+            .search => if (kind == operation.Type.Search) {} else PkcsError.OperationActive,
+        };
     }
 
     pub fn slot(self: *Session) void {
         return self.card.reader_id;
     }
 
-    pub fn resetSignSession(self: *Session) void {
-        self.operation_key = 0;
-        self.resetDigestSession();
-    }
-
-    pub fn resetDigestSession(self: *Session) void {
-        self.multipart_operation = false;
-        self.hasher.destroy(self.allocator);
-        self.operation = Operation.None;
-    }
-
-    pub fn signatureSize(self: *Session) usize {
-        _ = self;
-        unreachable;
-    }
-
-    pub fn signUpdate(self: *Session, data: []const u8) void {
-        _ = self;
-        _ = data;
-        unreachable;
-    }
-
-    pub fn signFinalize(
-        self: *Session,
-    ) std.mem.Allocator.Error![]u8 {
-        _ = self;
-        unreachable;
+    pub fn resetOperation(self: *Session) void {
+        self.operation.deinit();
+        self.operation = operation.Operation{
+            .none = operation.None{},
+        };
     }
 
     pub fn findObjects(
         self: *Session,
         attributes: []object.Attribute,
-    ) PkcsError!void {
+    ) PkcsError![]pkcs.CK_OBJECT_HANDLE {
         var object_list = std.ArrayList(pkcs.CK_OBJECT_HANDLE).init(self.allocator);
         defer object_list.deinit();
 
@@ -131,7 +98,7 @@ pub const Session = struct {
             }
         }
 
-        self.found_objects = object_list.toOwnedSlice() catch
+        return object_list.toOwnedSlice() catch
             return PkcsError.HostMemory;
     }
 
@@ -243,6 +210,9 @@ pub fn newSession(
         .write_enabled = write_enabled,
         .allocator = allocator,
         .objects = objects,
+        .operation = operation.Operation{
+            .none = operation.None{},
+        },
     };
 
     try new_session.loadCertificates(allocator);
@@ -292,7 +262,7 @@ pub fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
 
     current_session.closed = true;
 
-    current_session.hasher.destroy(current_session.allocator);
+    current_session.resetOperation();
 
     current_session.card.disconnect() catch {};
 

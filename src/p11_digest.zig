@@ -4,6 +4,7 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
+const operation = @import("operation.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
@@ -48,10 +49,15 @@ pub export fn C_DigestInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.hasher = hasher.createAndInit(hash_mechanism, current_session.allocator) catch
+    const hash = hasher.createAndInit(hash_mechanism, current_session.allocator) catch
         return pkcs.CKR_HOST_MEMORY;
 
-    current_session.operation = session.Operation.Digest;
+    current_session.operation = operation.Operation{
+        .digest = operation.Digest{
+            .hasher = hash,
+            .multipart_operation = false,
+        },
+    };
 
     return pkcs.CKR_OK;
 }
@@ -69,27 +75,29 @@ pub export fn C_Digest(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Digest) catch |err|
+    current_session.assertOperation(operation.Type.Digest) catch |err|
         return pkcs_error.toRV(err);
 
-    if (current_session.multipart_operation) {
-        current_session.resetDigestSession();
+    const current_operation = &current_session.operation.digest;
+
+    if (current_operation.multipart_operation) {
+        current_session.resetOperation();
         return pkcs.CKR_FUNCTION_CANCELED;
     }
 
     if (data_digest_len == null) {
-        current_session.resetDigestSession();
+        current_session.resetOperation();
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_digest_size = current_session.hasher.digestLength();
+    const required_digest_size = current_operation.hasher.digestLength();
     if (data_digest == null) {
         data_digest_len.?.* = required_digest_size;
         return pkcs.CKR_OK;
     }
 
     if (data == null) {
-        current_session.resetDigestSession();
+        current_session.resetOperation();
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
@@ -98,9 +106,9 @@ pub export fn C_Digest(
 
     const casted_data: [*]u8 = @ptrCast(data);
 
-    current_session.hasher.update(casted_data[0..data_len]);
-    const computed_digest = current_session.hasher.finalize(current_session.allocator) catch {
-        current_session.resetDigestSession();
+    current_operation.hasher.update(casted_data[0..data_len]);
+    const computed_digest = current_operation.hasher.finalize(current_session.allocator) catch {
+        current_session.resetOperation();
         return pkcs.CKR_HOST_MEMORY;
     };
 
@@ -109,7 +117,7 @@ pub export fn C_Digest(
     @memcpy(data_digest_casted, computed_digest);
     current_session.allocator.free(computed_digest);
 
-    current_session.resetDigestSession();
+    current_session.resetOperation();
 
     return pkcs.CKR_OK;
 }
@@ -125,18 +133,18 @@ pub export fn C_DigestUpdate(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Digest) catch |err|
+    current_session.assertOperation(operation.Type.Digest) catch |err|
         return pkcs_error.toRV(err);
 
+    const current_operation = &current_session.operation.digest;
+
     if (part == null) {
-        current_session.resetDigestSession();
+        current_session.resetOperation();
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    current_session.multipart_operation = true;
-
-    const casted_part: [*]u8 = @ptrCast(part);
-    current_session.hasher.update(casted_part[0..part_len]);
+    current_operation.multipart_operation = true;
+    current_operation.hasher.update(part.?[0..part_len]);
 
     return pkcs.CKR_OK;
 }
@@ -162,10 +170,12 @@ pub export fn C_DigestFinal(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Digest) catch |err|
+    current_session.assertOperation(operation.Type.Digest) catch |err|
         return pkcs_error.toRV(err);
 
-    const required_digest_size = current_session.hasher.digestLength();
+    var current_operation = &current_session.operation.digest;
+
+    const required_digest_size = current_operation.hasher.digestLength();
     if (data_digest == null) {
         data_digest_len.?.* = required_digest_size;
         return pkcs.CKR_OK;
@@ -174,17 +184,13 @@ pub export fn C_DigestFinal(
     if (data_digest_len.?.* < required_digest_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
 
-    const computed_digest = current_session.hasher.finalize(current_session.allocator) catch {
-        current_session.resetDigestSession();
+    defer current_session.resetOperation();
+
+    const computed_digest = current_operation.hasher.finalize(current_session.allocator) catch
         return pkcs.CKR_HOST_MEMORY;
-    };
 
-    const data_digest_casted: [*]u8 = @ptrCast(data_digest);
-
-    @memcpy(data_digest_casted, computed_digest);
+    @memcpy(data_digest.?, computed_digest);
     current_session.allocator.free(computed_digest);
-
-    current_session.resetDigestSession();
 
     return pkcs.CKR_OK;
 }

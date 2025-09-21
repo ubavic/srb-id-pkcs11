@@ -4,8 +4,9 @@ const pkcs = @cImport({
     @cInclude("pkcs.h");
 });
 
-const pkcs_error = @import("pkcs_error.zig");
 const object = @import("object.zig");
+const operation = @import("operation.zig");
+const pkcs_error = @import("pkcs_error.zig");
 const session = @import("session.zig");
 const state = @import("state.zig");
 
@@ -159,26 +160,28 @@ pub export fn C_FindObjectsInit(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.None) catch |err|
+    current_session.assertOperation(operation.Type.None) catch |err|
         return pkcs_error.toRV(err);
 
     if (template == null and count != 0)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    current_session.search_index = 0;
-
     var search_template: []object.Attribute = undefined;
-
     if (count > 0) {
         search_template = object.parseAttributes(current_session.allocator, template.?[0..count]) catch |err|
             return pkcs_error.toRV(err);
     } else search_template = &.{};
     defer object.deinitSearchTemplate(current_session.allocator, search_template);
 
-    current_session.findObjects(search_template) catch |err|
+    const found_objects = current_session.findObjects(search_template) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.operation = session.Operation.Search;
+    current_session.operation = operation.Operation{
+        .search = operation.Search{
+            .index = 0,
+            .found_objects = found_objects,
+        },
+    };
 
     return pkcs.CKR_OK;
 }
@@ -195,8 +198,10 @@ pub export fn C_FindObjects(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Search) catch |err|
+    current_session.assertOperation(operation.Type.Search) catch |err|
         return pkcs_error.toRV(err);
+
+    const current_operation = &current_session.operation.search;
 
     if (object_handles == null)
         return pkcs.CKR_ARGUMENTS_BAD;
@@ -204,22 +209,23 @@ pub export fn C_FindObjects(
     if (object_count == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (current_session.found_objects == null)
-        return pkcs.CKR_GENERAL_ERROR;
-
-    if (current_session.found_objects.?.len < current_session.search_index) {
+    if (current_operation.found_objects.len < current_operation.index) {
         object_count.?.* = 0;
         return pkcs.CKR_OK;
     }
 
-    const remaining_objects: pkcs.CK_ULONG = current_session.found_objects.?.len - current_session.search_index;
+    const remaining_objects: pkcs.CK_ULONG = current_operation.found_objects.len - current_operation.index;
     const objects_to_return = @min(remaining_objects, max_object_count);
 
     object_count.?.* = objects_to_return;
 
-    std.mem.copyForwards(pkcs.CK_OBJECT_HANDLE, object_handles.?[0..max_object_count], current_session.found_objects.?[current_session.search_index .. current_session.search_index + objects_to_return]);
+    std.mem.copyForwards(
+        pkcs.CK_OBJECT_HANDLE,
+        object_handles.?[0..max_object_count],
+        current_operation.found_objects[current_operation.index .. current_operation.index + objects_to_return],
+    );
 
-    current_session.search_index += objects_to_return;
+    current_operation.index += objects_to_return;
 
     return pkcs.CKR_OK;
 }
@@ -233,10 +239,10 @@ pub export fn C_FindObjectsFinal(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Search) catch |err|
+    current_session.assertOperation(operation.Type.Search) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.operation = session.Operation.None;
+    current_session.resetOperation();
 
     return pkcs.CKR_OK;
 }

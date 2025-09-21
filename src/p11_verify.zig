@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const operation = @import("operation.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
@@ -29,10 +30,11 @@ pub export fn C_VerifyInit(
     const hash_mechanism = hasher.fromMechanism(mechanism.?.mechanism) catch |err|
         return pkcs_error.toRV(err);
 
+    var hash: ?hasher.Hasher = null;
     if (hash_mechanism != null) {
-        current_session.hasher = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
+        hash = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
             return pkcs.CKR_HOST_MEMORY;
-    } else return pkcs.CKR_MECHANISM_INVALID;
+    } else return pkcs.CKR_MECHANISM_INVALID; // TODO
 
     var key_found = false;
     for (current_session.objects) |current_object| {
@@ -56,8 +58,13 @@ pub export fn C_VerifyInit(
     if (!key_found)
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    current_session.operation_key = key;
-    current_session.operation = session.Operation.Verify;
+    current_session.operation = operation.Operation{
+        .verify = operation.Verify{
+            .hasher = hash,
+            .multipart_operation = false,
+            .private_key = key,
+        },
+    };
 
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
 }
@@ -74,10 +81,13 @@ pub export fn C_Verify(
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
-    defer current_session.resetSignSession();
 
-    current_session.assertOperation(session.Operation.Verify) catch |err|
+    defer current_session.resetOperation();
+
+    current_session.assertOperation(operation.Type.Verify) catch |err|
         return pkcs_error.toRV(err);
+
+    const current_operation = &current_session.operation.verify;
 
     if (data == null)
         return pkcs.CKR_ARGUMENTS_BAD;
@@ -85,15 +95,15 @@ pub export fn C_Verify(
     if (signature == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (current_session.multipart_operation)
+    if (current_operation.multipart_operation)
         return pkcs.CKR_FUNCTION_CANCELED;
 
-    if (signature_len != current_session.signatureSize())
+    if (signature_len != current_operation.signatureSize())
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    current_session.signUpdate(data.?[0..data_len]);
+    current_operation.update(data.?[0..data_len]);
 
-    const computed_signature = current_session.signFinalize() catch
+    const computed_signature = current_operation.finalize() catch
         return pkcs.CKR_HOST_MEMORY;
     defer current_session.allocator.free(computed_signature);
 
@@ -114,16 +124,18 @@ pub export fn C_VerifyUpdate(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(session.Operation.Verify) catch |err|
+    current_session.assertOperation(operation.Type.Verify) catch |err|
         return pkcs_error.toRV(err);
 
+    const current_operation = &current_session.operation.verify;
+
     if (part == null) {
-        current_session.resetSignSession();
+        current_session.resetOperation();
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    current_session.multipart_operation = true;
-    current_session.signUpdate(part.?[0..part_len]);
+    current_operation.multipart_operation = true;
+    current_operation.update(part.?[0..part_len]);
 
     return pkcs.CKR_OK;
 }
@@ -139,18 +151,20 @@ pub export fn C_VerifyFinal(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    defer current_session.resetSignSession();
+    defer current_session.resetOperation();
 
-    current_session.assertOperation(session.Operation.Verify) catch |err|
+    current_session.assertOperation(operation.Type.Verify) catch |err|
         return pkcs_error.toRV(err);
+
+    const current_operation = &current_session.operation.verify;
 
     if (signature == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (signature_len != current_session.signatureSize())
+    if (signature_len != current_operation.signatureSize())
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    const computed_signature = current_session.signFinalize() catch
+    const computed_signature = current_operation.finalize() catch
         return pkcs.CKR_HOST_MEMORY;
     defer current_session.allocator.free(computed_signature);
 
