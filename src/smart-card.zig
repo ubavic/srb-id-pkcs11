@@ -232,6 +232,20 @@ pub const Card = struct {
         if (!responseOK(response))
             return PkcsError.FunctionFailed;
     }
+
+    pub fn sign(
+        self: *const Card,
+        key_name: u8,
+        sign_request: []u8,
+    ) PkcsError![]u8 {
+        _ = key_name;
+        _ = sign_request;
+        _ = self;
+
+        // TODO implementation
+
+        return PkcsError.FunctionFailed;
+    }
 };
 
 pub fn connect(

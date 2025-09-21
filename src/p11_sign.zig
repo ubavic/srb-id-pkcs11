@@ -103,24 +103,25 @@ pub export fn C_Sign(
         return pkcs.CKR_OK;
     }
 
-    if (data == null) {
-        current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
-    }
-
     if (signature_len.?.* < required_signature_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
 
+    defer current_session.resetOperation();
+
+    if (data == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
+
     current_operation.update(data.?[0..data_len]);
-    const computed_signature = current_operation.finalize() catch {
-        current_session.resetOperation();
+
+    const sign_request = current_operation.createSignRequest(current_session.allocator) catch
         return pkcs.CKR_HOST_MEMORY;
-    };
+    defer current_session.allocator.free(sign_request);
+
+    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+        return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
     @memcpy(signature.?, computed_signature);
-
-    current_session.resetOperation();
 
     return pkcs.CKR_OK;
 }
@@ -179,11 +180,15 @@ pub export fn C_SignFinal(
 
     defer current_session.resetOperation();
 
-    const computed_signature = current_operation.finalize() catch
+    const sign_request = current_operation.createSignRequest(current_session.allocator) catch
         return pkcs.CKR_HOST_MEMORY;
+    defer current_session.allocator.free(sign_request);
+
+    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+        return pkcs_error.toRV(err);
+    defer current_session.allocator.free(computed_signature);
 
     @memcpy(signature.?, computed_signature);
-    current_session.allocator.free(computed_signature);
 
     return pkcs.CKR_OK;
 }

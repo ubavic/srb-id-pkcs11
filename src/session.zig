@@ -67,7 +67,7 @@ pub const Session = struct {
     }
 
     pub fn resetOperation(self: *Session) void {
-        self.operation.deinit();
+        self.operation.deinit(self.allocator);
         self.operation = operation.Operation{
             .none = operation.None{},
         };

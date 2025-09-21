@@ -103,8 +103,12 @@ pub export fn C_Verify(
 
     current_operation.update(data.?[0..data_len]);
 
-    const computed_signature = current_operation.finalize() catch
+    const sign_request = current_operation.createSignRequest(current_session.allocator) catch
         return pkcs.CKR_HOST_MEMORY;
+    defer current_session.allocator.free(sign_request);
+
+    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+        return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
     if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
@@ -164,8 +168,12 @@ pub export fn C_VerifyFinal(
     if (signature_len != current_operation.signatureSize())
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    const computed_signature = current_operation.finalize() catch
+    const sign_request = current_operation.createSignRequest(current_session.allocator) catch
         return pkcs.CKR_HOST_MEMORY;
+    defer current_session.allocator.free(sign_request);
+
+    const computed_signature = current_session.card.sign(0x0, sign_request) catch |err|
+        return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
     if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
