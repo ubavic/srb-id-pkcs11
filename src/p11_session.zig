@@ -142,8 +142,7 @@ pub export fn C_Login(
     if (current_session.loggedIn())
         return pkcs.CKR_USER_ALREADY_LOGGED_IN;
 
-    const pin_casted: [*]const u8 = @ptrCast(pin);
-    current_session.login(pin_casted[0..pin_length]) catch |err|
+    current_session.login(pin.?[0..pin_length]) catch |err|
         return pkcs_error.toRV(err);
 
     return pkcs.CKR_OK;

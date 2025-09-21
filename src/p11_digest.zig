@@ -104,17 +104,13 @@ pub export fn C_Digest(
     if (data_digest_len.?.* < required_digest_size)
         return pkcs.CKR_BUFFER_TOO_SMALL;
 
-    const casted_data: [*]u8 = @ptrCast(data);
-
-    current_operation.hasher.update(casted_data[0..data_len]);
+    current_operation.hasher.update(data.?[0..data_len]);
     const computed_digest = current_operation.hasher.finalize(current_session.allocator) catch {
         current_session.resetOperation();
         return pkcs.CKR_HOST_MEMORY;
     };
 
-    const data_digest_casted: [*]u8 = @ptrCast(data_digest);
-
-    @memcpy(data_digest_casted, computed_digest);
+    @memcpy(data_digest.?, computed_digest);
     current_session.allocator.free(computed_digest);
 
     current_session.resetOperation();
