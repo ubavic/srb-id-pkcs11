@@ -1,9 +1,5 @@
 const std = @import("std");
 
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
 const sc = @import("smart-card_lib.zig").sc;
 pub var lock = std.Thread.RwLock{};
 

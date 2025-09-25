@@ -1,14 +1,11 @@
 const std = @import("std");
 
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
 const consts = @import("consts.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
 const certificate = @import("certificate.zig");
 const hasher = @import("hasher.zig");
+const pkcs = @import("pkcs.zig").pkcs;
 const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("reader.zig");
 const smart_card = @import("smart-card.zig");

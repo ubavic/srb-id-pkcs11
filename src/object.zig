@@ -1,11 +1,7 @@
 const std = @import("std");
 
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
+const pkcs = @import("pkcs.zig").pkcs;
 const pkcs_error = @import("pkcs_error.zig");
-
 const PkcsError = pkcs_error.PkcsError;
 
 pub const Object = union(enum) {

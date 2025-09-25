@@ -1,10 +1,7 @@
 const std = @import("std");
 
+const pkcs = @import("pkcs.zig").pkcs;
 const PkcsError = @import("pkcs_error.zig").PkcsError;
-
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
 
 pub const HasherType = enum { md5, sha1, sha256, sha384, sha512 };
 

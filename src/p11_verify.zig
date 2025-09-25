@@ -2,14 +2,11 @@ const std = @import("std");
 
 const consts = @import("consts.zig");
 const operation = @import("operation.zig");
+const pkcs = @import("pkcs.zig").pkcs;
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
 const hasher = @import("hasher.zig");
-
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
 
 pub export fn C_VerifyInit(
     session_handle: pkcs.CK_SESSION_HANDLE,

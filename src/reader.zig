@@ -1,12 +1,9 @@
 const std = @import("std");
 
 const atr = @import("atr.zig");
+const pkcs = @import("pkcs.zig").pkcs;
 const state = @import("state.zig");
 const sc = @import("smart-card_lib.zig").sc;
-
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
 
 const PkcsError = @import("pkcs_error.zig").PkcsError;
 

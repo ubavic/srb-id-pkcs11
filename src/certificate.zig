@@ -1,11 +1,8 @@
 const std = @import("std");
 const Certificate = std.crypto.Certificate;
 
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
 const object = @import("object.zig");
+const pkcs = @import("pkcs.zig").pkcs;
 const pkcs_error = @import("pkcs_error.zig");
 const PkcsError = pkcs_error.PkcsError;
 

@@ -1,7 +1,4 @@
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
+const pkcs = @import("pkcs.zig").pkcs;
 const PkcsError = @import("pkcs_error.zig").PkcsError;
 
 pub const ObjectConstants = struct {

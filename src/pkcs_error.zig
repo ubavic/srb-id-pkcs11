@@ -1,6 +1,4 @@
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
+const pkcs = @import("pkcs.zig").pkcs;
 
 pub const PkcsError = error{
     Cancel,

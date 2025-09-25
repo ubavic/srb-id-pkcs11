@@ -1,6 +1,4 @@
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
+const pkcs = @import("pkcs.zig").pkcs;
 
 pub export fn C_DecryptInit(
     session_handle: pkcs.CK_SESSION_HANDLE,

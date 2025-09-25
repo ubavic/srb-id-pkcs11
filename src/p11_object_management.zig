@@ -1,11 +1,8 @@
 const std = @import("std");
 
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
 const object = @import("object.zig");
 const operation = @import("operation.zig");
+const pkcs = @import("pkcs.zig").pkcs;
 const pkcs_error = @import("pkcs_error.zig");
 const session = @import("session.zig");
 const state = @import("state.zig");

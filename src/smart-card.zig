@@ -1,14 +1,8 @@
 const std = @import("std");
 
-const PkcsError = @import("pkcs_error.zig").PkcsError;
-
-const pkcs = @cImport({
-    @cInclude("pkcs.h");
-});
-
-const sc = @import("smart-card_lib.zig").sc;
-
 const apdu = @import("apdu.zig");
+const PkcsError = @import("pkcs_error.zig").PkcsError;
+const sc = @import("smart-card_lib.zig").sc;
 
 pub const Card = struct {
     card_handle: sc.SCARDHANDLE,
