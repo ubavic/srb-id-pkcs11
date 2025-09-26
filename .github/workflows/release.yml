@@ -83,6 +83,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./*
+          files: ./*.so.*
           body_path: changelog.md
           tag_name: ${{github.ref_name}}
