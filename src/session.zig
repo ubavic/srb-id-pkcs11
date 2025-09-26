@@ -75,7 +75,7 @@ pub const Session = struct {
         self: *Session,
         attributes: []object.Attribute,
     ) PkcsError![]pkcs.CK_OBJECT_HANDLE {
-        var object_list = std.ArrayList(pkcs.CK_OBJECT_HANDLE).init(self.allocator);
+        var object_list = std.array_list.AlignedManaged(pkcs.CK_OBJECT_HANDLE, null).init(self.allocator);
         defer object_list.deinit();
 
         for (self.objects) |current_object| {
@@ -120,7 +120,7 @@ pub const Session = struct {
     ) PkcsError!void {
         var object_list = std.ArrayList(object.Object).initCapacity(allocator, 6) catch
             return PkcsError.HostMemory;
-        errdefer object_list.deinit();
+        errdefer object_list.deinit(allocator);
 
         const files: [2][2]u8 = [2][2]u8{
             [_]u8{ 0x71, 0x02 },
@@ -153,13 +153,13 @@ pub const Session = struct {
                 continue;
 
             for (cert_objects) |o| {
-                object_list.append(o) catch {
+                object_list.append(allocator, o) catch {
                     // TODO deinit o;
                 };
             }
         }
 
-        self.objects = object_list.toOwnedSlice() catch
+        self.objects = object_list.toOwnedSlice(allocator) catch
             return PkcsError.HostMemory;
     }
 };

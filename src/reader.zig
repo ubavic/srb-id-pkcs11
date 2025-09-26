@@ -182,8 +182,8 @@ fn resetStates() void {
 }
 
 fn parseMultiString(allocator: std.mem.Allocator, input: [*:0]const u8) std.mem.Allocator.Error![][:0]const u8 {
-    var list = std.ArrayList([:0]const u8).init(allocator);
-    errdefer list.deinit();
+    var list = std.ArrayList([:0]const u8){};
+    errdefer list.deinit(allocator);
 
     var i: usize = 0;
     while (true) {
@@ -194,12 +194,12 @@ fn parseMultiString(allocator: std.mem.Allocator, input: [*:0]const u8) std.mem.
             break;
 
         const slice = input[i .. i + len :0];
-        try list.append(slice);
+        try list.append(allocator, slice);
 
         i += len + 1;
     }
 
-    return try list.toOwnedSlice();
+    return try list.toOwnedSlice(allocator);
 }
 
 pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {

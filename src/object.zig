@@ -285,17 +285,17 @@ pub fn parseAttributes(
 ) PkcsError![]Attribute {
     var search_template = std.ArrayList(Attribute).initCapacity(allocator, template.len) catch
         return PkcsError.HostMemory;
-    errdefer search_template.deinit();
+    errdefer search_template.deinit(allocator);
 
     for (template) |attribute| {
         const parsed_attribute = try parseAttribute(allocator, attribute);
         errdefer parsed_attribute.deinit(allocator);
 
-        search_template.append(parsed_attribute) catch
+        search_template.append(allocator, parsed_attribute) catch
             return PkcsError.HostMemory;
     }
 
-    const slice = search_template.toOwnedSlice() catch
+    const slice = search_template.toOwnedSlice(allocator) catch
         return PkcsError.HostMemory;
 
     return slice;

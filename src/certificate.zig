@@ -219,23 +219,34 @@ fn printHex(data: []const u8) void {
     std.debug.print("\n\n", .{});
 }
 
-pub fn decompressCertificate(allocator: std.mem.Allocator, certificate_data: []u8) PkcsError![]u8 {
-    if (certificate_data.len < 8)
+pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) PkcsError![]u8 {
+    if (compressed_certificate_data.len < 8)
         return PkcsError.GeneralError;
 
-    var list = std.ArrayList(u8).initCapacity(allocator, 2 * certificate_data.len) catch
+    var list = std.ArrayList(u8).initCapacity(allocator, 2 * compressed_certificate_data.len) catch
         return PkcsError.HostMemory;
-    defer list.deinit();
+    defer list.deinit(allocator);
 
-    const writer = list.writer();
+    const decompress_buffer = allocator.alloc(u8, std.compress.flate.max_window_len) catch
+        return PkcsError.HostMemory;
+    defer allocator.free(decompress_buffer);
 
-    var cert_stream = std.io.fixedBufferStream(certificate_data[6..]);
-    const stream_reader = cert_stream.reader();
+    var reader = std.io.Reader.fixed(compressed_certificate_data[6..]);
+    var decompress: std.compress.flate.Decompress = .init(&reader, std.compress.flate.Container.zlib, decompress_buffer);
 
-    std.compress.zlib.decompress(stream_reader, writer) catch
-        return PkcsError.GeneralError;
+    var buf2: [512]u8 = undefined;
+    while (true) {
+        const size = decompress.reader.readSliceShort(&buf2) catch
+            return PkcsError.HostMemory;
 
-    const decompressed_certificate = list.toOwnedSlice() catch
+        list.appendSlice(allocator, buf2[0..size]) catch
+            return PkcsError.HostMemory;
+
+        if (size < buf2.len)
+            break;
+    }
+
+    const decompressed_certificate = list.toOwnedSlice(allocator) catch
         return PkcsError.HostMemory;
 
     return decompressed_certificate;

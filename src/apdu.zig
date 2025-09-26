@@ -16,17 +16,17 @@ pub fn build(
         return std.mem.Allocator.Error.OutOfMemory;
 
     var apdu = try std.ArrayList(u8).initCapacity(allocator, 4 + length);
-    errdefer apdu.deinit();
-    try apdu.append(cla);
-    try apdu.append(ins);
-    try apdu.append(p1);
-    try apdu.append(p2);
+    errdefer apdu.deinit(allocator);
+    try apdu.append(allocator, cla);
+    try apdu.append(allocator, ins);
+    try apdu.append(allocator, p1);
+    try apdu.append(allocator, p2);
 
     if (length == 0) {
         if (ne != 0) {
             if (ne <= 256) {
                 const l: u8 = if (ne == 256) 0x00 else @intCast(ne);
-                try apdu.append(l);
+                try apdu.append(allocator, l);
             } else {
                 var l1: u8 = undefined;
                 var l2: u8 = undefined;
@@ -37,41 +37,41 @@ pub fn build(
                     l1 = @intCast(ne >> 8);
                     l2 = @intCast(ne & 0xFF);
                 }
-                try apdu.append(l1);
-                try apdu.append(l2);
+                try apdu.append(allocator, l1);
+                try apdu.append(allocator, l2);
             }
         }
     } else {
         if (ne == 0) {
             if (length <= 255) {
-                try apdu.append(@intCast(length));
-                try apdu.appendSlice(data.?);
+                try apdu.append(allocator, @intCast(length));
+                try apdu.appendSlice(allocator, data.?);
             } else {
-                try apdu.append(0x00);
-                try apdu.append(@intCast(length >> 8));
-                try apdu.append(@intCast(length & 0xFF));
-                try apdu.appendSlice(data.?);
+                try apdu.append(allocator, 0x00);
+                try apdu.append(allocator, @intCast(length >> 8));
+                try apdu.append(allocator, @intCast(length & 0xFF));
+                try apdu.appendSlice(allocator, data.?);
             }
         } else {
             if (length <= 255 and ne <= 256) {
-                try apdu.append(@intCast(length));
-                try apdu.appendSlice(data.?);
+                try apdu.append(allocator, @intCast(length));
+                try apdu.appendSlice(allocator, data.?);
                 const neByte: u8 = if (ne == 256) 0x00 else @intCast(ne);
-                try apdu.append(neByte);
+                try apdu.append(allocator, neByte);
             } else {
-                try apdu.append(0x00);
-                try apdu.append(@intCast(length >> 8));
-                try apdu.append(@intCast(length & 0xFF));
-                try apdu.appendSlice(data.?);
+                try apdu.append(allocator, 0x00);
+                try apdu.append(allocator, @intCast(length >> 8));
+                try apdu.append(allocator, @intCast(length & 0xFF));
+                try apdu.appendSlice(allocator, data.?);
                 if (ne != 65536) {
-                    try apdu.append(@intCast(ne >> 8));
-                    try apdu.append(@intCast(ne & 0xFF));
+                    try apdu.append(allocator, @intCast(ne >> 8));
+                    try apdu.append(allocator, @intCast(ne & 0xFF));
                 }
             }
         }
     }
 
-    return apdu.toOwnedSlice();
+    return apdu.toOwnedSlice(allocator);
 }
 
 test "build APDU" {

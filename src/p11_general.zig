@@ -34,7 +34,7 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
         return pkcs.CKR_CRYPTOKI_ALREADY_INITIALIZED;
 
     if (init_args != null) {
-        const args: *pkcs.CK_C_INITIALIZE_ARGS = @alignCast(@ptrCast(init_args));
+        const args: *pkcs.CK_C_INITIALIZE_ARGS = @ptrCast(@alignCast(init_args));
 
         if (args.*.pReserved != null)
             return pkcs.CKR_ARGUMENTS_BAD;

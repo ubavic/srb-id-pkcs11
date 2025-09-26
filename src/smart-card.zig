@@ -114,7 +114,7 @@ pub const Card = struct {
 
         var list = std.ArrayList(u8).initCapacity(allocator, length) catch
             return PkcsError.HostMemory;
-        defer list.deinit();
+        defer list.deinit(allocator);
 
         while (length > 0) {
             const data = try self.read(allocator, offset, length);
@@ -123,14 +123,14 @@ pub const Card = struct {
             if (data.len == 0)
                 break;
 
-            list.appendSlice(data) catch
+            list.appendSlice(allocator, data) catch
                 return PkcsError.HostMemory;
 
             offset += @intCast(data.len);
             length -= @intCast(data.len);
         }
 
-        const slice = list.toOwnedSlice() catch
+        const slice = list.toOwnedSlice(allocator) catch
             return PkcsError.HostMemory;
 
         return slice;
