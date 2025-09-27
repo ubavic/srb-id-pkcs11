@@ -91,6 +91,8 @@ pub export fn C_GetSessionInfo(
         reader.UserType.SecurityOfficer => pkcs.CKS_RW_SO_FUNCTIONS,
     };
 
+    session_info.?.ulDeviceError = 0;
+
     return pkcs.CKR_OK;
 }
 
