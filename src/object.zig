@@ -4,6 +4,8 @@ const pkcs = @import("pkcs.zig").pkcs;
 const pkcs_error = @import("pkcs_error.zig");
 const PkcsError = pkcs_error.PkcsError;
 
+const CKT_NETSCAPE_TRUSTED_DELEGATOR: pkcs.CK_ATTRIBUTE_TYPE = 0xce534352;
+
 pub const Object = union(enum) {
     certificate: CertificateObject,
     private_key: PrivateKeyObject,
@@ -124,6 +126,7 @@ pub const CertificateObject = struct {
             pkcs.CKA_URL => encodeByteArray(allocator, self.url),
             pkcs.CKA_HASH_OF_SUBJECT_PUBLIC_KEY => encodeByteArray(allocator, self.hash_of_subject_public_key),
             pkcs.CKA_NAME_HASH_ALGORITHM => encodeLong(allocator, self.name_hash_algorithm),
+            CKT_NETSCAPE_TRUSTED_DELEGATOR => encodeBool(allocator, pkcs.CK_TRUE),
             else => PkcsError.AttributeTypeInvalid,
         };
     }
