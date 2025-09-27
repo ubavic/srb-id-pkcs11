@@ -31,7 +31,7 @@ pub const Sign = struct {
     hasher: ?hasher.Hasher,
 
     pub fn signatureSize(_: *const Sign) usize {
-        return 512;
+        return 256;
     }
 
     pub fn update(self: *Sign, data: []const u8) void {
@@ -66,7 +66,7 @@ pub const Verify = struct {
     hasher: ?hasher.Hasher,
 
     pub fn signatureSize(_: *const Verify) usize {
-        return 512;
+        return 256;
     }
 
     pub fn update(self: *Verify, data: []const u8) void {

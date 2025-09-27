@@ -67,7 +67,7 @@ pub export fn C_VerifyInit(
         },
     };
 
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_Verify(

@@ -39,8 +39,8 @@ pub export fn C_SignInit(
         if (current_object.handle() == key) {
             switch (current_object) {
                 .private_key => {
-                    if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-                        return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+                    // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+                    //     return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 
                     if (current_object.private_key.sign != pkcs.CK_TRUE)
                         return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
@@ -122,6 +122,10 @@ pub export fn C_Sign(
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
+    if (computed_signature.len > signature_len.?.*)
+        return pkcs.CKR_GENERAL_ERROR;
+
+    signature_len.?.* = computed_signature.len;
     @memcpy(signature.?, computed_signature);
 
     return pkcs.CKR_OK;
@@ -192,6 +196,10 @@ pub export fn C_SignFinal(
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
+    if (computed_signature.len > signature_len.?.*)
+        return pkcs.CKR_GENERAL_ERROR;
+
+    signature_len.?.* = computed_signature.len;
     @memcpy(signature.?, computed_signature);
 
     return pkcs.CKR_OK;
