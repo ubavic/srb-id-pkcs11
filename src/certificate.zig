@@ -212,13 +212,6 @@ fn extractLabel(subject_bytes: []const u8) []const u8 {
     return subject_bytes[i + 2 .. subject_bytes.len];
 }
 
-fn printHex(data: []const u8) void {
-    for (data) |b| {
-        std.debug.print("{x:02}", .{b});
-    }
-    std.debug.print("\n\n", .{});
-}
-
 pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) PkcsError![]u8 {
     if (compressed_certificate_data.len < 8)
         return PkcsError.GeneralError;
