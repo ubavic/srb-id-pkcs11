@@ -12,6 +12,8 @@ Functions intended for security officers (`CKU_SO`) are not planned for implemen
 
 ## Usage on Linux
 
+To use this module, you need to have the `pcscd` service enabled.
+
 Download the latest `.so` file form [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location (for example: `/usr/lib/` or `~/lib/`).
 
 If you use Firefox, add a new PKCS#11 module using **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.so` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
