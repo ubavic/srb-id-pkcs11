@@ -162,6 +162,7 @@ pub const PrivateKeyObject = struct {
     unwrap_template: []pkcs.CK_ATTRIBUTE,
     always_authenticate: []pkcs.CK_ATTRIBUTE,
     public_key_info: []const u8,
+    modulus: []const u8,
 
     pub fn deinit(self: *Attribute, allocator: std.mem.Allocator) void {
         allocator.free(self.label);
@@ -171,6 +172,7 @@ pub const PrivateKeyObject = struct {
         allocator.free(self.unwrap_template);
         allocator.free(self.always_authenticate);
         allocator.free(self.public_key_info);
+        allocator.free(self.modulus);
     }
 
     pub fn getAttributeValue(self: *const PrivateKeyObject, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
@@ -203,6 +205,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_UNWRAP_TEMPLATE => unreachable,
             pkcs.CKA_ALWAYS_AUTHENTICATE => unreachable,
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
+            pkcs.CKA_MODULUS => encodeByteArray(allocator, self.modulus),
             else => PkcsError.AttributeTypeInvalid,
         };
     }
@@ -233,6 +236,7 @@ pub const PublicKeyObject = struct {
     trusted: pkcs.CK_BBOOL,
     wrap_template: []pkcs.CK_ATTRIBUTE,
     public_key_info: []const u8,
+    modulus: []const u8,
 
     pub fn deinit(self: *Attribute, allocator: std.mem.Allocator) void {
         allocator.free(self.label);
@@ -241,6 +245,7 @@ pub const PublicKeyObject = struct {
         allocator.free(self.subject);
         allocator.free(self.public_key_info);
         allocator.free(self.wrap_template);
+        allocator.free(self.modulus);
     }
 
     pub fn getAttributeValue(self: *const PublicKeyObject, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
@@ -268,6 +273,7 @@ pub const PublicKeyObject = struct {
             pkcs.CKA_TRUSTED => encodeBool(allocator, self.trusted),
             pkcs.CKA_WRAP_TEMPLATE => unreachable,
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
+            pkcs.CKA_MODULUS => encodeByteArray(allocator, self.modulus),
             else => PkcsError.AttributeTypeInvalid,
         };
     }

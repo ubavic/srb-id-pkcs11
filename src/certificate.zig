@@ -50,6 +50,8 @@ pub fn loadObjects(
     const label = try clone(allocator, label_slice);
     errdefer allocator.free(label);
 
+    const modulus = extractModulus(buffer[parsed.pub_key_slice.start..parsed.pub_key_slice.end]);
+
     const certificate_object: object.CertificateObject = object.CertificateObject{
         .handle = certificate_handle,
         .class = pkcs.CKO_CERTIFICATE,
@@ -84,6 +86,8 @@ pub fn loadObjects(
     errdefer allocator.free(private_key_subject);
     const always_authenticate = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
     errdefer allocator.free(always_authenticate);
+    const private_key_modulus = try clone(allocator, modulus);
+    errdefer allocator.free(private_key_modulus);
 
     // invalid on original token
     const priv_public_key_info = try allocEmptySlice(u8, allocator);
@@ -123,6 +127,7 @@ pub fn loadObjects(
         .unwrap_template = unwrap_template,
         .always_authenticate = always_authenticate,
         .public_key_info = priv_public_key_info,
+        .modulus = private_key_modulus,
     };
 
     const pub_id = try clone(allocator, id);
@@ -131,6 +136,8 @@ pub fn loadObjects(
     errdefer allocator.free(public_key_label);
     const public_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_subject);
+    const public_key_modulus = try clone(allocator, modulus);
+    errdefer allocator.free(public_key_modulus);
 
     // invalid on original token
     const pub_public_key_info = try allocEmptySlice(u8, allocator);
@@ -165,6 +172,7 @@ pub fn loadObjects(
         .trusted = pkcs.CK_FALSE,
         .wrap_template = wrap_template,
         .public_key_info = pub_public_key_info,
+        .modulus = public_key_modulus,
     };
 
     const object2 = object.Object{ .private_key = private_key_object };
@@ -210,6 +218,22 @@ fn extractLabel(subject_bytes: []const u8) []const u8 {
     }
 
     return subject_bytes[i + 2 .. subject_bytes.len];
+}
+
+fn extractModulus(subject_bytes: []const u8) []const u8 {
+    if (subject_bytes.len != 270)
+        return subject_bytes[0..0];
+
+    const a_structure_start: usize = 4;
+    const b_structure_start: usize = 265;
+
+    if (subject_bytes[a_structure_start] != 2)
+        return subject_bytes[0..0];
+
+    if (subject_bytes[b_structure_start] != 2)
+        return subject_bytes[0..0];
+
+    return subject_bytes[a_structure_start + 3 + 2 .. b_structure_start];
 }
 
 pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) PkcsError![]u8 {
