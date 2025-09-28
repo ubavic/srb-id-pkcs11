@@ -160,7 +160,7 @@ pub const PrivateKeyObject = struct {
     never_extractable: pkcs.CK_BBOOL,
     wrap_with_trusted: pkcs.CK_BBOOL,
     unwrap_template: []pkcs.CK_ATTRIBUTE,
-    always_authenticate: []pkcs.CK_ATTRIBUTE,
+    always_authenticate: pkcs.CK_BBOOL,
     public_key_info: []const u8,
     modulus: []const u8,
 
@@ -170,7 +170,6 @@ pub const PrivateKeyObject = struct {
         allocator.free(self.allowed_mechanisms);
         allocator.free(self.subject);
         allocator.free(self.unwrap_template);
-        allocator.free(self.always_authenticate);
         allocator.free(self.public_key_info);
         allocator.free(self.modulus);
     }
@@ -203,7 +202,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_NEVER_EXTRACTABLE => encodeBool(allocator, self.never_extractable),
             pkcs.CKA_WRAP_WITH_TRUSTED => encodeBool(allocator, self.wrap_with_trusted),
             pkcs.CKA_UNWRAP_TEMPLATE => unreachable,
-            pkcs.CKA_ALWAYS_AUTHENTICATE => unreachable,
+            pkcs.CKA_ALWAYS_AUTHENTICATE => encodeBool(allocator, self.always_authenticate),
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
             pkcs.CKA_MODULUS => encodeByteArray(allocator, self.modulus),
             else => PkcsError.AttributeTypeInvalid,

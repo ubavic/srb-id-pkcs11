@@ -84,8 +84,6 @@ pub fn loadObjects(
     errdefer allocator.free(private_key_label);
     const private_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_subject);
-    const always_authenticate = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
-    errdefer allocator.free(always_authenticate);
     const private_key_modulus = try clone(allocator, modulus);
     errdefer allocator.free(private_key_modulus);
 
@@ -125,7 +123,7 @@ pub fn loadObjects(
         .never_extractable = pkcs.CK_TRUE,
         .wrap_with_trusted = if (alow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
         .unwrap_template = unwrap_template,
-        .always_authenticate = always_authenticate,
+        .always_authenticate = pkcs.CK_FALSE,
         .public_key_info = priv_public_key_info,
         .modulus = private_key_modulus,
     };
