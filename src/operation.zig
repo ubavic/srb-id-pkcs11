@@ -171,9 +171,10 @@ test "sha1" {
         .hasher = hash,
         .multipart_operation = false,
         .private_key = 0,
+        .msg_buffer = null,
     };
 
-    sign_operation.update(data[0..data.len]);
+    try sign_operation.update(std.testing.allocator, data[0..data.len]);
 
     const sign_request = try sign_operation.createSignRequest(std.testing.allocator);
     defer std.testing.allocator.free(sign_request);
@@ -199,10 +200,11 @@ test "2 step sha1" {
         .hasher = hash,
         .multipart_operation = false,
         .private_key = 0,
+        .msg_buffer = null,
     };
 
-    sign_operation.update(data1[0..data1.len]);
-    sign_operation.update(data2[0..data2.len]);
+    try sign_operation.update(std.testing.allocator, data1[0..data1.len]);
+    try sign_operation.update(std.testing.allocator, data2[0..data2.len]);
 
     const sign_request = try sign_operation.createSignRequest(std.testing.allocator);
     defer std.testing.allocator.free(sign_request);
@@ -227,9 +229,10 @@ test "sha256" {
         .hasher = hash,
         .multipart_operation = false,
         .private_key = 0,
+        .msg_buffer = null,
     };
 
-    sign_operation.update(data[0..data.len]);
+    try sign_operation.update(std.testing.allocator, data[0..data.len]);
 
     const sign_request = try sign_operation.createSignRequest(std.testing.allocator);
     defer std.testing.allocator.free(sign_request);
