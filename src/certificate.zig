@@ -12,6 +12,7 @@ pub fn loadObjects(
     certificate_handle: pkcs.CK_OBJECT_HANDLE,
     private_key_handle: pkcs.CK_OBJECT_HANDLE,
     public_key_handle: pkcs.CK_OBJECT_HANDLE,
+    id: []const u8,
     alow_encrypt: bool,
 ) PkcsError![3]object.Object {
     const cert = Certificate{ .buffer = buffer, .index = 0 };
@@ -19,9 +20,8 @@ pub fn loadObjects(
     const parsed = Certificate.parse(cert) catch
         return PkcsError.GeneralError;
 
-    const id = try allocEmptySlice(u8, allocator); // TODO
-    errdefer allocator.free(id);
-
+    const cert_id = try clone(allocator, id);
+    errdefer allocator.free(cert_id);
     const certificate_value = try clone(allocator, buffer);
     errdefer allocator.free(certificate_value);
 
@@ -67,7 +67,7 @@ pub fn loadObjects(
         .end_date = pkcs.CK_DATE{},
         .public_key_info = public_key_info,
         .subject = subject,
-        .id = id,
+        .id = cert_id,
         .issuer = issuer,
         .serial_number = serial_number,
         .value = certificate_value,

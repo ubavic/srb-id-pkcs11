@@ -148,6 +148,7 @@ pub const Session = struct {
                 ids[i].certificate_handle,
                 ids[i].private_key_handle,
                 ids[i].public_key_handle,
+                &ids[i].id,
                 i == 0,
             ) catch
                 continue;
