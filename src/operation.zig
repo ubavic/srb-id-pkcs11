@@ -3,12 +3,18 @@ const std = @import("std");
 const hasher = @import("hasher.zig");
 const pkcs = @import("pkcs.zig").pkcs;
 
+const pkcs_error = @import("pkcs_error.zig");
+const PkcsError = pkcs_error.PkcsError;
+
 // rfc8017 - Section 9.2
 const md5_prefix: [18]u8 = [_]u8{ 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10 };
 const sha1_prefix: [15]u8 = [_]u8{ 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14 };
 const sha256_prefix: [19]u8 = [_]u8{ 0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20 };
 const sha384_prefix: [19]u8 = [_]u8{ 0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30 };
 const sha521_prefix: [18]u8 = [_]u8{ 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x04, 0x40 };
+
+pub const signature_size: usize = 256;
+const rsa_request_size: usize = 255;
 
 pub const Type = enum {
     None,
@@ -29,34 +35,23 @@ pub const Sign = struct {
     private_key: pkcs.CK_OBJECT_HANDLE,
     multipart_operation: bool,
     hasher: ?hasher.Hasher,
+    msg_buffer: ?std.ArrayList(u8),
 
-    pub fn signatureSize(_: *const Sign) usize {
-        return 256;
-    }
-
-    pub fn update(self: *Sign, data: []const u8) void {
+    pub fn update(self: *Sign, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
         if (self.hasher != null) {
             self.hasher.?.update(data);
+        } else if (self.msg_buffer != null) {
+            self.msg_buffer.?.appendSlice(allocator, data) catch
+                return PkcsError.HostMemory;
         } else unreachable;
     }
 
-    pub fn createSignRequest(self: *Sign, allocator: std.mem.Allocator) std.mem.Allocator.Error![]u8 {
-        const prefix = getPrefix(&self.hasher);
-
-        var payload: []u8 = undefined;
+    pub fn createSignRequest(self: *Sign, allocator: std.mem.Allocator) PkcsError![]u8 {
         if (self.hasher != null) {
-            payload = try self.hasher.?.finalize(allocator);
+            return createHashedSignRequest(&self.hasher.?, allocator);
+        } else if (self.msg_buffer != null) {
+            return createPlainSignRequest(&self.msg_buffer, allocator);
         } else unreachable;
-
-        var info = try allocator.alloc(u8, prefix.len + payload.len);
-
-        std.mem.copyForwards(u8, info[0..prefix.len], prefix);
-        std.mem.copyForwards(u8, info[prefix.len..info.len], payload);
-
-        if (self.hasher != null)
-            allocator.free(payload);
-
-        return info;
     }
 };
 
@@ -64,34 +59,23 @@ pub const Verify = struct {
     private_key: pkcs.CK_OBJECT_HANDLE,
     multipart_operation: bool,
     hasher: ?hasher.Hasher,
+    msg_buffer: ?std.ArrayList(u8),
 
-    pub fn signatureSize(_: *const Verify) usize {
-        return 256;
-    }
-
-    pub fn update(self: *Verify, data: []const u8) void {
+    pub fn update(self: *Verify, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
         if (self.hasher != null) {
             self.hasher.?.update(data);
+        } else if (self.msg_buffer != null) {
+            self.msg_buffer.?.appendSlice(allocator, data) catch
+                return PkcsError.HostMemory;
         } else unreachable;
     }
 
-    pub fn createSignRequest(self: *Verify, allocator: std.mem.Allocator) std.mem.Allocator.Error![]u8 {
-        const prefix = getPrefix(&self.hasher);
-
-        var payload: []u8 = undefined;
+    pub fn createSignRequest(self: *Verify, allocator: std.mem.Allocator) PkcsError![]u8 {
         if (self.hasher != null) {
-            payload = try self.hasher.?.finalize(allocator);
+            return createHashedSignRequest(&self.hasher.?, allocator);
+        } else if (self.msg_buffer != null) {
+            return createPlainSignRequest(&self.msg_buffer, allocator);
         } else unreachable;
-
-        var info = try allocator.alloc(u8, prefix.len + payload.len);
-
-        std.mem.copyForwards(u8, info[0..prefix.len], prefix);
-        std.mem.copyForwards(u8, info[prefix.len..info.len], payload);
-
-        if (self.hasher != null)
-            allocator.free(payload);
-
-        return info;
     }
 };
 
@@ -124,12 +108,48 @@ pub const Operation = union(enum) {
     }
 };
 
-fn getPrefix(hash: *?hasher.Hasher) []const u8 {
-    if (hash.* == null) {
-        unreachable;
-    }
+fn createPlainSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator) PkcsError![]u8 {
+    const payload = msg_buffer.*.?.toOwnedSlice(allocator) catch
+        return PkcsError.HostMemory;
+    defer allocator.free(payload);
 
-    return switch (hash.*.?.hasherType.?) {
+    msg_buffer.* = null;
+
+    if (payload.len > rsa_request_size - 2)
+        return PkcsError.DataLenRange;
+
+    var request = allocator.alloc(u8, rsa_request_size) catch
+        return PkcsError.HostMemory;
+
+    for (request) |*b|
+        b.* = 0xff;
+
+    const data_start_index = rsa_request_size - payload.len;
+    request[0] = 1;
+    request[data_start_index - 1] = 0;
+    std.mem.copyForwards(u8, request[data_start_index..rsa_request_size], payload);
+
+    return request;
+}
+
+fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) PkcsError![]u8 {
+    const prefix = getPrefixFromHasher(hash);
+
+    const payload = hash.finalize(allocator) catch
+        return PkcsError.HostMemory;
+    defer allocator.free(payload);
+
+    var request = allocator.alloc(u8, prefix.len + payload.len) catch
+        return PkcsError.HostMemory;
+
+    std.mem.copyForwards(u8, request[0..prefix.len], prefix);
+    std.mem.copyForwards(u8, request[prefix.len..request.len], payload);
+
+    return request;
+}
+
+fn getPrefixFromHasher(hash: *hasher.Hasher) []const u8 {
+    return switch (hash.*.hasherType.?) {
         .md5 => md5_prefix[0..md5_prefix.len],
         .sha1 => sha1_prefix[0..sha1_prefix.len],
         .sha256 => sha256_prefix[0..sha256_prefix.len],

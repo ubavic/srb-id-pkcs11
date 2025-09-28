@@ -127,7 +127,7 @@ pub fn createAndInit(
     return hasher;
 }
 
-pub fn fromMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!?HasherType {
+pub fn fromSignMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!?HasherType {
     return switch (mechanism) {
         pkcs.CKM_MD5_RSA_PKCS => HasherType.md5,
         pkcs.CKM_SHA1_RSA_PKCS => HasherType.sha1,

@@ -25,14 +25,17 @@ pub export fn C_VerifyInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    const hash_mechanism = hasher.fromMechanism(mechanism.?.mechanism) catch |err|
+    const hash_mechanism = hasher.fromSignMechanism(mechanism.?.mechanism) catch |err|
         return pkcs_error.toRV(err);
 
     var hash: ?hasher.Hasher = null;
+    var msg_buffer: ?std.ArrayList(u8) = null;
     if (hash_mechanism != null) {
         hash = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
             return pkcs.CKR_HOST_MEMORY;
-    } else return pkcs.CKR_MECHANISM_INVALID; // TODO
+    } else {
+        msg_buffer = std.ArrayList(u8){};
+    }
 
     var key_found = false;
     for (current_session.objects) |current_object| {
@@ -64,6 +67,7 @@ pub export fn C_VerifyInit(
             .hasher = hash,
             .multipart_operation = false,
             .private_key = private_key_handle,
+            .msg_buffer = msg_buffer,
         },
     };
 
@@ -99,19 +103,25 @@ pub export fn C_Verify(
     if (current_operation.multipart_operation)
         return pkcs.CKR_FUNCTION_CANCELED;
 
-    if (signature_len != current_operation.signatureSize())
+    if (signature_len != operation.signature_size)
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    current_operation.update(data.?[0..data_len]);
-
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch
+    current_operation.update(current_session.allocator, data.?[0..data_len]) catch
         return pkcs.CKR_HOST_MEMORY;
+
+    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
+        return pkcs_error.toRV(err);
     defer current_session.allocator.free(sign_request);
 
     const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
         return pkcs_error.toRV(err);
 
-    const computed_signature = current_session.card.sign(current_session.allocator, key_id, sign_request) catch |err|
+    const computed_signature = current_session.card.sign(
+        current_session.allocator,
+        key_id,
+        current_operation.hasher == null,
+        sign_request,
+    ) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 
@@ -143,7 +153,8 @@ pub export fn C_VerifyUpdate(
     }
 
     current_operation.multipart_operation = true;
-    current_operation.update(part.?[0..part_len]);
+    current_operation.update(current_session.allocator, part.?[0..part_len]) catch
+        return pkcs.CKR_HOST_MEMORY;
 
     return pkcs.CKR_OK;
 }
@@ -169,17 +180,22 @@ pub export fn C_VerifyFinal(
     if (signature == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (signature_len != current_operation.signatureSize())
+    if (signature_len != operation.signature_size)
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch
-        return pkcs.CKR_HOST_MEMORY;
+    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
+        return pkcs_error.toRV(err);
     defer current_session.allocator.free(sign_request);
 
     const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
         return pkcs_error.toRV(err);
 
-    const computed_signature = current_session.card.sign(current_session.allocator, key_id, sign_request) catch |err|
+    const computed_signature = current_session.card.sign(
+        current_session.allocator,
+        key_id,
+        current_operation.hasher == null,
+        sign_request,
+    ) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(computed_signature);
 

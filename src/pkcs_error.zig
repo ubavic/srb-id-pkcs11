@@ -30,6 +30,7 @@ pub const PkcsError = error{
     TokenNotRecognized,
     UserNotLoggedIn,
     CryptokiNotInitialized,
+    DataLenRange,
 };
 
 pub fn toRV(err: PkcsError) pkcs.CK_RV {
@@ -63,5 +64,6 @@ pub fn toRV(err: PkcsError) pkcs.CK_RV {
         PkcsError.TokenNotRecognized => pkcs.CKR_TOKEN_NOT_RECOGNIZED,
         PkcsError.UserNotLoggedIn => pkcs.CKR_USER_NOT_LOGGED_IN,
         PkcsError.CryptokiNotInitialized => pkcs.CKR_CRYPTOKI_NOT_INITIALIZED,
+        PkcsError.DataLenRange => pkcs.CKR_DATA_LEN_RANGE,
     };
 }

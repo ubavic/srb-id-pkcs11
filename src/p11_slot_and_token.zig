@@ -157,7 +157,7 @@ pub export fn C_GetMechanismList(
 
     const mechanisms = [_]pkcs.CK_MECHANISM_TYPE{
         // pkcs.CKM_RSA_PKCS_KEY_PAIR_GEN,
-        // pkcs.CKM_RSA_PKCS,
+        pkcs.CKM_RSA_PKCS,
         // pkcs.CKM_RSA_X_509,
         pkcs.CKM_MD5_RSA_PKCS,
         pkcs.CKM_SHA1_RSA_PKCS,
@@ -239,7 +239,7 @@ pub export fn C_GetMechanismInfo(
             mechanism_info.?.ulMaxKeySize = 2048;
             mechanism_info.?.flags = pkcs.CKF_HW | pkcs.CKF_GENERATE_KEY_PAIR;
         },
-        //pkcs.CKM_RSA_PKCS,
+        pkcs.CKM_RSA_PKCS,
         //pkcs.CKM_RSA_X_509,
         pkcs.CKM_MD5_RSA_PKCS,
         pkcs.CKM_SHA1_RSA_PKCS,
