@@ -8,6 +8,7 @@ on:
 env:
   ZIG_VERSION: "0.15.1"
   OASIS_URL: "https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40"
+  VERSION_FILE: "src/version.zig"
 
 jobs:
   test:
@@ -31,6 +32,19 @@ jobs:
       - name: Test
         run: |
           zig build test
+      - name: Check tag version
+        run: |      
+          major=$(grep -Po 'pub const major = \K\d+' "$VERSION_FILE")
+          minor=$(grep -Po 'pub const minor = \K\d+' "$VERSION_FILE")
+          patch=$(grep -Po 'pub const patch = \K\d+' "$VERSION_FILE")
+          
+          version="v$major.$minor.$patch"
+          tag="${{github.ref_name}}"
+          
+          if [ "$tag" != "$version" ]; then
+            echo "Error: tag ($tag) does not match version ($version)"
+            exit 1
+          fi
 
   buildLinux:
     runs-on: ubuntu-latest
