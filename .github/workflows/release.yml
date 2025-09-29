@@ -67,7 +67,7 @@ jobs:
           curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSmall
+          zig build -Doptimize=ReleaseSmall -Dcpu=baseline
           mkdir artifact
           cp zig-out/lib/*.so.*.*.* artifact/.
       - name: Upload library
