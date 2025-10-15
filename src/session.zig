@@ -199,7 +199,7 @@ pub fn newSession(
 
     const card = try smart_card.connect(
         allocator,
-        state.smart_card_context_handle,
+        &state.smart_card_client,
         reader_state.name,
     );
 

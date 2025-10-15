@@ -1,4 +1,5 @@
 const pkcs = @import("pkcs.zig").pkcs;
+const pcsc = @import("pcsc");
 
 pub const PkcsError = error{
     Cancel,
@@ -65,5 +66,13 @@ pub fn toRV(err: PkcsError) pkcs.CK_RV {
         PkcsError.UserNotLoggedIn => pkcs.CKR_USER_NOT_LOGGED_IN,
         PkcsError.CryptokiNotInitialized => pkcs.CKR_CRYPTOKI_NOT_INITIALIZED,
         PkcsError.DataLenRange => pkcs.CKR_DATA_LEN_RANGE,
+    };
+}
+
+pub fn formPCSC(err: anyerror) PkcsError {
+    return switch (err) {
+        pcsc.Err.NoSmartCard => PkcsError.TokenNoPresent,
+        pcsc.Err.NoMemory => PkcsError.HostMemory,
+        else => PkcsError.DeviceError,
     };
 }

@@ -1,7 +1,12 @@
 .{
     .name = .srb_id_pkcs11,
     .version = "0.15.1",
-    .dependencies = .{},
+    .dependencies = .{
+        .pcsc = .{
+            .url = "git+https://github.com/kofi-q/pcsc-z.git#2c85c3c84780122f006ec956db24968f6f163a87",
+            .hash = "pcsc-0.1.0-sAX2fqQaBgB76jeDysMq1SsxmFPleALSlL8RsykHNAVx",
+        },
+    },
     .paths = .{""},
     .fingerprint = 0xfc07798e32dd276d,
 }
