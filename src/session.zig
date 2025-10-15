@@ -105,7 +105,7 @@ pub const Session = struct {
     pub fn getObject(self: *Session, object_handle: pkcs.CK_OBJECT_HANDLE) PkcsError!*object.Object {
         for (self.objects) |*current_object| {
             if (current_object.private() and !self.loggedIn())
-                break;
+                continue;
 
             if (current_object.handle() == object_handle)
                 return current_object;
