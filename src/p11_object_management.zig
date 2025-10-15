@@ -105,7 +105,7 @@ pub export fn C_GetAttributeValue(
         defer object_attribute.deinit(current_session.allocator);
 
         if (template[i].pValue == null) {
-            template[i].ulValueLen = object_attribute.value.len;
+            template[i].ulValueLen = @intCast(object_attribute.value.len);
             continue;
         }
 
@@ -117,7 +117,7 @@ pub export fn C_GetAttributeValue(
             continue;
         }
 
-        template[i].ulValueLen = object_attribute.value.len;
+        template[i].ulValueLen = @intCast(object_attribute.value.len);
         std.mem.copyForwards(u8, target_buffer[0..template[i].ulValueLen], object_attribute.value);
     }
 
@@ -211,7 +211,7 @@ pub export fn C_FindObjects(
         return pkcs.CKR_OK;
     }
 
-    const remaining_objects: pkcs.CK_ULONG = current_operation.found_objects.len - current_operation.index;
+    const remaining_objects: pkcs.CK_ULONG = @intCast(current_operation.found_objects.len - current_operation.index);
     const objects_to_return = @min(remaining_objects, max_object_count);
 
     object_count.?.* = objects_to_return;

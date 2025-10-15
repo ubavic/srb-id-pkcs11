@@ -135,7 +135,7 @@ pub export fn C_Sign(
     if (computed_signature.len > signature_len.?.*)
         return pkcs.CKR_GENERAL_ERROR;
 
-    signature_len.?.* = computed_signature.len;
+    signature_len.?.* = @intCast(computed_signature.len);
     @memcpy(signature.?, computed_signature);
 
     return pkcs.CKR_OK;
@@ -215,7 +215,7 @@ pub export fn C_SignFinal(
     if (computed_signature.len > signature_len.?.*)
         return pkcs.CKR_GENERAL_ERROR;
 
-    signature_len.?.* = computed_signature.len;
+    signature_len.?.* = @intCast(computed_signature.len);
     @memcpy(signature.?, computed_signature);
 
     return pkcs.CKR_OK;

@@ -89,7 +89,7 @@ pub export fn C_Digest(
 
     const required_digest_size = current_operation.hasher.digestLength();
     if (data_digest == null) {
-        data_digest_len.?.* = required_digest_size;
+        data_digest_len.?.* = @intCast(required_digest_size);
         return pkcs.CKR_OK;
     }
 
@@ -170,7 +170,7 @@ pub export fn C_DigestFinal(
 
     const required_digest_size = current_operation.hasher.digestLength();
     if (data_digest == null) {
-        data_digest_len.?.* = required_digest_size;
+        data_digest_len.?.* = @intCast(required_digest_size);
         return pkcs.CKR_OK;
     }
 
