@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) void {
         .root_module = mod,
         .version = semver,
         .use_llvm = true,
-        .use_lld = true,
+        .use_lld = target.result.os.tag != .macos,
     });
 
     const lib_test = b.addTest(.{ .root_module = mod });
