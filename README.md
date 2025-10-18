@@ -26,6 +26,12 @@ modutil -dbdir sql:.pki/nssdb/ -add "Srb Id PKCS11" -libfile PATH_TO_SO
 
 After staring Chrome you will be able to use the module.
 
+## Usage on macOS
+
+Download the latest `.dylib` file form [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. There are separate `dylib` files for intel (x64) and ARM macs.
+
+In Firefox add a new PKCS#11 module using **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.dylib` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
+
 ## Compilation
 
 First, download PKCS11 headers:
