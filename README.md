@@ -32,6 +32,8 @@ Download the latest `.dylib` file form [Releases](https://github.com/ubavic/srb-
 
 In Firefox add a new PKCS#11 module using **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.dylib` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
 
+If your system’s security settings prevent downloaded `.dylib` files from executing, refer to Apple’s official documentation for instructions on enabling the use of unsigned libraries. Alternatively, you may install Zig and build the project locally.
+
 ## Compilation
 
 First, download PKCS11 headers:
