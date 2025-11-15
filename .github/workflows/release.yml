@@ -37,19 +37,19 @@ jobs:
           zig build test
       - name: Check tag version
         id: setversion
-        run: |      
+        run: |
           major=$(grep -Po 'pub const major = \K\d+' "$VERSION_FILE")
           minor=$(grep -Po 'pub const minor = \K\d+' "$VERSION_FILE")
           patch=$(grep -Po 'pub const patch = \K\d+' "$VERSION_FILE")
-          
+
           version="v$major.$minor.$patch"
           tag="${{github.ref_name}}"
-          
+
           if [ "$tag" != "$version" ]; then
             echo "Error: tag ($tag) does not match version ($version)"
             exit 1
           fi
-          
+
           echo "version=$major.$minor.$patch" >> $GITHUB_OUTPUT
 
   buildLinux:
@@ -88,8 +88,6 @@ jobs:
     steps:
       - name: Checkout mac-os branch
         uses: actions/checkout@v4
-        with:
-          ref: mac-os
       - name: Install macOS deps
         run: |
           brew update
@@ -120,8 +118,6 @@ jobs:
     steps:
       - name: Checkout mac-os branch
         uses: actions/checkout@v4
-        with:
-          ref: mac-os
       - name: Install macOS deps
         run: |
           brew update

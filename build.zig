@@ -18,7 +18,12 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/p11_general.zig"),
     });
 
-    const pcsc_dep = b.dependency("pcsc", .{ .target = target, .optimize = optimize });
+    const pcsc_dep = b.dependency("pcsc", .{
+        .target = target,
+        .optimize = optimize,
+        .link_system_pcsclite = (target.result.os.tag == .linux),
+    });
+
     const pcsc_mod = pcsc_dep.module("pcsc");
 
     mod.addImport("pcsc", pcsc_mod);
