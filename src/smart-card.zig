@@ -1,12 +1,13 @@
 const std = @import("std");
+const pcsc = @import("pcsc");
 
 const apdu = @import("apdu.zig");
-const PkcsError = @import("pkcs_error.zig").PkcsError;
-const sc = @import("smart-card_lib.zig").sc;
+const pkcs_error = @import("pkcs_error.zig");
+
+const PkcsError = pkcs_error.PkcsError;
 
 pub const Card = struct {
-    card_handle: sc.SCARDHANDLE,
-    active_card_protocol: sc.DWORD,
+    smart_card: pcsc.Card,
 
     fn selectFile(
         self: *const Card,
@@ -41,25 +42,14 @@ pub const Card = struct {
         allocator: std.mem.Allocator,
         data_unit: []u8,
     ) PkcsError![]u8 {
-        var buf: [256 + 2]u8 = undefined;
-        var buf_len: sc.DWORD = buf.len;
+        var buf: [pcsc.max_buffer_len]u8 = undefined;
+        const response = self.smart_card.transmit(data_unit, &buf) catch |err|
+            return pkcs_error.formPCSC(err);
 
-        const rv = sc.SCardTransmit(
-            self.card_handle,
-            @ptrCast(&self.active_card_protocol),
-            data_unit.ptr,
-            data_unit.len,
-            null,
-            &buf,
-            &buf_len,
-        );
-
-        try scToPkcsError(rv);
-
-        const out = allocator.alloc(u8, buf_len) catch
+        const out = allocator.alloc(u8, response.len) catch
             return PkcsError.HostMemory;
 
-        std.mem.copyForwards(u8, out, buf[0..buf_len]);
+        std.mem.copyForwards(u8, out, response[0..response.len]);
 
         return out;
     }
@@ -139,8 +129,8 @@ pub const Card = struct {
     pub fn disconnect(
         self: *Card,
     ) PkcsError!void {
-        const rv = sc.SCardDisconnect(self.card_handle, sc.SCARD_LEAVE_CARD);
-        try scToPkcsError(rv);
+        self.smart_card.disconnect(.LEAVE) catch |err|
+            return pkcs_error.formPCSC(err);
     }
 
     pub fn initCrypto(
@@ -272,27 +262,13 @@ pub const Card = struct {
 
 pub fn connect(
     allocator: std.mem.Allocator,
-    smart_card_context_handle: sc.SCARDHANDLE,
-    reader_name: []const u8,
+    smart_card_client: *pcsc.Client,
+    reader_name: [*:0]const u8,
 ) PkcsError!Card {
-    var card_handle: sc.SCARDHANDLE = 0;
-    var active_protocol: sc.DWORD = 0;
+    const smart_handle = smart_card_client.connect(reader_name, .SHARED, .ANY) catch |err|
+        return pkcs_error.formPCSC(err);
 
-    const rv = sc.SCardConnect(
-        smart_card_context_handle,
-        reader_name.ptr,
-        sc.SCARD_SHARE_SHARED,
-        sc.SCARD_PROTOCOL_T0 | sc.SCARD_PROTOCOL_T1,
-        &card_handle,
-        &active_protocol,
-    );
-
-    try scToPkcsError(rv);
-
-    const card = Card{
-        .card_handle = card_handle,
-        .active_card_protocol = active_protocol,
-    };
+    const card = Card{ .smart_card = smart_handle };
 
     try card.initCrypto(allocator);
 
@@ -308,14 +284,6 @@ fn responseIs(rsp: []const u8, expected: [2]u8) bool {
 
 fn responseOK(rsp: []const u8) bool {
     return responseIs(rsp, [_]u8{ 0x90, 0x00 });
-}
-
-fn scToPkcsError(err: sc.LONG) PkcsError!void {
-    return switch (err) {
-        sc.SCARD_S_SUCCESS => {},
-        sc.SCARD_E_NO_SMARTCARD => PkcsError.TokenNoPresent,
-        else => PkcsError.DeviceError,
-    };
 }
 
 fn padPin(pin: []const u8) PkcsError![8]u8 {

@@ -21,7 +21,7 @@ pub export fn C_GetSlotList(
         return pkcs.CKR_ARGUMENTS_BAD;
 
     if (slot_list == null) {
-        reader.refreshStatuses(state.allocator, state.smart_card_context_handle) catch |err|
+        reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
             return pkcs_error.toRV(err);
     }
 
@@ -77,7 +77,7 @@ pub export fn C_GetSlotInfo(
     reader_state.writeShortName(&slot_info.?.slotDescription);
     @memset(&slot_info.?.manufacturerID, ' ');
 
-    reader_state.refreshCardPresent(state.smart_card_context_handle) catch |err|
+    reader_state.refreshCardPresent(&state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
 
     slot_info.?.flags = pkcs.CKF_HW_SLOT | pkcs.CKF_REMOVABLE_DEVICE;
@@ -114,7 +114,7 @@ pub export fn C_GetTokenInfo(
 
     var reader_state = reader_entry.?;
 
-    reader_state.refreshCardPresent(state.smart_card_context_handle) catch |err|
+    reader_state.refreshCardPresent(&state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
 
     @memset(&token_info.?.label, 0);

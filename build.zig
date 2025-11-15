@@ -18,37 +18,24 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/p11_general.zig"),
     });
 
+    const pcsc_dep = b.dependency("pcsc", .{ .target = target, .optimize = optimize });
+    const pcsc_mod = pcsc_dep.module("pcsc");
+
+    mod.addImport("pcsc", pcsc_mod);
+
     const lib = b.addLibrary(.{
         .linkage = std.builtin.LinkMode.dynamic,
         .name = "srb-id-pkcs11",
         .root_module = mod,
         .version = semver,
         .use_llvm = true,
-        .use_lld = true,
+        .use_lld = target.result.os.tag != .macos,
     });
 
     const lib_test = b.addTest(.{ .root_module = mod });
 
     lib.addIncludePath(b.path("include"));
     lib_test.addIncludePath(b.path("include"));
-
-    switch (target.result.os.tag) {
-        .windows => {
-            lib.linkSystemLibrary("Winscard");
-            lib_test.linkSystemLibrary("Winscard");
-        },
-        .linux => {
-            lib.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
-            lib.linkSystemLibrary("pcsclite");
-            lib_test.addIncludePath(.{ .cwd_relative = "/usr/include/PCSC/" });
-            lib_test.linkSystemLibrary("pcsclite");
-        },
-        .macos => {
-            lib.linkFramework("PCSC");
-            lib_test.linkFramework("PCSC");
-        },
-        else => unreachable,
-    }
 
     b.installArtifact(lib);
 
