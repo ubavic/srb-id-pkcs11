@@ -2,6 +2,9 @@ const std = @import("std");
 
 const version = @import("src/version.zig");
 
+const base_url = "https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/";
+const files = [3][]const u8{ "pkcs11.h", "pkcs11f.h", "pkcs11t.h" };
+
 const semver = std.SemanticVersion{
     .major = version.major,
     .minor = version.minor,
@@ -37,7 +40,11 @@ pub fn build(b: *std.Build) void {
         .use_lld = target.result.os.tag != .macos,
     });
 
+    const header_file_step = checkPkcs11Headers(b);
+    lib.step.dependOn(header_file_step);
+
     const lib_test = b.addTest(.{ .root_module = mod });
+    lib_test.step.dependOn(header_file_step);
 
     lib.addIncludePath(b.path("include"));
     lib_test.addIncludePath(b.path("include"));
@@ -48,4 +55,22 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&lib_test_run.step);
+}
+
+fn checkPkcs11Headers(b: *std.Build) *std.Build.Step {
+    const step = std.Build.step(b, "pkcs headers", "Download pkcs headers");
+    inline for (files) |file_name| {
+        _ = std.fs.cwd().openFile("include/" ++ file_name, .{ .mode = .read_only }) catch |e| {
+            if (e == std.fs.File.OpenError.FileNotFound) {
+                const curl_cmd = b.addSystemCommand(&.{"curl"});
+                curl_cmd.addArg("-s");
+                curl_cmd.addArg(base_url ++ file_name);
+                const output = curl_cmd.captureStdOut();
+                curl_cmd.expectExitCode(0);
+                const inst_step = b.addInstallFileWithDir(output, .{ .custom = "../include" }, file_name);
+                step.dependOn(&inst_step.step);
+            }
+        };
+    }
+    return step;
 }
