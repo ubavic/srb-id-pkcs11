@@ -36,22 +36,11 @@ If your system’s security settings prevent downloaded `.dylib` files from exec
 
 ## Compilation
 
-First, download PKCS11 headers:
-
-```bash
-OASIS_URL="https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40"
-curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
-curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
-curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
-```
-
-Then, build the project with:
+Build the project with:
 
 ```
 zig build
 ```
-
-You will maybe need to configure [PCSC lite](https://pcsclite.apdu.fr/) path in `build.zig`.
 
 ## Warranty Disclaimer
 
