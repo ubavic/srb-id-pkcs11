@@ -12,7 +12,7 @@ Functions intended for security officers (`CKU_SO`) are not planned for implemen
 
 ## Usage on Linux
 
-To use this module, you need to have the `pcscd` service enabled.
+To use this module, you need to have the `pcscd` service enabled, and `ccid` driver installed.
 
 Download the latest `.so` file form [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location (for example: `/usr/lib/` or `~/lib/`).
 
@@ -24,11 +24,11 @@ Chrome does not allow loading a PKCS#11 module through the browser settings. Ins
 modutil -dbdir sql:.pki/nssdb/ -add "Srb Id PKCS11" -libfile PATH_TO_SO
 ```
 
-After staring Chrome you will be able to use the module.
+After staring Chrome, you will be able to use the module.
 
 ## Usage on macOS
 
-Download the latest `.dylib` file form [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. There are separate `dylib` files for intel (x64) and ARM macs.
+Download the latest `.dylib` file form [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. There are separate `dylib` files for Intel (x64) and ARM macs.
 
 In Firefox add a new PKCS#11 module using **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.dylib` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
 
