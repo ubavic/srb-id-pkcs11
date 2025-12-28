@@ -249,7 +249,7 @@ pub fn getSession(
     return current_session;
 }
 
-pub fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
+pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
     if (!lock.tryLock())
         return PkcsError.FunctionFailed;
     defer lock.unlock();
@@ -267,13 +267,17 @@ pub fn closeSession(session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
 
     current_session.resetOperation();
 
+    for (current_session.objects) |*o| {
+        o.deinit(allocator);
+    }
+
     current_session.card.disconnect() catch {};
 
     if (!sessions.remove(session_handle))
         return PkcsError.GeneralError;
 }
 
-pub fn closeAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
+pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     var err: pkcs.CK_RV = pkcs.CKR_OK;
     var it = sessions.iterator();
 
@@ -281,7 +285,7 @@ pub fn closeAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
         const sessionId = entry.key_ptr.*;
         const session_entry = entry.value_ptr.*;
         if (session_entry.reader_id == slot_id) {
-            closeSession(sessionId) catch |e| {
+            closeSession(allocator, sessionId) catch |e| {
                 err = pkcs_error.toRV(e);
             };
         }

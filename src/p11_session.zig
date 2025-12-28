@@ -38,7 +38,7 @@ pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    session.closeSession(session_handle) catch |err|
+    session.closeSession(state.allocator, session_handle) catch |err|
         return pkcs_error.toRV(err);
 
     return pkcs.CKR_OK;
@@ -57,7 +57,7 @@ pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     if (!reader.reader_states.contains(slot_id))
         return pkcs.CKR_SLOT_ID_INVALID;
 
-    return session.closeAllSessions(slot_id);
+    return session.closeAllSessions(state.allocator, slot_id);
 
     // TODO: refresh reader status;
 }

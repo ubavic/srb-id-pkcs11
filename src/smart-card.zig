@@ -165,11 +165,13 @@ pub const Card = struct {
         if (!validatePin(pin))
             return PkcsError.PinIncorrect;
 
-        const padded_pin = try padPin(pin);
+        var padded_pin = try padPin(pin);
+        defer std.crypto.secureZero(u8, &padded_pin);
 
         const data_unit = apdu.build(allocator, 0x00, 0x20, 0x00, 0x80, &padded_pin, 0) catch
             return PkcsError.HostMemory;
         defer allocator.free(data_unit);
+        defer std.crypto.secureZero(u8, data_unit);
 
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
@@ -199,9 +201,13 @@ pub const Card = struct {
         try self.verifyPin(allocator, old_pin);
 
         var data: [16]u8 = [_]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        defer std.crypto.secureZero(u8, &data);
 
-        const padded_old_pin = try padPin(old_pin);
-        const padded_new_pin = try padPin(new_pin);
+        var padded_old_pin = try padPin(old_pin);
+        defer std.crypto.secureZero(u8, &padded_old_pin);
+
+        var padded_new_pin = try padPin(new_pin);
+        defer std.crypto.secureZero(u8, &padded_new_pin);
 
         std.mem.copyForwards(u8, data[0..8], &padded_old_pin);
         std.mem.copyForwards(u8, data[8..16], &padded_new_pin);
@@ -209,6 +215,7 @@ pub const Card = struct {
         const data_unit = apdu.build(allocator, 0x00, 0x24, 0x00, 0x80, &data, 0) catch
             return PkcsError.HostMemory;
         defer allocator.free(data_unit);
+        defer std.crypto.secureZero(u8, data_unit);
 
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
@@ -241,6 +248,7 @@ pub const Card = struct {
         const sign_request_data_unit = apdu.build(allocator, 0, 0x2a, 0x9e, 0x00, sign_request, 0x100) catch
             return PkcsError.HostMemory;
         defer allocator.free(sign_request_data_unit);
+        defer std.crypto.secureZero(u8, sign_request_data_unit);
 
         const sign_request_response = try self.transmit(allocator, sign_request_data_unit);
         defer allocator.free(sign_request_response);

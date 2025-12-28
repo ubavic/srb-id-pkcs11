@@ -55,11 +55,11 @@ pub const Object = union(enum) {
         };
     }
 
-    pub fn deinit(self: *const Object, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *Object, allocator: std.mem.Allocator) void {
         switch (self.*) {
-            .certificate => |o| o.deinit(allocator),
-            .private_key => |o| o.deinit(allocator),
-            .public_key => |o| o.deinit(allocator),
+            .certificate => |*o| o.deinit(allocator),
+            .private_key => |*o| o.deinit(allocator),
+            .public_key => |*o| o.deinit(allocator),
         }
     }
 };
@@ -70,36 +70,57 @@ pub const CertificateObject = struct {
     token: pkcs.CK_BBOOL,
     private: pkcs.CK_BBOOL,
     modifiable: pkcs.CK_BBOOL,
-    label: []const u8,
+    label: []u8,
     copyable: pkcs.CK_BBOOL,
     destroyable: pkcs.CK_BBOOL,
     certificate_type: pkcs.CK_CERTIFICATE_TYPE,
     trusted: pkcs.CK_BBOOL,
     certificate_category: pkcs.CK_CERTIFICATE_CATEGORY,
-    check_value: []const u8,
+    check_value: []u8,
     start_date: pkcs.CK_DATE,
     end_date: pkcs.CK_DATE,
-    public_key_info: []const u8,
-    subject: []const u8,
-    id: []const u8,
-    issuer: []const u8,
-    serial_number: []const u8,
-    value: []const u8,
-    url: []const u8,
-    hash_of_subject_public_key: []const u8,
+    public_key_info: []u8,
+    subject: []u8,
+    id: []u8,
+    issuer: []u8,
+    serial_number: []u8,
+    value: []u8,
+    url: []u8,
+    hash_of_subject_public_key: []u8,
     name_hash_algorithm: pkcs.CK_MECHANISM_TYPE,
 
-    pub fn deinit(self: *Attribute, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *CertificateObject, allocator: std.mem.Allocator) void {
+        std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
+
+        std.crypto.secureZero(u8, self.check_value);
         allocator.free(self.check_value);
+
+        std.crypto.secureZero(u8, self.public_key_info);
         allocator.free(self.public_key_info);
+
+        std.crypto.secureZero(u8, self.subject);
         allocator.free(self.subject);
+
+        std.crypto.secureZero(u8, self.id);
         allocator.free(self.id);
+
+        std.crypto.secureZero(u8, self.issuer);
         allocator.free(self.issuer);
+
+        std.crypto.secureZero(u8, self.serial_number);
         allocator.free(self.serial_number);
+
+        std.crypto.secureZero(u8, self.value);
         allocator.free(self.value);
+
+        std.crypto.secureZero(u8, self.url);
         allocator.free(self.url);
+
+        std.crypto.secureZero(u8, self.hash_of_subject_public_key);
         allocator.free(self.hash_of_subject_public_key);
+
+        std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
 
     pub fn getAttributeValue(self: *const CertificateObject, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
@@ -138,18 +159,18 @@ pub const PrivateKeyObject = struct {
     token: pkcs.CK_BBOOL,
     private: pkcs.CK_BBOOL,
     modifiable: pkcs.CK_BBOOL,
-    label: []const u8,
+    label: []u8,
     copyable: pkcs.CK_BBOOL,
     destroyable: pkcs.CK_BBOOL,
     key_type: pkcs.CK_KEY_TYPE,
-    id: []const u8,
+    id: []u8,
     start_date: pkcs.CK_DATE,
     end_date: pkcs.CK_DATE,
     derive: pkcs.CK_BBOOL,
     local: pkcs.CK_BBOOL,
     key_gen_mechanism: pkcs.CK_MECHANISM_TYPE,
-    allowed_mechanisms: []const pkcs.CK_MECHANISM_TYPE,
-    subject: []const u8,
+    allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE,
+    subject: []u8,
     sensitive: pkcs.CK_BBOOL,
     decrypt: pkcs.CK_BBOOL,
     sign: pkcs.CK_BBOOL,
@@ -161,17 +182,31 @@ pub const PrivateKeyObject = struct {
     wrap_with_trusted: pkcs.CK_BBOOL,
     unwrap_template: []pkcs.CK_ATTRIBUTE,
     always_authenticate: pkcs.CK_BBOOL,
-    public_key_info: []const u8,
-    modulus: []const u8,
+    public_key_info: []u8,
+    modulus: []u8,
 
-    pub fn deinit(self: *Attribute, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *PrivateKeyObject, allocator: std.mem.Allocator) void {
+        std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
+
+        std.crypto.secureZero(u8, self.id);
         allocator.free(self.id);
+
+        std.crypto.secureZero(c_ulong, self.allowed_mechanisms);
         allocator.free(self.allowed_mechanisms);
+
+        std.crypto.secureZero(u8, self.subject);
         allocator.free(self.subject);
+
         allocator.free(self.unwrap_template);
+
+        std.crypto.secureZero(u8, self.public_key_info);
         allocator.free(self.public_key_info);
+
+        std.crypto.secureZero(u8, self.modulus);
         allocator.free(self.modulus);
+
+        std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
 
     pub fn getAttributeValue(self: *const PrivateKeyObject, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
@@ -216,35 +251,51 @@ pub const PublicKeyObject = struct {
     token: pkcs.CK_BBOOL,
     private: pkcs.CK_BBOOL,
     modifiable: pkcs.CK_BBOOL,
-    label: []const u8,
+    label: []u8,
     copyable: pkcs.CK_BBOOL,
     destroyable: pkcs.CK_BBOOL,
     key_type: pkcs.CK_KEY_TYPE,
-    id: []const u8,
+    id: []u8,
     start_date: pkcs.CK_DATE,
     end_date: pkcs.CK_DATE,
     derive: pkcs.CK_BBOOL,
     local: pkcs.CK_BBOOL,
     key_gen_mechanism: pkcs.CK_MECHANISM_TYPE,
-    allowed_mechanisms: []const pkcs.CK_MECHANISM_TYPE,
-    subject: []const u8,
+    allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE,
+    subject: []u8,
     encrypt: pkcs.CK_BBOOL,
     verify: pkcs.CK_BBOOL,
     verify_recover: pkcs.CK_BBOOL,
     wrap: pkcs.CK_BBOOL,
     trusted: pkcs.CK_BBOOL,
     wrap_template: []pkcs.CK_ATTRIBUTE,
-    public_key_info: []const u8,
-    modulus: []const u8,
+    public_key_info: []u8,
+    modulus: []u8,
 
-    pub fn deinit(self: *Attribute, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *PublicKeyObject, allocator: std.mem.Allocator) void {
+        std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
+
+        std.crypto.secureZero(u8, self.id);
         allocator.free(self.id);
+
+        std.crypto.secureZero(c_ulong, self.allowed_mechanisms);
         allocator.free(self.allowed_mechanisms);
+
+        std.crypto.secureZero(u8, self.subject);
         allocator.free(self.subject);
+
+        std.crypto.secureZero(u8, self.public_key_info);
         allocator.free(self.public_key_info);
+
+        // TODO: secure zero
+        // for now we don't put here anything
         allocator.free(self.wrap_template);
+
+        std.crypto.secureZero(u8, self.modulus);
         allocator.free(self.modulus);
+
+        std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
 
     pub fn getAttributeValue(self: *const PublicKeyObject, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
