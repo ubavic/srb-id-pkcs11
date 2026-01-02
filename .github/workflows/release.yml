@@ -72,6 +72,27 @@ jobs:
           name: linux-build-artifact
           path: artifact/*
 
+  buildWindows:
+    runs-on: windows-latest
+    needs: [test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Build
+        run: |
+          zig build -Doptimize=ReleaseSmall -Dcpu=baseline
+          mkdir artifact
+          cp zig-out/bin/$LIB_NAME.dll artifact/$LIB_NAME.${{needs.test.outputs.version}}.dll
+      - name: Upload library
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-artifact
+          path: artifact/*
+
   buildMacArm:
     runs-on: macos-latest
     needs: [test]
@@ -124,7 +145,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [buildLinux, buildMacArm, buildMacIntel]
+    needs: [buildLinux, buildMacArm, buildMacIntel, buildWindows]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -134,6 +155,7 @@ jobs:
           mv linux-build-artifact/* .
           mv macos-arm-build-artifact/* .
           mv macos-intel-build-artifact/* .
+          mv windows-build-artifact/* .
       - name: Generate release body
         run: |
           touch changelog.md
@@ -147,6 +169,9 @@ jobs:
           echo '```' >> changelog.md
           sha256sum *.arm.* >> changelog.md
           echo '```' >> changelog.md
+          echo '```' >> changelog.md
+          sha256sum *.dll >> changelog.md
+          echo '```' >> changelog.md
           echo ''    >> changelog.md
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -154,5 +179,6 @@ jobs:
           files: |
             ./*.so.*
             ./*.dylib
+            ./*.dll
           body_path: changelog.md
           tag_name: ${{github.ref_name}}
