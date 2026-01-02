@@ -27,11 +27,6 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Download PKCS11
-        run: |
-          curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
-          curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
-          curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
       - name: Test
         run: |
           zig build test
@@ -66,11 +61,6 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Download PKCS11
-        run: |
-          curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
-          curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
-          curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
       - name: Build
         run: |
           zig build -Doptimize=ReleaseSmall -Dcpu=baseline
@@ -96,11 +86,6 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Download PKCS11
-        run: |
-          curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
-          curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
-          curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
       - name: Build
         run: |
           zig build -Doptimize=ReleaseSmall -Dcpu=baseline
@@ -126,11 +111,6 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Download PKCS11
-        run: |
-          curl --output include/pkcs11.h $OASIS_URL/pkcs11.h
-          curl --output include/pkcs11f.h $OASIS_URL/pkcs11f.h
-          curl --output include/pkcs11t.h $OASIS_URL/pkcs11t.h
       - name: Build
         run: |
           zig build -Doptimize=ReleaseSmall -Dcpu=baseline
