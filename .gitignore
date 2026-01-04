@@ -18,3 +18,8 @@ include/pkcs11t.h
 *.so.*
 *.a
 *.log
+*.key
+*.pem
+*.der
+
+!testdata/test.der
