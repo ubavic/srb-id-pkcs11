@@ -2,6 +2,9 @@ const std = @import("std");
 
 const version = @import("src/version.zig");
 
+const base_url = "https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/";
+const files = [3][]const u8{ "pkcs11.h", "pkcs11f.h", "pkcs11t.h" };
+
 const semver = std.SemanticVersion{
     .major = version.major,
     .minor = version.minor,
@@ -11,9 +14,6 @@ const semver = std.SemanticVersion{
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const use_system_pkcs11 = b.option(bool, "use_system_pkcs11", "Use system PKCS11 headers") orelse false;
-    const nss_include_path = b.option([]const u8, "nss_include_path", "NSS include path") orelse "/usr/include/nss";
-    const nspr_include_path = b.option([]const u8, "nspr_include_path", "NSPR include path") orelse "/usr/include/nspr";
 
     const mod = b.createModule(.{
         .target = target,
@@ -40,19 +40,14 @@ pub fn build(b: *std.Build) void {
         .use_lld = target.result.os.tag != .macos,
     });
 
+    const header_file_step = checkPkcs11Headers(b);
+    lib.step.dependOn(header_file_step);
+
     const lib_test = b.addTest(.{ .root_module = mod });
+    lib_test.step.dependOn(header_file_step);
 
     lib.addIncludePath(b.path("include"));
     lib_test.addIncludePath(b.path("include"));
-
-    if (use_system_pkcs11) {
-        lib.addSystemIncludePath(.{ .cwd_relative = nss_include_path });
-        lib.addSystemIncludePath(.{ .cwd_relative = nspr_include_path });
-    } else {
-        const header_file_step = checkPkcs11Headers(b);
-        lib.step.dependOn(header_file_step);
-        lib_test.step.dependOn(header_file_step);
-    }
 
     b.installArtifact(lib);
 
@@ -63,9 +58,6 @@ pub fn build(b: *std.Build) void {
 }
 
 fn checkPkcs11Headers(b: *std.Build) *std.Build.Step {
-    const base_url = "https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/";
-    const files = [3][]const u8{ "pkcs11.h", "pkcs11f.h", "pkcs11t.h" };
-
     const step = std.Build.step(b, "pkcs headers", "Download pkcs headers");
     inline for (files) |file_name| {
         _ = std.fs.cwd().openFile("include/" ++ file_name, .{ .mode = .read_only }) catch |e| {
