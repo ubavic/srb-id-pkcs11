@@ -184,6 +184,7 @@ pub const PrivateKeyObject = struct {
     always_authenticate: pkcs.CK_BBOOL,
     public_key_info: []u8,
     modulus: []u8,
+    public_exponent: []u8,
 
     pub fn deinit(self: *PrivateKeyObject, allocator: std.mem.Allocator) void {
         std.crypto.secureZero(u8, self.label);
@@ -205,6 +206,9 @@ pub const PrivateKeyObject = struct {
 
         std.crypto.secureZero(u8, self.modulus);
         allocator.free(self.modulus);
+
+        std.crypto.secureZero(u8, self.public_exponent);
+        allocator.free(self.public_exponent);
 
         std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
@@ -240,6 +244,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_ALWAYS_AUTHENTICATE => encodeBool(allocator, self.always_authenticate),
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
             pkcs.CKA_MODULUS => encodeByteArray(allocator, self.modulus),
+            pkcs.CKA_PUBLIC_EXPONENT => encodeByteArray(allocator, self.public_exponent),
             else => PkcsError.AttributeTypeInvalid,
         };
     }
@@ -271,6 +276,7 @@ pub const PublicKeyObject = struct {
     wrap_template: []pkcs.CK_ATTRIBUTE,
     public_key_info: []u8,
     modulus: []u8,
+    public_exponent: []u8,
 
     pub fn deinit(self: *PublicKeyObject, allocator: std.mem.Allocator) void {
         std.crypto.secureZero(u8, self.label);
@@ -294,6 +300,9 @@ pub const PublicKeyObject = struct {
 
         std.crypto.secureZero(u8, self.modulus);
         allocator.free(self.modulus);
+
+        std.crypto.secureZero(u8, self.public_exponent);
+        allocator.free(self.public_exponent);
 
         std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
@@ -324,6 +333,7 @@ pub const PublicKeyObject = struct {
             // pkcs.CKA_WRAP_TEMPLATE => unreachable,
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
             pkcs.CKA_MODULUS => encodeByteArray(allocator, self.modulus),
+            pkcs.CKA_PUBLIC_EXPONENT => encodeByteArray(allocator, self.public_exponent),
             else => PkcsError.AttributeTypeInvalid,
         };
     }

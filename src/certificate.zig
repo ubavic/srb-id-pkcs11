@@ -20,6 +20,14 @@ pub fn loadObjects(
     const parsed = Certificate.parse(cert) catch
         return PkcsError.GeneralError;
 
+    switch (parsed.pub_key_algo) {
+        .rsaEncryption => {},
+        else => return PkcsError.GeneralError,
+    }
+
+    const public_key_components = std.crypto.Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
+        return PkcsError.GeneralError;
+
     const cert_id = try clone(allocator, id);
     errdefer allocator.free(cert_id);
     const certificate_value = try clone(allocator, buffer);
@@ -49,8 +57,6 @@ pub fn loadObjects(
     const label_slice = extractLabel(subject);
     const label = try clone(allocator, label_slice);
     errdefer allocator.free(label);
-
-    const modulus = extractModulus(buffer[parsed.pub_key_slice.start..parsed.pub_key_slice.end]);
 
     const certificate_object: object.CertificateObject = object.CertificateObject{
         .handle = certificate_handle,
@@ -84,8 +90,10 @@ pub fn loadObjects(
     errdefer allocator.free(private_key_label);
     const private_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_subject);
-    const private_key_modulus = try clone(allocator, modulus);
+    const private_key_modulus = try clone(allocator, public_key_components.modulus);
     errdefer allocator.free(private_key_modulus);
+    const priv_key_public_exponent = try clone(allocator, public_key_components.exponent);
+    errdefer allocator.free(priv_key_public_exponent);
 
     // invalid on original token
     const priv_public_key_info = try allocEmptySlice(u8, allocator);
@@ -126,6 +134,7 @@ pub fn loadObjects(
         .always_authenticate = pkcs.CK_FALSE,
         .public_key_info = priv_public_key_info,
         .modulus = private_key_modulus,
+        .public_exponent = priv_key_public_exponent,
     };
 
     const pub_id = try clone(allocator, id);
@@ -134,8 +143,10 @@ pub fn loadObjects(
     errdefer allocator.free(public_key_label);
     const public_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_subject);
-    const public_key_modulus = try clone(allocator, modulus);
+    const public_key_modulus = try clone(allocator, public_key_components.modulus);
     errdefer allocator.free(public_key_modulus);
+    const pub_public_exponent = try clone(allocator, public_key_components.exponent);
+    errdefer allocator.free(pub_public_exponent);
 
     // invalid on original token
     const pub_public_key_info = try allocEmptySlice(u8, allocator);
@@ -171,6 +182,7 @@ pub fn loadObjects(
         .wrap_template = wrap_template,
         .public_key_info = pub_public_key_info,
         .modulus = public_key_modulus,
+        .public_exponent = pub_public_exponent,
     };
 
     const object2 = object.Object{ .private_key = private_key_object };
@@ -216,22 +228,6 @@ fn extractLabel(subject_bytes: []const u8) []const u8 {
     }
 
     return subject_bytes[i + 2 .. subject_bytes.len];
-}
-
-fn extractModulus(subject_bytes: []const u8) []const u8 {
-    if (subject_bytes.len != 270)
-        return subject_bytes[0..0];
-
-    const a_structure_start: usize = 4;
-    const b_structure_start: usize = 265;
-
-    if (subject_bytes[a_structure_start] != 2)
-        return subject_bytes[0..0];
-
-    if (subject_bytes[b_structure_start] != 2)
-        return subject_bytes[0..0];
-
-    return subject_bytes[a_structure_start + 3 + 2 .. b_structure_start];
 }
 
 pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) PkcsError![]u8 {
