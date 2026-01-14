@@ -132,8 +132,9 @@ pub export fn C_GetTokenInfo(
     token_info.?.ulMaxPinLen = 8;
     token_info.?.flags = pkcs.CKF_TOKEN_INITIALIZED | pkcs.CKF_USER_PIN_INITIALIZED | pkcs.CKF_LOGIN_REQUIRED | pkcs.CKF_RNG;
     token_info.?.ulMaxSessionCount = pkcs.CK_EFFECTIVELY_INFINITE;
-    token_info.?.ulMaxSessionCount = pkcs.CK_EFFECTIVELY_INFINITE;
+    token_info.?.ulMaxRwSessionCount = pkcs.CK_EFFECTIVELY_INFINITE;
     session.countSessions(slot_id, &token_info.?.ulSessionCount, &token_info.?.ulRwSessionCount);
+
     token_info.?.hardwareVersion.major = 1;
     token_info.?.hardwareVersion.minor = 0;
     token_info.?.firmwareVersion.major = 1;
