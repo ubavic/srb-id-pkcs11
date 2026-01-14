@@ -332,3 +332,45 @@ test "Pad pin" {
         try std.testing.expectEqualSlices(u8, tc.expected, result[0..]);
     }
 }
+
+test "Validate pin" {
+    const test_cases = [_]struct {
+        pin: []const u8,
+        expected: bool,
+    }{
+        .{ .pin = "", .expected = false },
+        .{ .pin = "1", .expected = false },
+        .{ .pin = "123456789", .expected = false },
+        .{ .pin = "123A", .expected = false },
+        .{ .pin = "abcd", .expected = false },
+        .{ .pin = "01w1", .expected = false },
+        .{ .pin = "#+()", .expected = false },
+        .{ .pin = "4321", .expected = true },
+        .{ .pin = "0000", .expected = true },
+        .{ .pin = "01234567", .expected = true },
+    };
+
+    for (test_cases) |tc| {
+        try std.testing.expect(validatePin(tc.pin) == tc.expected);
+    }
+}
+
+test "Response OK" {
+    const test_cases = [_]struct {
+        pin: []const u8,
+        expected: bool,
+    }{
+        .{ .pin = &.{}, .expected = false },
+        .{ .pin = &.{1}, .expected = false },
+        .{ .pin = &.{ 0, 0 }, .expected = false },
+        .{ .pin = &.{ 1, 2, 3 }, .expected = false },
+        .{ .pin = &.{ 0x90, 0x00, 0x00 }, .expected = false },
+        .{ .pin = &.{ 0x00, 0x00, 0x00, 0x90, 0x10 }, .expected = false },
+        .{ .pin = &.{ 0x90, 0x00 }, .expected = true },
+        .{ .pin = &.{ 0x00, 0x90, 0x00 }, .expected = true },
+    };
+
+    for (test_cases) |tc| {
+        try std.testing.expect(responseOK(tc.pin) == tc.expected);
+    }
+}
