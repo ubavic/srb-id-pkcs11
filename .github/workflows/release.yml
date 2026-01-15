@@ -86,7 +86,7 @@ jobs:
         run: |
           zig build -Doptimize=ReleaseSmall -Dcpu=baseline
           mkdir artifact
-          cp zig-out/bin/$LIB_NAME.dll artifact/$LIB_NAME.${{needs.test.outputs.version}}.dll
+          cp zig-out/bin/srb-id-pkcs11.dll artifact/srb-id-pkcs11.${{needs.test.outputs.version}}.dll
       - name: Upload library
         uses: actions/upload-artifact@v4
         with:
