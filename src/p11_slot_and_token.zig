@@ -77,7 +77,7 @@ pub export fn C_GetSlotInfo(
     reader_state.writeShortName(&slot_info.?.slotDescription);
     @memset(&slot_info.?.manufacturerID, ' ');
 
-    reader_state.refreshCardPresent(&state.smart_card_client) catch |err|
+    reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
 
     slot_info.?.flags = pkcs.CKF_HW_SLOT | pkcs.CKF_REMOVABLE_DEVICE;
@@ -114,19 +114,17 @@ pub export fn C_GetTokenInfo(
 
     var reader_state = reader_entry.?;
 
-    reader_state.refreshCardPresent(&state.smart_card_client) catch |err|
+    reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
 
-    @memset(&token_info.?.label, 0);
-    std.mem.copyForwards(u8, &token_info.?.label, "NetSeT's CardEdge Token");
+    std.mem.copyForwards(u8, &token_info.?.label, &reader_state.token_label);
+    std.mem.copyForwards(u8, &token_info.?.serialNumber, &reader_state.token_serial_number);
 
-    @memset(&token_info.?.manufacturerID, 0);
+    @memset(&token_info.?.manufacturerID, 0x20);
     std.mem.copyForwards(u8, &token_info.?.manufacturerID, "NetSeT Global Solutions");
 
-    @memset(&token_info.?.model, 0);
+    @memset(&token_info.?.model, 0x20);
     std.mem.copyForwards(u8, &token_info.?.model, "SSCD v1");
-
-    @memset(&token_info.?.serialNumber, 0); // TODO
 
     token_info.?.ulMinPinLen = 4;
     token_info.?.ulMaxPinLen = 8;

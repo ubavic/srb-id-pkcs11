@@ -4,6 +4,7 @@ const pcsc = @import("pcsc");
 const atr = @import("atr.zig");
 const pkcs = @import("pkcs.zig").pkcs;
 const state = @import("state.zig");
+const smart_card = @import("smart-card.zig");
 const pkcs_error = @import("pkcs_error.zig");
 
 const PkcsError = pkcs_error.PkcsError;
@@ -27,9 +28,18 @@ pub const ReaderState = struct {
     active: bool,
     card_present: bool,
     recognized: bool,
+    token_label: [32]u8 = undefined,
+    token_serial_number: [16]u8 = undefined,
     user_type: UserType,
 
-    pub fn refreshCardPresent(self: *ReaderState, smart_card_client: *pcsc.Client) PkcsError!void {
+    pub fn refreshCardPresent(
+        self: *ReaderState,
+        allocator: std.mem.Allocator,
+        smart_card_client: *pcsc.Client,
+    ) PkcsError!void {
+        @memset(&self.*.token_label, 0x20);
+        @memset(&self.*.token_serial_number, 0x20);
+
         const card = smart_card_client.connect(self.name.ptr, .SHARED, .ANY) catch |err| {
             switch (err) {
                 pcsc.Err.NoSmartCard => {
@@ -49,6 +59,18 @@ pub const ReaderState = struct {
             return PkcsError.GeneralError;
 
         self.recognized = atr.validATR(card_state.atr.buf[0..card_state.atr.len]);
+
+        if (!self.recognized)
+            return;
+
+        var idCard = smart_card.Card{ .smart_card = card };
+        const token_info = idCard.readTokenInfo(allocator) catch {
+            self.recognized = false;
+            return;
+        };
+
+        self.*.token_label = token_info.token_label;
+        self.*.token_serial_number = token_info.token_serial_number;
     }
 
     pub fn writeShortName(self: *const ReaderState, output: []u8) void {
@@ -106,7 +128,7 @@ pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Cl
         if (!reader_state_entry.value_ptr.active)
             continue;
 
-        try reader_state_entry.value_ptr.*.refreshCardPresent(smart_card_client);
+        try reader_state_entry.value_ptr.*.refreshCardPresent(allocator, smart_card_client);
     }
 }
 
