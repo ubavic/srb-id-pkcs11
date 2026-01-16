@@ -182,6 +182,7 @@ pub fn loadObjects(
         .wrap_template = wrap_template,
         .public_key_info = pub_public_key_info,
         .modulus = public_key_modulus,
+        .modulus_bits = public_key_modulus.len * 8,
         .public_exponent = pub_public_exponent,
     };
 
