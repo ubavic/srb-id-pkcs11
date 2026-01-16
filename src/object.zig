@@ -276,6 +276,7 @@ pub const PublicKeyObject = struct {
     wrap_template: []pkcs.CK_ATTRIBUTE,
     public_key_info: []u8,
     modulus: []u8,
+    modulus_bits: pkcs.CK_ULONG,
     public_exponent: []u8,
 
     pub fn deinit(self: *PublicKeyObject, allocator: std.mem.Allocator) void {
@@ -333,6 +334,7 @@ pub const PublicKeyObject = struct {
             // pkcs.CKA_WRAP_TEMPLATE => unreachable,
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
             pkcs.CKA_MODULUS => encodeByteArray(allocator, self.modulus),
+            pkcs.CKA_MODULUS_BITS => encodeLong(allocator, self.modulus_bits),
             pkcs.CKA_PUBLIC_EXPONENT => encodeByteArray(allocator, self.public_exponent),
             else => PkcsError.AttributeTypeInvalid,
         };
