@@ -33,9 +33,11 @@ pub const Card = struct {
         ) catch
             return PkcsError.HostMemory;
         defer allocator.free(data_unit);
+        defer std.crypto.secureZero(u8, data_unit);
 
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
+        defer std.crypto.secureZero(u8, response);
 
         if (!responseOK(response))
             return PkcsError.DeviceError;
@@ -79,6 +81,7 @@ pub const Card = struct {
 
         const rsp = try self.transmit(allocator, adpu);
         defer allocator.free(rsp);
+        defer std.crypto.secureZero(u8, rsp);
 
         if (rsp.len < 2)
             return PkcsError.DeviceError;
@@ -114,6 +117,7 @@ pub const Card = struct {
         while (length > 0) {
             const data = try self.read(allocator, offset, length);
             defer allocator.free(data);
+            defer std.crypto.secureZero(u8, data);
 
             if (data.len == 0)
                 break;
@@ -142,6 +146,7 @@ pub const Card = struct {
 
         const data = try self.read(allocator, 0, 52);
         defer allocator.free(data);
+        defer std.crypto.secureZero(u8, data);
 
         return parseTokenInfo(data);
     }
@@ -195,6 +200,7 @@ pub const Card = struct {
 
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
+        defer std.crypto.secureZero(u8, response);
 
         if (responseIs(response, [_]u8{ 0x63, 0xC0 }))
             return PkcsError.PinLocked;
@@ -239,6 +245,7 @@ pub const Card = struct {
 
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
+        defer std.crypto.secureZero(u8, response);
 
         if (!responseOK(response))
             return PkcsError.FunctionFailed;
@@ -272,6 +279,7 @@ pub const Card = struct {
 
         const sign_request_response = try self.transmit(allocator, sign_request_data_unit);
         defer allocator.free(sign_request_response);
+        defer std.crypto.secureZero(u8, sign_request_response);
 
         if (!responseOK(sign_request_response))
             return PkcsError.GeneralError;
