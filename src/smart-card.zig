@@ -141,6 +141,7 @@ pub const Card = struct {
         try self.selectFile(allocator, &file_name, 0, 0, 0);
 
         const data = try self.read(allocator, 0, 52);
+        defer allocator.free(data);
 
         return parseTokenInfo(data);
     }
