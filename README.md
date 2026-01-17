@@ -2,6 +2,8 @@
 
 This is an open source [PKCS#11 v2.40](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html) module (middleware) for Serbian ID smart cards. It is designed for smart cards produced by Gemalto and aims to support the functionality required for authenticating and signing in to official state portals (like [eUprava](https://euprava.gov.rs/) or [ePorezi](https://eporezi.purs.gov.rs/user/login.html)).
 
+For reading document data from Serbian ID cards, check the [Baš Čelik](https://github.com/ubavic/bas-celik) software and it's [wiki](https://github.com/ubavic/bas-celik/wiki) (on Serbian).
+
 ## Project status
 
 The module supports the `CKM_MD5`, `CKM_SHA_1`, `CKM_SHA256`, `CKM_SHA384`, and `CKM_SHA512` digest algorithms (implemented in software, as it is in the original module). A random number generator is implemented on the token itself. Signing and verification are supported for the `CKM_RSA_PKCS`, `CKM_MD5_RSA_PKCS`, `CKM_SHA1_RSA_PKCS`, `CKM_SHA256_RSA_PKCS`, `CKM_SHA384_RSA_PKCS`, and `CKM_SHA512_RSA_PKCS` mechanisms. General session and token management functions are implemented.
