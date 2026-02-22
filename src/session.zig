@@ -56,6 +56,8 @@ pub const Session = struct {
             .digest => if (kind == operation.Type.Digest) {} else PkcsError.OperationActive,
             .sign => if (kind == operation.Type.Sign) {} else PkcsError.OperationActive,
             .verify => if (kind == operation.Type.Verify) {} else PkcsError.OperationActive,
+            .encrypt => if (kind == operation.Type.Encrypt) {} else PkcsError.OperationActive,
+            .decrypt => if (kind == operation.Type.Decrypt) {} else PkcsError.OperationActive,
             .search => if (kind == operation.Type.Search) {} else PkcsError.OperationActive,
         };
     }

@@ -294,6 +294,44 @@ pub const Card = struct {
 
         return signature;
     }
+
+    pub fn decrypt(
+        self: *const Card,
+        allocator: std.mem.Allocator,
+        key_id: u8,
+        decrypt_request: []u8,
+    ) PkcsError![]u8 {
+        if (decrypt_request.len != 256)
+            return PkcsError.GeneralError;
+
+        const body = [_]u8{ 0x80, 0x01, 0x00, 0x84, 0x02, 0x60, key_id };
+
+        const select_key_data_unit = apdu.build(allocator, 0, 0x22, 0x41, 0xb6, body[0..body.len], 0) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(select_key_data_unit);
+
+        const select_key_response = try self.transmit(allocator, select_key_data_unit);
+        defer allocator.free(select_key_response);
+
+        const decrypt_request_data_unit = apdu.build(allocator, 0, 0x2a, 0x80, decrypt_request[0], decrypt_request[1..], 0x100) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(decrypt_request_data_unit);
+        defer std.crypto.secureZero(u8, decrypt_request_data_unit);
+
+        const decrypt_request_response = try self.transmit(allocator, decrypt_request_data_unit);
+        defer allocator.free(decrypt_request_response);
+        defer std.crypto.secureZero(u8, decrypt_request_response);
+
+        if (!responseOK(decrypt_request_response))
+            return PkcsError.GeneralError;
+
+        const plain_message = allocator.alloc(u8, decrypt_request_response.len - 2) catch
+            return PkcsError.HostMemory;
+
+        @memcpy(plain_message, decrypt_request_response[0 .. decrypt_request_response.len - 2]);
+
+        return plain_message;
+    }
 };
 
 pub fn connect(

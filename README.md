@@ -6,9 +6,13 @@ For reading document data from Serbian ID cards, check the [Baš Čelik](https:/
 
 ## Project status
 
-The module supports the `CKM_MD5`, `CKM_SHA_1`, `CKM_SHA256`, `CKM_SHA384`, and `CKM_SHA512` digest algorithms (implemented in software, as it is in the original module). A random number generator is implemented on the token itself. Signing and verification are supported for the `CKM_RSA_PKCS`, `CKM_MD5_RSA_PKCS`, `CKM_SHA1_RSA_PKCS`, `CKM_SHA256_RSA_PKCS`, `CKM_SHA384_RSA_PKCS`, and `CKM_SHA512_RSA_PKCS` mechanisms. General session and token management functions are implemented.
+The module should support all use cases of MUP certificates for end users.
 
-Encryption and decryption are not implemented, since the original module (most likely) does not support these operations.
+The module supports the `CKM_MD5`, `CKM_SHA_1`, `CKM_SHA256`, `CKM_SHA384`, and `CKM_SHA512` digest algorithms (implemented in software, as it is in the original module).
+A random number generator is implemented on the token itself.
+Signing and verification are supported for the `CKM_RSA_PKCS`, `CKM_MD5_RSA_PKCS`, `CKM_SHA1_RSA_PKCS`, `CKM_SHA256_RSA_PKCS`, `CKM_SHA384_RSA_PKCS`, and `CKM_SHA512_RSA_PKCS` mechanisms.
+Encryption and decryption are implemented via `CKM_RSA_X_509` and `CKM_RSA_PKCS`.
+General session and token management functions are implemented.
 
 Functions intended for security officers (`CKU_SO`) are not planned for implementation at this stage. They are not required for end users, and omitting them reduces code complexity.
 

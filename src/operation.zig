@@ -14,6 +14,7 @@ const sha384_prefix: [19]u8 = [_]u8{ 0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0
 const sha521_prefix: [18]u8 = [_]u8{ 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x04, 0x40 };
 
 pub const signature_size: usize = 256;
+pub const encrypted_data_size: usize = 256;
 const rsa_request_size: usize = 255;
 
 pub const Type = enum {
@@ -21,6 +22,8 @@ pub const Type = enum {
     Digest,
     Sign,
     Verify,
+    Encrypt,
+    Decrypt,
     Search,
 };
 
@@ -79,6 +82,115 @@ pub const Verify = struct {
     }
 };
 
+pub const Encrypt = struct {
+    multipart_operation: bool,
+    public_key: pkcs.CK_OBJECT_HANDLE,
+    modulus: []const u8,
+    exponent: []const u8,
+    msg_buffer: std.ArrayList(u8),
+    raw: bool,
+
+    pub fn update(self: *Encrypt, allocator: std.mem.Allocator, data: []const u8) PkcsError![]u8 {
+        self.msg_buffer.appendSlice(allocator, data) catch
+            return PkcsError.HostMemory;
+
+        return &[_]u8{};
+    }
+
+    fn pad(self: *Encrypt, allocator: std.mem.Allocator) PkcsError![256]u8 {
+        var buf: [256]u8 = [1]u8{0x00} ** encrypted_data_size;
+
+        if (self.raw) {
+            if (self.msg_buffer.items.len != encrypted_data_size)
+                return PkcsError.DataLenRange;
+        } else {
+            if (self.msg_buffer.items.len > encrypted_data_size - 11)
+                return PkcsError.DataLenRange;
+        }
+
+        const msg = self.msg_buffer.toOwnedSlice(allocator) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(msg);
+        defer std.crypto.secureZero(u8, msg);
+
+        if (!self.raw) {
+            const rand = std.crypto.random;
+            const difference: usize = encrypted_data_size - msg.len - 3;
+
+            buf[1] = 0x02;
+
+            for (2..2 + difference) |i| {
+                buf[i] = rand.uintLessThan(u8, std.math.maxInt(u8)) + 1;
+            }
+        }
+
+        @memcpy(buf[(encrypted_data_size - msg.len)..], msg);
+
+        return buf;
+    }
+
+    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator) PkcsError![256]u8 {
+        const rsa_public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(self.exponent, self.modulus) catch
+            return PkcsError.GeneralError;
+
+        const max_modulus_bits = 4096;
+        const Modulus = std.crypto.ff.Modulus(max_modulus_bits);
+        const Fe = Modulus.Fe;
+
+        const buffer = try self.pad(allocator);
+
+        const m = Fe.fromBytes(rsa_public_key.n, buffer[0..], .big) catch
+            return PkcsError.GeneralError;
+
+        const e = rsa_public_key.n.powPublic(m, rsa_public_key.e) catch
+            return PkcsError.GeneralError;
+
+        var result: [256]u8 = undefined;
+        e.toBytes(&result, .big) catch
+            return PkcsError.HostMemory;
+
+        return result;
+    }
+};
+
+pub const Decrypt = struct {
+    multipart_operation: bool,
+    private_key: pkcs.CK_OBJECT_HANDLE,
+    msg_buffer: std.ArrayList(u8),
+    raw: bool,
+
+    pub fn update(self: *Decrypt, allocator: std.mem.Allocator, data: []const u8) PkcsError![]u8 {
+        self.msg_buffer.appendSlice(allocator, data) catch
+            return PkcsError.HostMemory;
+
+        return &[_]u8{};
+    }
+
+    pub fn createDecryptRequest(self: *Decrypt, allocator: std.mem.Allocator) PkcsError![]u8 {
+        return self.msg_buffer.toOwnedSlice(allocator) catch
+            return PkcsError.HostMemory;
+    }
+
+    pub fn stripPad(self: *const Decrypt, data: []const u8) PkcsError![]const u8 {
+        if (self.raw)
+            return data;
+
+        var start_index: usize = 0;
+
+        for (data, 0..) |b, i| {
+            start_index += 1;
+
+            if (b == 0 and i > 0)
+                break;
+        }
+
+        if (start_index >= data.len)
+            return PkcsError.GeneralError;
+
+        return data[start_index..];
+    }
+};
+
 pub const Search = struct {
     index: usize,
     found_objects: []pkcs.CK_OBJECT_HANDLE,
@@ -89,6 +201,8 @@ pub const Operation = union(enum) {
     digest: Digest,
     sign: Sign,
     verify: Verify,
+    encrypt: Encrypt,
+    decrypt: Decrypt,
     search: Search,
 
     pub fn deinit(self: *Operation, allocator: std.mem.Allocator) void {
@@ -102,6 +216,12 @@ pub const Operation = union(enum) {
             .verify => {
                 if (self.verify.hasher != null)
                     self.verify.hasher.?.destroy(allocator);
+            },
+            .encrypt => {
+                self.encrypt.msg_buffer.deinit(allocator);
+            },
+            .decrypt => {
+                self.decrypt.msg_buffer.deinit(allocator);
             },
             .search => allocator.free(self.search.found_objects),
         }
@@ -242,4 +362,119 @@ test "sha256" {
         expected_sign_request[0..expected_sign_request.len],
         sign_request,
     );
+}
+
+test "strip pad raw" {
+    const decrypt = Decrypt{
+        .private_key = 0,
+        .multipart_operation = false,
+        .msg_buffer = std.ArrayList(u8){},
+        .raw = true,
+    };
+
+    const test_cases = [_][]const u8{
+        &[_]u8{},
+        &[_]u8{0x00},
+        &[_]u8{ 0x01, 0x02, 0x00 },
+        &[_]u8{ 0x01, 0x02, 0x03, 0x00, 0x04, 0x05 },
+        &([_]u8{0x01} ** 256),
+    };
+
+    for (test_cases) |tc| {
+        const result = try decrypt.stripPad(tc);
+        try std.testing.expectEqualSlices(u8, tc, result);
+    }
+}
+
+test "strip pad padded" {
+    const decrypt = Decrypt{
+        .private_key = 0,
+        .multipart_operation = false,
+        .msg_buffer = std.ArrayList(u8){},
+        .raw = false,
+    };
+
+    const test_cases = [_]struct {
+        input: []const u8,
+        expected: []const u8,
+    }{
+        .{
+            .input = &[_]u8{ 0x00, 0x00, 0x01, 0x02 },
+            .expected = &[_]u8{ 0x01, 0x02 },
+        },
+        .{
+            .input = &[_]u8{ 0x00, 0x01, 0x02, 0x00, 0x03, 0x04 },
+            .expected = &[_]u8{ 0x03, 0x04 },
+        },
+        .{
+            .input = &[_]u8{ 0x00, 0x01, 0x02, 0x00, 0x00, 0x00 },
+            .expected = &[_]u8{ 0x00, 0x00 },
+        },
+        .{
+            .input = &[_]u8{ 0x00, 0x01, 0x02, 0x00, 0xFF },
+            .expected = &[_]u8{0xFF},
+        },
+    };
+
+    for (test_cases) |tc| {
+        const result = try decrypt.stripPad(tc.input);
+        try std.testing.expectEqualSlices(u8, tc.expected, result);
+    }
+}
+
+test "strip pad padded malformed" {
+    const decrypt = Decrypt{
+        .private_key = 0,
+        .multipart_operation = false,
+        .msg_buffer = std.ArrayList(u8){},
+        .raw = false,
+    };
+
+    const test_cases = [_][]const u8{
+        &[_]u8{},
+        &[_]u8{0x00},
+        &[_]u8{ 0x01, 0x02, 0x00 },
+        &[_]u8{ 0x01, 0x02, 0x03 },
+    };
+
+    for (test_cases) |tc| {
+        const result = decrypt.stripPad(tc);
+        try std.testing.expectError(PkcsError.GeneralError, result);
+    }
+}
+
+test "pad and strip" {
+    const decrypt = Decrypt{
+        .private_key = 0,
+        .multipart_operation = false,
+        .msg_buffer = std.ArrayList(u8){},
+        .raw = false,
+    };
+
+    const test_cases = [_][]const u8{
+        &[_]u8{0x00},
+        &[_]u8{ 0x01, 0x02, 0x00 },
+        &[_]u8{ 0x01, 0x02, 0x03, 0x00, 0x04, 0x05 },
+        &([_]u8{0x01} ** 245),
+    };
+
+    for (test_cases) |tc| {
+        var encrypt = Encrypt{
+            .public_key = 0,
+            .multipart_operation = false,
+            .modulus = &[_]u8{ 0x01, 0x02, 0x00 },
+            .exponent = &[_]u8{ 0x01, 0x02, 0x00 },
+            .msg_buffer = std.ArrayList(u8){},
+            .raw = false,
+        };
+
+        _ = try encrypt.update(std.testing.allocator, tc);
+
+        const padded = try encrypt.pad(std.testing.allocator);
+        defer encrypt.msg_buffer.deinit(std.testing.allocator);
+
+        const result = try decrypt.stripPad(&padded);
+
+        try std.testing.expectEqualSlices(u8, tc, result);
+    }
 }
