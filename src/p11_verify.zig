@@ -37,27 +37,19 @@ pub export fn C_VerifyInit(
         msg_buffer = std.ArrayList(u8){};
     }
 
-    var key_found = false;
-    for (current_session.objects) |current_object| {
-        if (current_object.handle() == key) {
-            switch (current_object) {
-                .public_key => {
-                    // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-                    //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
-
-                    if (current_object.public_key.verify != pkcs.CK_TRUE)
-                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-                },
-                .certificate, .private_key => return pkcs.CKR_KEY_HANDLE_INVALID,
-            }
-
-            key_found = true;
-            break;
-        }
-    }
-
-    if (!key_found)
+    const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
+
+    switch (found_object.*) {
+        .public_key => {
+            // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+            //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+            if (found_object.public_key.verify != pkcs.CK_TRUE)
+                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+        },
+        else => return pkcs.CKR_KEY_HANDLE_INVALID,
+    }
 
     const private_key_handle = consts.getPrivateKeyFormPublicKey(key) catch |err|
         return pkcs_error.toRV(err);

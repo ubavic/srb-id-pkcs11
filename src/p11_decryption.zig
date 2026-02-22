@@ -35,24 +35,16 @@ pub export fn C_DecryptInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    var key_found = false;
-    for (current_session.objects) |current_object| {
-        if (current_object.handle() == key) {
-            switch (current_object) {
-                .private_key => {
-                    if (current_object.private_key.decrypt != pkcs.CK_TRUE)
-                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-                },
-                .certificate, .public_key => return pkcs.CKR_KEY_HANDLE_INVALID,
-            }
-
-            key_found = true;
-            break;
-        }
-    }
-
-    if (!key_found)
+    const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
+
+    switch (found_object.*) {
+        .private_key => {
+            if (found_object.private_key.decrypt != pkcs.CK_TRUE)
+                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+        },
+        else => return pkcs.CKR_KEY_HANDLE_INVALID,
+    }
 
     current_session.operation = operation.Operation{
         .decrypt = operation.Decrypt{

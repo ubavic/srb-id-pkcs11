@@ -36,30 +36,25 @@ pub export fn C_EncryptInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    var public_key: ?*object.PublicKeyObject = null;
-    for (current_session.objects) |*current_object| {
-        if (current_object.handle() == key) {
-            switch (current_object.*) {
-                .public_key => {
-                    if (current_object.public_key.encrypt != pkcs.CK_TRUE)
-                        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+    var public_key: *object.PublicKeyObject = undefined;
 
-                    public_key = &current_object.*.public_key;
-                },
-                else => return pkcs.CKR_KEY_HANDLE_INVALID,
-            }
-
-            break;
-        }
-    }
-
-    if (public_key == null)
+    const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    const modulus = current_session.allocator.dupe(u8, public_key.?.*.modulus) catch
+    switch (found_object.*) {
+        .public_key => {
+            if (found_object.public_key.encrypt != pkcs.CK_TRUE)
+                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+
+            public_key = &found_object.*.public_key;
+        },
+        else => return pkcs.CKR_KEY_HANDLE_INVALID,
+    }
+
+    const modulus = current_session.allocator.dupe(u8, public_key.*.modulus) catch
         return pkcs.CKR_HOST_MEMORY;
 
-    const exponent = current_session.allocator.dupe(u8, public_key.?.*.public_exponent) catch
+    const exponent = current_session.allocator.dupe(u8, public_key.*.public_exponent) catch
         return pkcs.CKR_HOST_MEMORY;
 
     current_session.operation = operation.Operation{
