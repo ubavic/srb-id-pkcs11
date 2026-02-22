@@ -144,7 +144,7 @@ pub const Session = struct {
             const certificate_data = try certificate.decompressCertificate(allocator, certificate_file);
             defer allocator.free(certificate_data);
 
-            const cert_objects = certificate.loadObjects(
+            var cert_objects = certificate.loadObjects(
                 allocator,
                 certificate_data,
                 ids[i].certificate_handle,
@@ -155,11 +155,10 @@ pub const Session = struct {
             ) catch
                 continue;
 
-            for (cert_objects) |o| {
-                object_list.append(allocator, o) catch {
-                    // TODO deinit o;
-                };
-            }
+            object_list.appendSlice(allocator, &cert_objects) catch {
+                for (&cert_objects) |*o|
+                    o.deinit(allocator);
+            };
         }
 
         self.objects = object_list.toOwnedSlice(allocator) catch
