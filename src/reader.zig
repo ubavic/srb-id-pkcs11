@@ -145,7 +145,7 @@ fn addIfNotExists(allocator: std.mem.Allocator, reader_name: [*:0]const u8) std.
 
     const allocated_name = try allocator.allocSentinel(u8, reader_name_slice.len, 0);
 
-    std.mem.copyForwards(u8, allocated_name, reader_name_slice);
+    @memcpy(allocated_name, reader_name_slice);
     try reader_states.put(
         next_reader_id,
         ReaderState{

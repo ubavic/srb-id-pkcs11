@@ -39,7 +39,7 @@ pub export fn C_GenerateRandom(
         const segment = current_session.card.readRandom(current_session.allocator, segment_size) catch |err|
             return pkcs_error.toRV(err);
 
-        std.mem.copyForwards(u8, random_data[i .. i + segment_size], segment[0..segment_size]);
+        @memcpy(random_data[i .. i + segment_size], segment[0..segment_size]);
 
         i += segment_size;
         remaining_size -= segment_size;

@@ -56,7 +56,7 @@ pub const Card = struct {
         const out = allocator.alloc(u8, response.len) catch
             return PkcsError.HostMemory;
 
-        std.mem.copyForwards(u8, out, response[0..response.len]);
+        @memcpy(out, response[0..response.len]);
 
         return out;
     }
@@ -89,7 +89,7 @@ pub const Card = struct {
         const rsp_len = rsp.len - 2;
         const result = allocator.alloc(u8, rsp_len) catch
             return PkcsError.HostMemory;
-        std.mem.copyForwards(u8, result, rsp[0..rsp_len]);
+        @memcpy(result, rsp[0..rsp_len]);
 
         return result;
     }
@@ -235,8 +235,8 @@ pub const Card = struct {
         var padded_new_pin = try padPin(new_pin);
         defer std.crypto.secureZero(u8, &padded_new_pin);
 
-        std.mem.copyForwards(u8, data[0..8], &padded_old_pin);
-        std.mem.copyForwards(u8, data[8..16], &padded_new_pin);
+        @memcpy(data[0..8], &padded_old_pin);
+        @memcpy(data[8..16], &padded_new_pin);
 
         const data_unit = apdu.build(allocator, 0x00, 0x24, 0x00, 0x80, &data, 0) catch
             return PkcsError.HostMemory;
@@ -290,7 +290,7 @@ pub const Card = struct {
         const signature = allocator.alloc(u8, sign_request_response.len - 2) catch
             return PkcsError.HostMemory;
 
-        std.mem.copyForwards(u8, signature, sign_request_response[0 .. sign_request_response.len - 2]);
+        @memcpy(signature, sign_request_response[0 .. sign_request_response.len - 2]);
 
         return signature;
     }
@@ -388,15 +388,17 @@ fn parseTokenInfo(data: []const u8) CardsTokenInfo {
     if (data.len <= 48)
         return token_info;
 
-    std.mem.copyForwards(u8, &token_info.token_label, data[0..32]);
+    @memcpy(&token_info.token_label, data[0..32]);
 
     var pos: usize = 0;
     for (32..48) |i| {
-        if (data[i] != 0x00)
-            pos = i;
-    }
+        if (data[i] == 0x00)
+            break;
 
-    std.mem.copyForwards(u8, &token_info.token_serial_number, data[32 .. pos + 1]);
+        token_info.token_serial_number[pos] = data[i];
+
+        pos += 1;
+    }
 
     return token_info;
 }

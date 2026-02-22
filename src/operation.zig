@@ -247,7 +247,7 @@ fn createPlainSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Al
     const data_start_index = rsa_request_size - payload.len;
     request[0] = 1;
     request[data_start_index - 1] = 0;
-    std.mem.copyForwards(u8, request[data_start_index..rsa_request_size], payload);
+    @memcpy(request[data_start_index..rsa_request_size], payload);
 
     return request;
 }
@@ -262,8 +262,8 @@ fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) P
     var request = allocator.alloc(u8, prefix.len + payload.len) catch
         return PkcsError.HostMemory;
 
-    std.mem.copyForwards(u8, request[0..prefix.len], prefix);
-    std.mem.copyForwards(u8, request[prefix.len..request.len], payload);
+    @memcpy(request[0..prefix.len], prefix);
+    @memcpy(request[prefix.len..], payload);
 
     return request;
 }

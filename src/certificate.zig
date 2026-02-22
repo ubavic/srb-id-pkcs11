@@ -199,12 +199,8 @@ fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T
 }
 
 fn clone(allocator: std.mem.Allocator, src: []const u8) PkcsError![]u8 {
-    const buf = allocator.alloc(u8, src.len) catch
+    return allocator.dupe(u8, src) catch
         return PkcsError.HostMemory;
-
-    std.mem.copyForwards(u8, buf, src);
-
-    return buf;
 }
 
 fn extractSerialNumber(cert_bytes: []const u8) Certificate.der.Element.ParseError![]const u8 {

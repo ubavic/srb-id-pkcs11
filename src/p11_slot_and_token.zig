@@ -117,8 +117,8 @@ pub export fn C_GetTokenInfo(
     reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
 
-    std.mem.copyForwards(u8, &token_info.?.label, &reader_state.token_label);
-    std.mem.copyForwards(u8, &token_info.?.serialNumber, &reader_state.token_serial_number);
+    @memcpy(&token_info.?.label, &reader_state.token_label);
+    @memcpy(&token_info.?.serialNumber, &reader_state.token_serial_number);
 
     @memset(&token_info.?.manufacturerID, 0x20);
     std.mem.copyForwards(u8, &token_info.?.manufacturerID, "NetSeT Global Solutions");
