@@ -32,13 +32,17 @@ modutil -dbdir sql:.pki/nssdb/ -add "Srb Id PKCS11" -libfile PATH_TO_SO
 
 After starting Chrome, you will be able to use the module.
 
+Other programs, like Okular, usually use NSS databases located in `~/.pki` or `~/.mozilla`.
+
+Note that Snap/Flatpak applications (including browsers) can have issues loading module, and additional configuration may be required.
+
 ## Usage on macOS
 
 Download the latest `.dylib` file from [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. There are separate `dylib` files for Intel (x64) and ARM Macs.
 
 In Firefox, add a new PKCS#11 module using the **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.dylib` file you just downloaded. After restarting Firefox, you can use the module for signing in.
 
-If your system’s security settings prevent downloaded `.dylib` files from executing, refer to Apple’s official documentation for instructions on enabling the use of unsigned libraries. Alternatively, you may install Zig and build the project locally.
+If your system’s security settings prevent downloaded `.dylib` files from executing, refer to Apple’s [official documentation](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac) for instructions on enabling the use of unsigned libraries. Alternatively, you may install Zig and build the project locally.
 
 ## Compilation
 
