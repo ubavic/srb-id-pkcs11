@@ -154,6 +154,9 @@ pub export fn C_GetMechanismList(
     state.lock.lockShared();
     defer state.lock.unlockShared();
 
+    if (count == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
+
     const mechanisms = [_]pkcs.CK_MECHANISM_TYPE{
         // pkcs.CKM_RSA_PKCS_KEY_PAIR_GEN,
         pkcs.CKM_RSA_PKCS,

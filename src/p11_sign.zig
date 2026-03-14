@@ -177,6 +177,11 @@ pub export fn C_SignFinal(
 
     const current_operation = &current_session.operation.sign;
 
+    if (signature_len == null) {
+        current_session.resetOperation();
+        return pkcs.CKR_ARGUMENTS_BAD;
+    }
+
     const required_signature_size = operation.signature_size;
     if (signature == null) {
         signature_len.?.* = required_signature_size;

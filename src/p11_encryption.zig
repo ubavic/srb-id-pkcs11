@@ -190,6 +190,11 @@ pub export fn C_EncryptFinal(
 
     _ = &current_session.operation.encrypt;
 
+    if (last_encrypted_part_len == null) {
+        current_session.resetOperation();
+        return pkcs.CKR_ARGUMENTS_BAD;
+    }
+
     const required_encrypted_data_size = operation.encrypted_data_size;
     if (last_encrypted_part == null) {
         last_encrypted_part_len.?.* = required_encrypted_data_size;

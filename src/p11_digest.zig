@@ -168,6 +168,11 @@ pub export fn C_DigestFinal(
 
     var current_operation = &current_session.operation.digest;
 
+    if (data_digest_len == null) {
+        current_session.resetOperation();
+        return pkcs.CKR_ARGUMENTS_BAD;
+    }
+
     const required_digest_size = current_operation.hasher.digestLength();
     if (data_digest == null) {
         data_digest_len.?.* = @intCast(required_digest_size);
