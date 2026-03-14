@@ -32,6 +32,10 @@ pub const None = struct {};
 pub const Digest = struct {
     hasher: hasher.Hasher,
     multipart_operation: bool,
+
+    pub fn deinit(self: *Digest, allocator: std.mem.Allocator) void {
+        self.hasher.destroy(allocator);
+    }
 };
 
 pub const Sign = struct {
@@ -56,6 +60,14 @@ pub const Sign = struct {
             return createPlainSignRequest(&self.msg_buffer, allocator);
         } else unreachable;
     }
+
+    pub fn deinit(self: *Sign, allocator: std.mem.Allocator) void {
+        if (self.hasher != null)
+            self.hasher.?.destroy(allocator);
+
+        if (self.msg_buffer != null)
+            self.msg_buffer.?.deinit(allocator);
+    }
 };
 
 pub const Verify = struct {
@@ -79,6 +91,14 @@ pub const Verify = struct {
         } else if (self.msg_buffer != null) {
             return createPlainSignRequest(&self.msg_buffer, allocator);
         } else unreachable;
+    }
+
+    pub fn deinit(self: *Verify, allocator: std.mem.Allocator) void {
+        if (self.hasher != null)
+            self.hasher.?.destroy(allocator);
+
+        if (self.msg_buffer != null)
+            self.msg_buffer.?.deinit(allocator);
     }
 };
 
@@ -151,6 +171,10 @@ pub const Encrypt = struct {
 
         return result;
     }
+
+    pub fn deinit(self: *Encrypt, allocator: std.mem.Allocator) void {
+        self.msg_buffer.deinit(allocator);
+    }
 };
 
 pub const Decrypt = struct {
@@ -189,11 +213,19 @@ pub const Decrypt = struct {
 
         return data[start_index..];
     }
+
+    pub fn deinit(self: *Decrypt, allocator: std.mem.Allocator) void {
+        self.msg_buffer.deinit(allocator);
+    }
 };
 
 pub const Search = struct {
     index: usize,
     found_objects: []pkcs.CK_OBJECT_HANDLE,
+
+    pub fn deinit(self: *Search, allocator: std.mem.Allocator) void {
+        allocator.free(self.found_objects);
+    }
 };
 
 pub const Operation = union(enum) {
@@ -208,22 +240,12 @@ pub const Operation = union(enum) {
     pub fn deinit(self: *Operation, allocator: std.mem.Allocator) void {
         switch (self.*) {
             .none => {},
-            .digest => self.digest.hasher.destroy(allocator),
-            .sign => {
-                if (self.sign.hasher != null)
-                    self.sign.hasher.?.destroy(allocator);
-            },
-            .verify => {
-                if (self.verify.hasher != null)
-                    self.verify.hasher.?.destroy(allocator);
-            },
-            .encrypt => {
-                self.encrypt.msg_buffer.deinit(allocator);
-            },
-            .decrypt => {
-                self.decrypt.msg_buffer.deinit(allocator);
-            },
-            .search => allocator.free(self.search.found_objects),
+            .digest => self.digest.deinit(allocator),
+            .sign => self.sign.deinit(allocator),
+            .verify => self.verify.deinit(allocator),
+            .encrypt => self.encrypt.deinit(allocator),
+            .decrypt => self.decrypt.deinit(allocator),
+            .search => self.search.deinit(allocator),
         }
     }
 };
@@ -334,6 +356,42 @@ test "2 step sha1" {
         expected_sign_request[0..expected_sign_request.len],
         sign_request,
     );
+}
+
+test "deinit sha1 sign" {
+    const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
+
+    const hash = try hasher.createAndInit(
+        hasher.HasherType.sha1,
+        std.testing.allocator,
+    );
+
+    var sign_operation = Sign{
+        .hasher = hash,
+        .multipart_operation = false,
+        .private_key = 0,
+        .msg_buffer = null,
+    };
+
+    try sign_operation.update(std.testing.allocator, data[0..data.len]);
+
+    sign_operation.deinit(std.testing.allocator);
+}
+
+test "deinit plain sign" {
+    const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
+    const msg_buffer = std.ArrayList(u8){};
+
+    var sign_operation = Sign{
+        .hasher = null,
+        .multipart_operation = false,
+        .private_key = 0,
+        .msg_buffer = msg_buffer,
+    };
+
+    try sign_operation.update(std.testing.allocator, data[0..data.len]);
+
+    sign_operation.deinit(std.testing.allocator);
 }
 
 test "sha512" {
