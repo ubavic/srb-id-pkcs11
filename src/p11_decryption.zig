@@ -15,7 +15,7 @@ pub export fn C_DecryptInit(
     state.lock.lockShared();
     defer state.lock.unlockShared();
 
-    const current_session = session.getSession(session_handle, false) catch |err|
+    const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
     if (mechanism == null)
@@ -68,7 +68,7 @@ pub export fn C_Decrypt(
     state.lock.lockShared();
     defer state.lock.unlockShared();
 
-    const current_session = session.getSession(session_handle, false) catch |err|
+    const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
     current_session.assertOperation(operation.Type.Decrypt) catch |err|
