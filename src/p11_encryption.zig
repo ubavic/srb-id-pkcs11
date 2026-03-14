@@ -188,7 +188,7 @@ pub export fn C_EncryptFinal(
     current_session.assertOperation(operation.Type.Encrypt) catch |err|
         return pkcs_error.toRV(err);
 
-    _ = &current_session.operation.encrypt;
+    const current_operation = &current_session.operation.encrypt;
 
     if (last_encrypted_part_len == null) {
         current_session.resetOperation();
@@ -206,13 +206,14 @@ pub export fn C_EncryptFinal(
 
     defer current_session.resetOperation();
 
-    const computed_encrypted_data = &[_]u8{1};
+    const computed_encrypted_data = current_operation.encrypt(current_session.allocator) catch |err|
+        return pkcs_error.toRV(err);
 
     if (computed_encrypted_data.len > last_encrypted_part_len.?.*)
         return pkcs.CKR_GENERAL_ERROR;
 
     last_encrypted_part_len.?.* = @intCast(computed_encrypted_data.len);
-    @memcpy(last_encrypted_part.?, computed_encrypted_data);
+    @memcpy(last_encrypted_part.?, computed_encrypted_data[0..computed_encrypted_data.len]);
 
     return pkcs.CKR_OK;
 }
