@@ -76,6 +76,7 @@ export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
     state.smart_card_client.deinit() catch
         return pkcs.CKR_FUNCTION_FAILED;
 
+    state.initialized = false;
     return pkcs.CKR_OK;
 }
 
