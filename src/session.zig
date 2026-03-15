@@ -280,18 +280,22 @@ pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSIO
 
 pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     var err: pkcs.CK_RV = pkcs.CKR_OK;
-    var it = sessions.iterator();
 
+    var sessions_to_close = std.ArrayList(pkcs.CK_SESSION_HANDLE).initCapacity(allocator, sessions.count()) catch
+        return pkcs.CKR_HOST_MEMORY;
+    defer sessions_to_close.deinit(allocator);
+
+    var it = sessions.iterator();
     while (it.next()) |entry| {
-        const sessionId = entry.key_ptr.*;
-        const session_entry = entry.value_ptr.*;
-        if (session_entry.reader_id == slot_id) {
-            closeSession(allocator, sessionId) catch |e| {
-                err = pkcs_error.toRV(e);
-            };
-        }
+        if (entry.value_ptr.reader_id == slot_id)
+            sessions_to_close.append(allocator, entry.key_ptr.*) catch {};
     }
 
+    for (sessions_to_close.items) |id| {
+        closeSession(allocator, id) catch |e| {
+            err = pkcs_error.toRV(e);
+        };
+    }
     return err;
 }
 
