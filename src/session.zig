@@ -186,11 +186,8 @@ pub fn newSession(
     const session_id: pkcs.CK_SESSION_HANDLE = next_session_id;
     next_session_id += 1;
 
-    const reader_entry = reader.reader_states.get(slot_id);
-    if (reader_entry == null)
+    const reader_state = reader.reader_states.get(slot_id) orelse
         return PkcsError.SlotIdInvalid;
-
-    const reader_state = reader_entry.?;
 
     if (!reader_state.card_present)
         return PkcsError.TokenNoPresent;
@@ -238,11 +235,8 @@ pub fn getSession(
     if (!state.initialized)
         return PkcsError.CryptokiNotInitialized;
 
-    const session_entry = sessions.getPtr(session_handle);
-    if (session_entry == null)
+    const current_session = sessions.getPtr(session_handle) orelse
         return PkcsError.SessionHandleInvalid;
-
-    const current_session = session_entry.?;
 
     if (login_required and !current_session.loggedIn())
         return PkcsError.UserNotLoggedIn;
@@ -255,11 +249,8 @@ pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSIO
         return PkcsError.FunctionFailed;
     defer lock.unlock();
 
-    const session_entry = sessions.getPtr(session_handle);
-    if (session_entry == null)
+    const current_session = sessions.getPtr(session_handle) orelse
         return PkcsError.SessionHandleInvalid;
-
-    const current_session = session_entry.?;
 
     if (current_session.closed)
         return PkcsError.SessionClosed;
