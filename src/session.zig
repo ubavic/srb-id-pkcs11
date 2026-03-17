@@ -297,11 +297,11 @@ pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sess
     total_sessions.* = 0;
     rw_sessions.* = 0;
 
-    var it = sessions.iterator();
-    while (it.next()) |entry| {
-        if (entry.value_ptr.*.reader_id == slot_id) {
+    var it = sessions.valueIterator();
+    while (it.next()) |value| {
+        if (value.*.reader_id == slot_id) {
             total_sessions.* += 1;
-            if (entry.value_ptr.write_enabled)
+            if (value.write_enabled)
                 rw_sessions.* += 1;
         }
     }
