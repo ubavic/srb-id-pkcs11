@@ -188,7 +188,7 @@ pub export fn C_GetMechanismList(
     const reader_state = reader_entry.?;
 
     if (!reader_state.card_present)
-        return pkcs.CKR_DEVICE_REMOVED;
+        return pkcs.CKR_TOKEN_NOT_PRESENT;
 
     if (!reader_state.recognized)
         return pkcs.CKR_TOKEN_NOT_RECOGNIZED;
@@ -227,7 +227,7 @@ pub export fn C_GetMechanismInfo(
     const reader_state = reader_entry.?;
 
     if (!reader_state.card_present)
-        return pkcs.CKR_DEVICE_REMOVED;
+        return pkcs.CKR_TOKEN_NOT_PRESENT;
 
     if (!reader_state.recognized)
         return pkcs.CKR_TOKEN_NOT_RECOGNIZED;
