@@ -208,3 +208,25 @@ pub fn getUserType(slot_id: pkcs.CK_SLOT_ID) UserType {
 
     return reader_entry.user_type;
 }
+
+pub fn deinit(allocator: std.mem.Allocator) void {
+    var it = reader_states.valueIterator();
+    while (it.next()) |reader_state| {
+        allocator.free(reader_state.name);
+    }
+
+    next_reader_id = 1;
+
+    reader_states.deinit();
+}
+
+test "init and deinit readers" {
+    reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, ReaderState).init(std.testing.allocator);
+
+    try addIfNotExists(std.testing.allocator, "reader1");
+    try addIfNotExists(std.testing.allocator, "reader2");
+
+    deinit(std.testing.allocator);
+
+    try std.testing.expectEqual(1, next_reader_id);
+}
