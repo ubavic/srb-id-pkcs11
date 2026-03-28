@@ -46,22 +46,9 @@ If your system’s security settings prevent downloaded `.dylib` files from exec
 
 ## Compilation
 
-Ensure the PCSC Lite development libraries are installed on your system (libpcsclite.so).
+On Linux, ensure that the [PCSC Lite](https://pcsclite.apdu.fr/) (development) library (`libpcsclite.so`) is installed on your system. Most Linux package managers provide this package. Also install `ccid` driver, and enable `pcscd` service.
 
-Ubuntu/Debian
-```
-sudo apt install libpcsclite-dev
-```
-
-Fedora
-```
-sudo dnf install pcsc-lite-devel
-```
-
-macOS
-```
-brew install pcsc-lite
-```
+On Windows and macOS, PC/SC libraries should already be installed, and the service enabled by default.
 
 Build the project with:
 
