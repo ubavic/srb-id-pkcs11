@@ -230,3 +230,38 @@ test "init and deinit readers" {
 
     try std.testing.expectEqual(1, next_reader_id);
 }
+
+test "add if not exists" {
+    reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, ReaderState).init(std.testing.allocator);
+
+    try addIfNotExists(std.testing.allocator, "reader1");
+    try addIfNotExists(std.testing.allocator, "reader2");
+    try addIfNotExists(std.testing.allocator, "reader2");
+    try addIfNotExists(std.testing.allocator, "reader3");
+    try addIfNotExists(std.testing.allocator, "reader2");
+
+    try std.testing.expectEqual(3, reader_states.count());
+
+    deinit(std.testing.allocator);
+}
+
+test "set and get user types" {
+    reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, ReaderState).init(std.testing.allocator);
+
+    try addIfNotExists(std.testing.allocator, "reader1");
+    try addIfNotExists(std.testing.allocator, "reader2");
+
+    setUserType(1, UserType.SecurityOfficer);
+    setUserType(2, UserType.User);
+
+    try std.testing.expectEqual(UserType.SecurityOfficer, getUserType(1));
+    try std.testing.expectEqual(UserType.User, getUserType(2));
+
+    setUserType(1, UserType.None);
+    setUserType(2, UserType.None);
+
+    try std.testing.expectEqual(UserType.None, getUserType(1));
+    try std.testing.expectEqual(UserType.None, getUserType(2));
+
+    deinit(std.testing.allocator);
+}
