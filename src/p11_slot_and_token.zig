@@ -68,11 +68,8 @@ pub export fn C_GetSlotInfo(
     reader.lock.lock();
     defer reader.lock.unlock();
 
-    const reader_entry = reader.reader_states.getPtr(slot_ID);
-    if (reader_entry == null)
+    var reader_state = reader.reader_states.getPtr(slot_ID) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
-
-    var reader_state = reader_entry.?;
 
     reader_state.writeShortName(&slot_info.?.slotDescription);
     @memset(&slot_info.?.manufacturerID, ' ');
@@ -108,11 +105,8 @@ pub export fn C_GetTokenInfo(
     reader.lock.lock();
     defer reader.lock.unlock();
 
-    const reader_entry = reader.reader_states.getPtr(slot_id);
-    if (reader_entry == null)
+    var reader_state = reader.reader_states.getPtr(slot_id) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
-
-    var reader_state = reader_entry.?;
 
     reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
@@ -181,11 +175,8 @@ pub export fn C_GetMechanismList(
     reader.lock.lockShared();
     defer reader.lock.unlockShared();
 
-    const reader_entry = reader.reader_states.getPtr(slot_id);
-    if (reader_entry == null)
+    const reader_state = reader.reader_states.getPtr(slot_id) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
-
-    const reader_state = reader_entry.?;
 
     if (!reader_state.card_present)
         return pkcs.CKR_TOKEN_NOT_PRESENT;
@@ -220,11 +211,8 @@ pub export fn C_GetMechanismInfo(
     reader.lock.lockShared();
     defer reader.lock.unlockShared();
 
-    const reader_entry = reader.reader_states.get(slot_id);
-    if (reader_entry == null)
+    const reader_state = reader.reader_states.get(slot_id) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
-
-    const reader_state = reader_entry.?;
 
     if (!reader_state.card_present)
         return pkcs.CKR_TOKEN_NOT_PRESENT;
