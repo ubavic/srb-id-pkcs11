@@ -15,7 +15,25 @@ const sha512_prefix: [19]u8 = [_]u8{ 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0
 
 pub const signature_size: usize = 256;
 pub const encrypted_data_size: usize = 256;
-const rsa_request_size: usize = 255;
+
+pub const SignType = enum {
+    RawRsa,
+    Pkcs1Pad,
+    DigestAndSign,
+};
+
+pub fn signTypeFromMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!SignType {
+    return switch (mechanism) {
+        pkcs.CKM_RSA_X_509 => .RawRsa,
+        pkcs.CKM_RSA_PKCS => .Pkcs1Pad,
+        pkcs.CKM_MD5_RSA_PKCS => .DigestAndSign,
+        pkcs.CKM_SHA1_RSA_PKCS => .DigestAndSign,
+        pkcs.CKM_SHA256_RSA_PKCS => .DigestAndSign,
+        pkcs.CKM_SHA384_RSA_PKCS => .DigestAndSign,
+        pkcs.CKM_SHA512_RSA_PKCS => .DigestAndSign,
+        else => return PkcsError.MechanismInvalid,
+    };
+}
 
 pub const Type = enum {
     None,
@@ -40,25 +58,28 @@ pub const Digest = struct {
 
 pub const Sign = struct {
     private_key: pkcs.CK_OBJECT_HANDLE,
+    key_size: usize,
+    sign_type: SignType,
     multipart_operation: bool,
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
     pub fn update(self: *Sign, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
-        if (self.hasher != null) {
-            self.hasher.?.update(data);
-        } else if (self.msg_buffer != null) {
-            self.msg_buffer.?.appendSlice(allocator, data) catch
-                return PkcsError.HostMemory;
-        } else unreachable;
+        switch (self.sign_type) {
+            .DigestAndSign => self.hasher.?.update(data),
+            .RawRsa, .Pkcs1Pad => {
+                self.msg_buffer.?.appendSlice(allocator, data) catch
+                    return PkcsError.HostMemory;
+            },
+        }
     }
 
     pub fn createSignRequest(self: *Sign, allocator: std.mem.Allocator) PkcsError![]u8 {
-        if (self.hasher != null) {
-            return createHashedSignRequest(&self.hasher.?, allocator);
-        } else if (self.msg_buffer != null) {
-            return createPlainSignRequest(&self.msg_buffer, allocator);
-        } else unreachable;
+        return switch (self.sign_type) {
+            .RawRsa => createRawSignRequest(&self.msg_buffer, allocator, self.key_size),
+            .Pkcs1Pad => createPkcs1PaddedSignRequest(&self.msg_buffer, allocator, self.key_size),
+            .DigestAndSign => createHashedSignRequest(&self.hasher.?, allocator),
+        };
     }
 
     pub fn deinit(self: *Sign, allocator: std.mem.Allocator) void {
@@ -72,25 +93,28 @@ pub const Sign = struct {
 
 pub const Verify = struct {
     private_key: pkcs.CK_OBJECT_HANDLE,
+    key_size: usize,
+    sign_type: SignType,
     multipart_operation: bool,
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
     pub fn update(self: *Verify, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
-        if (self.hasher != null) {
-            self.hasher.?.update(data);
-        } else if (self.msg_buffer != null) {
-            self.msg_buffer.?.appendSlice(allocator, data) catch
-                return PkcsError.HostMemory;
-        } else unreachable;
+        switch (self.sign_type) {
+            .DigestAndSign => self.hasher.?.update(data),
+            .RawRsa, .Pkcs1Pad => {
+                self.msg_buffer.?.appendSlice(allocator, data) catch
+                    return PkcsError.HostMemory;
+            },
+        }
     }
 
     pub fn createSignRequest(self: *Verify, allocator: std.mem.Allocator) PkcsError![]u8 {
-        if (self.hasher != null) {
-            return createHashedSignRequest(&self.hasher.?, allocator);
-        } else if (self.msg_buffer != null) {
-            return createPlainSignRequest(&self.msg_buffer, allocator);
-        } else unreachable;
+        return switch (self.sign_type) {
+            .RawRsa => createRawSignRequest(&self.msg_buffer, allocator, self.key_size),
+            .Pkcs1Pad => createPkcs1PaddedSignRequest(&self.msg_buffer, allocator, self.key_size),
+            .DigestAndSign => createHashedSignRequest(&self.hasher.?, allocator),
+        };
     }
 
     pub fn deinit(self: *Verify, allocator: std.mem.Allocator) void {
@@ -250,26 +274,40 @@ pub const Operation = union(enum) {
     }
 };
 
-fn createPlainSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator) PkcsError![]u8 {
+fn createRawSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
+    const payload = msg_buffer.*.?.toOwnedSlice(allocator) catch
+        return PkcsError.HostMemory;
+    errdefer allocator.free(payload);
+
+    msg_buffer.* = null;
+
+    if (payload.len != key_size)
+        return PkcsError.DataLenRange;
+
+    return payload;
+}
+
+fn createPkcs1PaddedSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
     const payload = msg_buffer.*.?.toOwnedSlice(allocator) catch
         return PkcsError.HostMemory;
     defer allocator.free(payload);
 
     msg_buffer.* = null;
 
-    if (payload.len > rsa_request_size - 2)
+    if (payload.len > key_size - 11)
         return PkcsError.DataLenRange;
 
-    var request = allocator.alloc(u8, rsa_request_size) catch
+    var request = allocator.alloc(u8, key_size) catch
         return PkcsError.HostMemory;
 
     for (request) |*b|
         b.* = 0xff;
 
-    const data_start_index = rsa_request_size - payload.len;
-    request[0] = 1;
-    request[data_start_index - 1] = 0;
-    @memcpy(request[data_start_index..rsa_request_size], payload);
+    const data_start_index = key_size - payload.len;
+    request[0] = 0x00;
+    request[1] = 0x01;
+    request[data_start_index - 1] = 0x00;
+    @memcpy(request[data_start_index..key_size], payload);
 
     return request;
 }
@@ -311,6 +349,8 @@ test "sha1" {
 
     var sign_operation = Sign{
         .hasher = hash,
+        .sign_type = .DigestAndSign,
+        .key_size = 256,
         .multipart_operation = false,
         .private_key = 0,
         .msg_buffer = null,
@@ -340,6 +380,8 @@ test "2 step sha1" {
 
     var sign_operation = Sign{
         .hasher = hash,
+        .sign_type = .DigestAndSign,
+        .key_size = 256,
         .multipart_operation = false,
         .private_key = 0,
         .msg_buffer = null,
@@ -368,6 +410,8 @@ test "deinit sha1 sign" {
 
     var sign_operation = Sign{
         .hasher = hash,
+        .key_size = 256,
+        .sign_type = .DigestAndSign,
         .multipart_operation = false,
         .private_key = 0,
         .msg_buffer = null,
@@ -384,6 +428,8 @@ test "deinit plain sign" {
 
     var sign_operation = Sign{
         .hasher = null,
+        .sign_type = .Pkcs1Pad,
+        .key_size = 256,
         .multipart_operation = false,
         .private_key = 0,
         .msg_buffer = msg_buffer,
@@ -411,6 +457,8 @@ test "sha512" {
 
     var sign_operation = Sign{
         .hasher = hash,
+        .sign_type = .DigestAndSign,
+        .key_size = 256,
         .multipart_operation = false,
         .private_key = 0,
         .msg_buffer = null,
@@ -439,6 +487,8 @@ test "sha256" {
 
     var sign_operation = Sign{
         .hasher = hash,
+        .sign_type = .DigestAndSign,
+        .key_size = 256,
         .multipart_operation = false,
         .private_key = 0,
         .msg_buffer = null,
@@ -569,4 +619,56 @@ test "pad and strip" {
 
         try std.testing.expectEqualSlices(u8, tc, result);
     }
+}
+
+test "raw sign request with invalid length" {
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 50);
+
+    const result = createRawSignRequest(&msg_buffer, std.testing.allocator, 128);
+    try std.testing.expectError(pkcs_error.PkcsError.DataLenRange, result);
+
+    try std.testing.expectEqual(null, msg_buffer);
+}
+
+test "raw sign request with valid length" {
+    const key_size: comptime_int = 128;
+
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, key_size);
+
+    const result = try createRawSignRequest(&msg_buffer, std.testing.allocator, key_size);
+
+    const expected: [key_size]u8 = [_]u8{0x01} ** 128;
+    try std.testing.expectEqualSlices(u8, &expected, result);
+
+    try std.testing.expectEqual(null, msg_buffer);
+
+    std.testing.allocator.free(result);
+}
+
+test "pkcs1 padded sign request with invalid length" {
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 118);
+
+    const result = createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, 128);
+    try std.testing.expectError(pkcs_error.PkcsError.DataLenRange, result);
+
+    try std.testing.expectEqual(null, msg_buffer);
+}
+
+test "pkcs1 padded request with valid length" {
+    const key_size: comptime_int = 128;
+
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 117);
+
+    const result = try createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, key_size);
+
+    const expected: [key_size]u8 = [_]u8{ 0x00, 0x01 } ++ [_]u8{0xff} ** 8 ++ [_]u8{0x00} ++ [_]u8{0x01} ** 117;
+    try std.testing.expectEqualSlices(u8, &expected, result);
+
+    try std.testing.expectEqual(null, msg_buffer);
+
+    std.testing.allocator.free(result);
 }

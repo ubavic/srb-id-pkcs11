@@ -272,7 +272,15 @@ pub const Card = struct {
         if (!responseOK(select_key_response))
             return PkcsError.GeneralError;
 
-        const sign_request_data_unit = apdu.build(allocator, 0, 0x2a, 0x9e, 0x00, sign_request, 0x100) catch
+        var p2: u8 = 0x00;
+        var sign_request_body = sign_request;
+
+        if (plain_sign) {
+            p2 = sign_request[0];
+            sign_request_body = sign_request[1..];
+        }
+
+        const sign_request_data_unit = apdu.build(allocator, 0, 0x2a, 0x9e, p2, sign_request_body, 0x100) catch
             return PkcsError.HostMemory;
         defer allocator.free(sign_request_data_unit);
         defer std.crypto.secureZero(u8, sign_request_data_unit);

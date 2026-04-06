@@ -25,6 +25,9 @@ pub export fn C_VerifyInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
+    const sign_type = operation.signTypeFromMechanism(mechanism.?.mechanism) catch |err|
+        return pkcs_error.toRV(err);
+
     const hash_mechanism = hasher.fromSignMechanism(mechanism.?.mechanism) catch |err|
         return pkcs_error.toRV(err);
 
@@ -57,6 +60,8 @@ pub export fn C_VerifyInit(
     current_session.operation = operation.Operation{
         .verify = operation.Verify{
             .hasher = hash,
+            .key_size = found_object.public_key.modulus.len,
+            .sign_type = sign_type,
             .multipart_operation = false,
             .private_key = private_key_handle,
             .msg_buffer = msg_buffer,
@@ -111,7 +116,7 @@ pub export fn C_Verify(
     const computed_signature = current_session.card.sign(
         current_session.allocator,
         key_id,
-        current_operation.hasher == null,
+        current_operation.sign_type != .DigestAndSign,
         sign_request,
     ) catch |err|
         return pkcs_error.toRV(err);
@@ -185,7 +190,7 @@ pub export fn C_VerifyFinal(
     const computed_signature = current_session.card.sign(
         current_session.allocator,
         key_id,
-        current_operation.hasher == null,
+        current_operation.sign_type != .DigestAndSign,
         sign_request,
     ) catch |err|
         return pkcs_error.toRV(err);

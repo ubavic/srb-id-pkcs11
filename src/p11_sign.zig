@@ -25,6 +25,9 @@ pub export fn C_SignInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
+    const sign_type = operation.signTypeFromMechanism(mechanism.?.mechanism) catch |err|
+        return pkcs_error.toRV(err);
+
     const hash_mechanism = hasher.fromSignMechanism(mechanism.?.mechanism) catch |err|
         return pkcs_error.toRV(err);
 
@@ -54,6 +57,8 @@ pub export fn C_SignInit(
     current_session.operation = operation.Operation{
         .sign = operation.Sign{
             .private_key = key,
+            .key_size = found_object.private_key.modulus.len,
+            .sign_type = sign_type,
             .hasher = hash,
             .msg_buffer = msg_buffer,
             .multipart_operation = false,
@@ -118,7 +123,7 @@ pub export fn C_Sign(
     const computed_signature = current_session.card.sign(
         current_session.allocator,
         key_id,
-        current_operation.hasher == null,
+        current_operation.sign_type != .DigestAndSign,
         sign_request,
     ) catch |err|
         return pkcs_error.toRV(err);
@@ -203,7 +208,7 @@ pub export fn C_SignFinal(
     const computed_signature = current_session.card.sign(
         current_session.allocator,
         key_id,
-        current_operation.hasher == null,
+        current_operation.sign_type != .DigestAndSign,
         sign_request,
     ) catch |err|
         return pkcs_error.toRV(err);
