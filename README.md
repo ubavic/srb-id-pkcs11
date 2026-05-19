@@ -34,6 +34,8 @@ After starting Chrome, you will be able to use the module.
 
 Other programs, like Okular, usually use NSS databases located in `~/.pki` or `~/.mozilla`.
 
+On some distros, `p11-kit` is a recommended way of managing modules. This higher-level utility removes the need to configure modules separately for each program.
+
 Note that Snap/Flatpak applications (including browsers) can have issues loading module, and additional configuration may be required.
 
 ## Usage on macOS
