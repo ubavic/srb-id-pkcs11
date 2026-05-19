@@ -22,9 +22,11 @@ To use this module, you need to have the `pcscd` service enabled, and the `ccid`
 
 Download the latest `.so` file from [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location (for example: `/usr/lib/` or `~/lib/`).
 
+This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few examples of how this is done.
+
 If you use Firefox, add a new PKCS#11 module using the **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.so` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
 
-Chrome does not allow loading a PKCS#11 module through the browser settings. Instead, you must use `modutil` to add a module to the NSS database. This database is most likely located at `~/.pki/nssdb/`. Make sure you don't use `~` in paths, and make sure you close all browsers you have opened. For example:
+Chrome does not allow loading a PKCS#11 module through the browser settings. Instead, you must use `modutil` to add a module to the NSS database. This database is most likely located at `~/.pki/nssdb/` (or `~/.local/share/pki/nssdb`). Make sure you don't use `~` in paths, and make sure you close all browsers you have opened. For example:
 
 ```bash
 modutil -dbdir sql:.pki/nssdb/ -add "Srb Id PKCS11" -libfile PATH_TO_SO
