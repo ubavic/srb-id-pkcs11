@@ -16,15 +16,23 @@ General session and token management functions are implemented.
 
 Functions intended for security officers (`CKU_SO`) are not planned for implementation at this stage. They are not required for end users, and omitting them reduces code complexity.
 
-## Usage on Linux
+## Usage
+
+This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few examples of how this is done. You can also look at [e-documents howto](https://ubavic.rs/e-documents/?usage=read-id&os=linux) (on serbian) for step by step instructions.
+
+### On Linux
 
 To use this module, you need to have the `pcscd` service enabled, and the `ccid` driver installed.
 
 Download the latest `.so` file from [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location (for example: `/usr/lib/` or `~/lib/`).
 
-This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few examples of how this is done.
+On some distros, `p11-kit` is a recommended way of managing modules. This higher-level utility removes the need to configure modules separately for each program. Refer to the distribution documentation for more information.
+
+#### Firefox 
 
 If you use Firefox, add a new PKCS#11 module using the **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.so` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
+
+#### Chrome
 
 Chrome does not allow loading a PKCS#11 module through the browser settings. Instead, you must use `modutil` to add a module to the NSS database. This database is most likely located at `~/.pki/nssdb/` (or `~/.local/share/pki/nssdb`). Make sure you don't use `~` in paths, and make sure you close all browsers you have opened. For example:
 
@@ -34,13 +42,13 @@ modutil -dbdir sql:.pki/nssdb/ -add "Srb Id PKCS11" -libfile PATH_TO_SO
 
 After starting Chrome, you will be able to use the module.
 
-Other programs, like Okular, usually use NSS databases located in `~/.pki` or `~/.mozilla`.
+#### Other
 
-On some distros, `p11-kit` is a recommended way of managing modules. This higher-level utility removes the need to configure modules separately for each program.
+Other programs, like Okular, usually use NSS databases located in `~/.pki` or `~/.mozilla`.
 
 Note that Snap/Flatpak applications (including browsers) can have issues loading module, and additional configuration may be required.
 
-## Usage on macOS
+### On macOS
 
 Download the latest `.dylib` file from [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. There are separate `dylib` files for Intel (x64) and ARM Macs.
 
