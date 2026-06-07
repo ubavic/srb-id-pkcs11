@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");

@@ -3,7 +3,7 @@ const std = @import("std");
 const session = @import("session.zig");
 const state = @import("state.zig");
 const reader = @import("reader.zig");
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 
 pub export fn C_GetSlotList(

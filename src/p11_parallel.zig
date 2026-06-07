@@ -1,4 +1,4 @@
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 
 pub export fn C_GetFunctionStatus(_: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
     return pkcs.CKR_FUNCTION_NOT_PARALLEL;

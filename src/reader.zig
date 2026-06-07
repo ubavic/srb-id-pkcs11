@@ -2,7 +2,7 @@ const std = @import("std");
 const pcsc = @import("pcsc");
 
 const atr = @import("atr.zig");
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 const state = @import("state.zig");
 const smart_card = @import("smart-card.zig");
 const pkcs_error = @import("pkcs_error.zig");

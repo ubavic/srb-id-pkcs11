@@ -1,4 +1,4 @@
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("reader.zig");
 const session = @import("session.zig");

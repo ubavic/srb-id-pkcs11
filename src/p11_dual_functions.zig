@@ -1,4 +1,4 @@
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 
 pub export fn C_DigestEncryptUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,

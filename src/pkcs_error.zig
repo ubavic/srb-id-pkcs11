@@ -1,4 +1,4 @@
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 const pcsc = @import("pcsc");
 
 pub const PkcsError = error{

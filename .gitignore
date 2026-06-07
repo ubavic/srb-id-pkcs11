@@ -4,9 +4,6 @@ zig-out/
 .zig-cache/
 .vscode/
 
-include/pkcs11.h
-include/pkcs11f.h
-include/pkcs11t.h
 
 *.o
 *.obj

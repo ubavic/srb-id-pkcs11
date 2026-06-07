@@ -1,4 +1,4 @@
-const pkcs = @import("pkcs.zig").pkcs;
+const pkcs = @import("pkcs.zig");
 const PkcsError = @import("pkcs_error.zig").PkcsError;
 
 pub const ObjectConstants = struct {
