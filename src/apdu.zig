@@ -75,7 +75,7 @@ pub fn build(
 }
 
 test "build APDU" {
-    const testCases = [_]struct {
+    const test_cases = [_]struct {
         parameters: [4]u8,
         data: []const u8,
         ne: u32,
@@ -90,7 +90,7 @@ test "build APDU" {
         .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{ 0x00, 0x00, 0x00 }, .ne = 0x100, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00 } },
     };
 
-    for (testCases) |tc| {
+    for (test_cases) |tc| {
         const result = try build(std.testing.allocator, tc.parameters[0], tc.parameters[1], tc.parameters[2], tc.parameters[3], tc.data, tc.ne);
         defer std.testing.allocator.free(result);
         try testing.expectEqualSlices(u8, tc.expected, result);

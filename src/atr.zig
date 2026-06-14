@@ -38,22 +38,22 @@ pub fn validATR(atr: []const u8) bool {
 
 test "valid ATR" {
     const test_cases = [_]struct {
-        pin: []const u8,
+        atr: []const u8,
         expected: bool,
     }{
-        .{ .pin = &.{}, .expected = false },
-        .{ .pin = &.{1}, .expected = false },
-        .{ .pin = &.{ 0, 0 }, .expected = false },
-        .{ .pin = &.{ 1, 2, 3 }, .expected = false },
-        .{ .pin = &.{ 0x90, 0x00, 0x00 }, .expected = false },
-        .{ .pin = &.{ 0x00, 0x00, 0x00, 0x90, 0x10 }, .expected = false },
-        .{ .pin = &GEMALTO_ATR_1, .expected = true },
-        .{ .pin = &GEMALTO_ATR_2, .expected = true },
-        .{ .pin = &GEMALTO_ATR_3, .expected = true },
-        .{ .pin = &GEMALTO_ATR_4, .expected = true },
+        .{ .atr = &.{}, .expected = false },
+        .{ .atr = &.{1}, .expected = false },
+        .{ .atr = &.{ 0, 0 }, .expected = false },
+        .{ .atr = &.{ 1, 2, 3 }, .expected = false },
+        .{ .atr = &.{ 0x90, 0x00, 0x00 }, .expected = false },
+        .{ .atr = &.{ 0x00, 0x00, 0x00, 0x90, 0x10 }, .expected = false },
+        .{ .atr = &GEMALTO_ATR_1, .expected = true },
+        .{ .atr = &GEMALTO_ATR_2, .expected = true },
+        .{ .atr = &GEMALTO_ATR_3, .expected = true },
+        .{ .atr = &GEMALTO_ATR_4, .expected = true },
     };
 
     for (test_cases) |tc| {
-        try std.testing.expect(validATR(tc.pin) == tc.expected);
+        try std.testing.expect(validATR(tc.atr) == tc.expected);
     }
 }
