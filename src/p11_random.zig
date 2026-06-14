@@ -8,7 +8,7 @@ const session = @import("session.zig");
 // not supported in the original module
 pub export fn C_SeedRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    _: pkcs.CK_BYTE_PTR,
+    _: [*c]pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared();

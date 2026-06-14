@@ -270,7 +270,7 @@ pub export fn C_InitToken(
 
 pub export fn C_InitPIN(
     _: pkcs.CK_SESSION_HANDLE,
-    _: pkcs.CK_UTF8CHAR_PTR,
+    _: [*c]pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
@@ -278,9 +278,9 @@ pub export fn C_InitPIN(
 
 pub export fn C_SetPIN(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    old_pin: pkcs.CK_UTF8CHAR_PTR,
+    old_pin: [*c]pkcs.CK_UTF8CHAR,
     old_pin_len: pkcs.CK_ULONG,
-    new_pin: pkcs.CK_UTF8CHAR_PTR,
+    new_pin: [*c]pkcs.CK_UTF8CHAR,
     new_pin_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared();

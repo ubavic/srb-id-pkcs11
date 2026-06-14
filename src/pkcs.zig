@@ -7,19 +7,15 @@ pub const CK_BBOOL = CK_BYTE;
 pub const CK_ULONG = c_ulong;
 pub const CK_LONG = c_long;
 pub const CK_FLAGS = CK_ULONG;
-pub const CK_BYTE_PTR = [*c]CK_BYTE;
-pub const CK_CHAR_PTR = [*c]CK_CHAR;
-pub const CK_UTF8CHAR_PTR = [*c]CK_UTF8CHAR;
-pub const CK_ULONG_PTR = [*c]CK_ULONG;
+
 pub const CK_VOID_PTR = ?*anyopaque;
-pub const CK_VOID_PTR_PTR = [*c]CK_VOID_PTR;
-pub const struct_CK_VERSION = extern struct {
+
+pub const CK_VERSION = extern struct {
     major: CK_BYTE = 0,
     minor: CK_BYTE = 0,
 };
-pub const CK_VERSION = struct_CK_VERSION;
-pub const CK_VERSION_PTR = [*c]CK_VERSION;
-pub const struct_CK_INFO = extern struct {
+
+pub const CK_INFO = extern struct {
     cryptokiVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     manufacturerID: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     flags: CK_FLAGS = 0,
@@ -28,21 +24,19 @@ pub const struct_CK_INFO = extern struct {
     pub const C_GetInfo = __root.C_GetInfo;
     pub const GetInfo = __root.C_GetInfo;
 };
-pub const CK_INFO = struct_CK_INFO;
-pub const CK_INFO_PTR = [*c]CK_INFO;
+
 pub const CK_NOTIFICATION = CK_ULONG;
 pub const CK_SLOT_ID = CK_ULONG;
-pub const CK_SLOT_ID_PTR = [*c]CK_SLOT_ID;
-pub const struct_CK_SLOT_INFO = extern struct {
+
+pub const CK_SLOT_INFO = extern struct {
     slotDescription: [64]CK_UTF8CHAR = @import("std").mem.zeroes([64]CK_UTF8CHAR),
     manufacturerID: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     flags: CK_FLAGS = 0,
     hardwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     firmwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
 };
-pub const CK_SLOT_INFO = struct_CK_SLOT_INFO;
-pub const CK_SLOT_INFO_PTR = [*c]CK_SLOT_INFO;
-pub const struct_CK_TOKEN_INFO = extern struct {
+
+pub const CK_TOKEN_INFO = extern struct {
     label: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     manufacturerID: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     model: [16]CK_UTF8CHAR = @import("std").mem.zeroes([16]CK_UTF8CHAR),
@@ -62,131 +56,116 @@ pub const struct_CK_TOKEN_INFO = extern struct {
     firmwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     utcTime: [16]CK_CHAR = @import("std").mem.zeroes([16]CK_CHAR),
 };
-pub const CK_TOKEN_INFO = struct_CK_TOKEN_INFO;
-pub const CK_TOKEN_INFO_PTR = [*c]CK_TOKEN_INFO;
+
 pub const CK_SESSION_HANDLE = CK_ULONG;
-pub const CK_SESSION_HANDLE_PTR = [*c]CK_SESSION_HANDLE;
 pub const CK_USER_TYPE = CK_ULONG;
 pub const CK_STATE = CK_ULONG;
-pub const struct_CK_SESSION_INFO = extern struct {
+pub const CK_SESSION_INFO = extern struct {
     slotID: CK_SLOT_ID = 0,
     state: CK_STATE = 0,
     flags: CK_FLAGS = 0,
     ulDeviceError: CK_ULONG = 0,
 };
-pub const CK_SESSION_INFO = struct_CK_SESSION_INFO;
-pub const CK_SESSION_INFO_PTR = [*c]CK_SESSION_INFO;
 pub const CK_OBJECT_HANDLE = CK_ULONG;
-pub const CK_OBJECT_HANDLE_PTR = [*c]CK_OBJECT_HANDLE;
 pub const CK_OBJECT_CLASS = CK_ULONG;
-pub const CK_OBJECT_CLASS_PTR = [*c]CK_OBJECT_CLASS;
 pub const CK_HW_FEATURE_TYPE = CK_ULONG;
 pub const CK_KEY_TYPE = CK_ULONG;
 pub const CK_CERTIFICATE_TYPE = CK_ULONG;
 pub const CK_ATTRIBUTE_TYPE = CK_ULONG;
-pub const struct_CK_ATTRIBUTE = extern struct {
+pub const CK_ATTRIBUTE = extern struct {
     type: CK_ATTRIBUTE_TYPE = 0,
     pValue: CK_VOID_PTR = null,
     ulValueLen: CK_ULONG = 0,
 };
-pub const CK_ATTRIBUTE = struct_CK_ATTRIBUTE;
-pub const CK_ATTRIBUTE_PTR = [*c]CK_ATTRIBUTE;
-pub const struct_CK_DATE = extern struct {
+pub const CK_DATE = extern struct {
     year: [4]CK_CHAR = @import("std").mem.zeroes([4]CK_CHAR),
     month: [2]CK_CHAR = @import("std").mem.zeroes([2]CK_CHAR),
     day: [2]CK_CHAR = @import("std").mem.zeroes([2]CK_CHAR),
 };
-pub const CK_DATE = struct_CK_DATE;
 pub const CK_MECHANISM_TYPE = CK_ULONG;
-pub const CK_MECHANISM_TYPE_PTR = [*c]CK_MECHANISM_TYPE;
-pub const struct_CK_MECHANISM = extern struct {
+pub const CK_MECHANISM = extern struct {
     mechanism: CK_MECHANISM_TYPE = 0,
     pParameter: CK_VOID_PTR = null,
     ulParameterLen: CK_ULONG = 0,
 };
-pub const CK_MECHANISM = struct_CK_MECHANISM;
-pub const CK_MECHANISM_PTR = [*c]CK_MECHANISM;
-pub const struct_CK_MECHANISM_INFO = extern struct {
+pub const CK_MECHANISM_INFO = extern struct {
     ulMinKeySize: CK_ULONG = 0,
     ulMaxKeySize: CK_ULONG = 0,
     flags: CK_FLAGS = 0,
 };
-pub const CK_MECHANISM_INFO = struct_CK_MECHANISM_INFO;
-pub const CK_MECHANISM_INFO_PTR = [*c]CK_MECHANISM_INFO;
 pub const CK_RV = CK_ULONG;
+
 pub const CK_NOTIFY = ?*const fn (hSession: CK_SESSION_HANDLE, event: CK_NOTIFICATION, pApplication: CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_C_Initialize = ?*const fn (pInitArgs: CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_C_Finalize = ?*const fn (pReserved: CK_VOID_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetInfo = ?*const fn (pInfo: CK_INFO_PTR) callconv(.c) CK_RV;
-pub const CK_FUNCTION_LIST = struct_CK_FUNCTION_LIST;
-pub const CK_FUNCTION_LIST_PTR = [*c]CK_FUNCTION_LIST;
-pub const CK_FUNCTION_LIST_PTR_PTR = [*c]CK_FUNCTION_LIST_PTR;
-pub const CK_C_GetFunctionList = ?*const fn (ppFunctionList: CK_FUNCTION_LIST_PTR_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetSlotList = ?*const fn (tokenPresent: CK_BBOOL, pSlotList: CK_SLOT_ID_PTR, pulCount: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetSlotInfo = ?*const fn (slotID: CK_SLOT_ID, pInfo: CK_SLOT_INFO_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetTokenInfo = ?*const fn (slotID: CK_SLOT_ID, pInfo: CK_TOKEN_INFO_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetMechanismList = ?*const fn (slotID: CK_SLOT_ID, pMechanismList: CK_MECHANISM_TYPE_PTR, pulCount: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetMechanismInfo = ?*const fn (slotID: CK_SLOT_ID, @"type": CK_MECHANISM_TYPE, pInfo: CK_MECHANISM_INFO_PTR) callconv(.c) CK_RV;
-pub const CK_C_InitToken = ?*const fn (slotID: CK_SLOT_ID, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG, pLabel: CK_UTF8CHAR_PTR) callconv(.c) CK_RV;
-pub const CK_C_InitPIN = ?*const fn (hSession: CK_SESSION_HANDLE, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_SetPIN = ?*const fn (hSession: CK_SESSION_HANDLE, pOldPin: CK_UTF8CHAR_PTR, ulOldLen: CK_ULONG, pNewPin: CK_UTF8CHAR_PTR, ulNewLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_OpenSession = ?*const fn (slotID: CK_SLOT_ID, flags: CK_FLAGS, pApplication: CK_VOID_PTR, Notify: CK_NOTIFY, phSession: CK_SESSION_HANDLE_PTR) callconv(.c) CK_RV;
+pub const CK_C_GetInfo = ?*const fn (pInfo: [*c]CK_INFO) callconv(.c) CK_RV;
+pub const CK_C_GetFunctionList = ?*const fn (ppFunctionList: [*c][*c]CK_FUNCTION_LIST) callconv(.c) CK_RV;
+pub const CK_C_GetSlotList = ?*const fn (tokenPresent: CK_BBOOL, pSlotList: [*c]CK_SLOT_ID, pulCount: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_GetSlotInfo = ?*const fn (slotID: CK_SLOT_ID, pInfo: [*c]CK_SLOT_INFO) callconv(.c) CK_RV;
+pub const CK_C_GetTokenInfo = ?*const fn (slotID: CK_SLOT_ID, pInfo: [*c]CK_TOKEN_INFO) callconv(.c) CK_RV;
+pub const CK_C_GetMechanismList = ?*const fn (slotID: CK_SLOT_ID, pMechanismList: [*c]CK_MECHANISM_TYPE, pulCount: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_GetMechanismInfo = ?*const fn (slotID: CK_SLOT_ID, @"type": CK_MECHANISM_TYPE, pInfo: [*c]CK_MECHANISM_INFO) callconv(.c) CK_RV;
+pub const CK_C_InitToken = ?*const fn (slotID: CK_SLOT_ID, pPin: [*c]CK_UTF8CHAR, ulPinLen: CK_ULONG, pLabel: [*c]CK_UTF8CHAR) callconv(.c) CK_RV;
+pub const CK_C_InitPIN = ?*const fn (hSession: CK_SESSION_HANDLE, pPin: [*c]CK_UTF8CHAR, ulPinLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SetPIN = ?*const fn (hSession: CK_SESSION_HANDLE, pOldPin: [*c]CK_UTF8CHAR, ulOldLen: CK_ULONG, pNewPin: [*c]CK_UTF8CHAR, ulNewLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_OpenSession = ?*const fn (slotID: CK_SLOT_ID, flags: CK_FLAGS, pApplication: CK_VOID_PTR, Notify: CK_NOTIFY, phSession: [*c]CK_SESSION_HANDLE) callconv(.c) CK_RV;
 pub const CK_C_CloseSession = ?*const fn (hSession: CK_SESSION_HANDLE) callconv(.c) CK_RV;
 pub const CK_C_CloseAllSessions = ?*const fn (slotID: CK_SLOT_ID) callconv(.c) CK_RV;
-pub const CK_C_GetSessionInfo = ?*const fn (hSession: CK_SESSION_HANDLE, pInfo: CK_SESSION_INFO_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetOperationState = ?*const fn (hSession: CK_SESSION_HANDLE, pOperationState: CK_BYTE_PTR, pulOperationStateLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_SetOperationState = ?*const fn (hSession: CK_SESSION_HANDLE, pOperationState: CK_BYTE_PTR, ulOperationStateLen: CK_ULONG, hEncryptionKey: CK_OBJECT_HANDLE, hAuthenticationKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_Login = ?*const fn (hSession: CK_SESSION_HANDLE, userType: CK_USER_TYPE, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_GetSessionInfo = ?*const fn (hSession: CK_SESSION_HANDLE, pInfo: [*c]CK_SESSION_INFO) callconv(.c) CK_RV;
+pub const CK_C_GetOperationState = ?*const fn (hSession: CK_SESSION_HANDLE, pOperationState: [*c]CK_BYTE, pulOperationStateLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SetOperationState = ?*const fn (hSession: CK_SESSION_HANDLE, pOperationState: [*c]CK_BYTE, ulOperationStateLen: CK_ULONG, hEncryptionKey: CK_OBJECT_HANDLE, hAuthenticationKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_Login = ?*const fn (hSession: CK_SESSION_HANDLE, userType: CK_USER_TYPE, pPin: [*c]CK_UTF8CHAR, ulPinLen: CK_ULONG) callconv(.c) CK_RV;
 pub const CK_C_Logout = ?*const fn (hSession: CK_SESSION_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_CreateObject = ?*const fn (hSession: CK_SESSION_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG, phObject: CK_OBJECT_HANDLE_PTR) callconv(.c) CK_RV;
-pub const CK_C_CopyObject = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG, phNewObject: CK_OBJECT_HANDLE_PTR) callconv(.c) CK_RV;
+pub const CK_C_CreateObject = ?*const fn (hSession: CK_SESSION_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG, phObject: [*c]CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_CopyObject = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG, phNewObject: [*c]CK_OBJECT_HANDLE) callconv(.c) CK_RV;
 pub const CK_C_DestroyObject = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_GetObjectSize = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pulSize: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_GetAttributeValue = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_SetAttributeValue = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_FindObjectsInit = ?*const fn (hSession: CK_SESSION_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_FindObjects = ?*const fn (hSession: CK_SESSION_HANDLE, phObject: CK_OBJECT_HANDLE_PTR, ulMaxObjectCount: CK_ULONG, pulObjectCount: CK_ULONG_PTR) callconv(.c) CK_RV;
+pub const CK_C_GetObjectSize = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pulSize: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_GetAttributeValue = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SetAttributeValue = ?*const fn (hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_FindObjectsInit = ?*const fn (hSession: CK_SESSION_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_FindObjects = ?*const fn (hSession: CK_SESSION_HANDLE, phObject: [*c]CK_OBJECT_HANDLE, ulMaxObjectCount: CK_ULONG, pulObjectCount: [*c]CK_ULONG) callconv(.c) CK_RV;
 pub const CK_C_FindObjectsFinal = ?*const fn (hSession: CK_SESSION_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_EncryptInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_Encrypt = ?*const fn (hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pEncryptedData: CK_BYTE_PTR, pulEncryptedDataLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_EncryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG, pEncryptedPart: CK_BYTE_PTR, pulEncryptedPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_EncryptFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pLastEncryptedPart: CK_BYTE_PTR, pulLastEncryptedPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DecryptInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_Decrypt = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedData: CK_BYTE_PTR, ulEncryptedDataLen: CK_ULONG, pData: CK_BYTE_PTR, pulDataLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DecryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedPart: CK_BYTE_PTR, ulEncryptedPartLen: CK_ULONG, pPart: CK_BYTE_PTR, pulPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DecryptFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pLastPart: CK_BYTE_PTR, pulLastPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DigestInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR) callconv(.c) CK_RV;
-pub const CK_C_Digest = ?*const fn (hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pDigest: CK_BYTE_PTR, pulDigestLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DigestUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_EncryptInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_Encrypt = ?*const fn (hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pEncryptedData: [*c]CK_BYTE, pulEncryptedDataLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_EncryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG, pEncryptedPart: [*c]CK_BYTE, pulEncryptedPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_EncryptFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pLastEncryptedPart: [*c]CK_BYTE, pulLastEncryptedPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DecryptInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_Decrypt = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedData: [*c]CK_BYTE, ulEncryptedDataLen: CK_ULONG, pData: [*c]CK_BYTE, pulDataLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DecryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedPart: [*c]CK_BYTE, ulEncryptedPartLen: CK_ULONG, pPart: [*c]CK_BYTE, pulPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DecryptFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pLastPart: [*c]CK_BYTE, pulLastPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DigestInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM) callconv(.c) CK_RV;
+pub const CK_C_Digest = ?*const fn (hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pDigest: [*c]CK_BYTE, pulDigestLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DigestUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG) callconv(.c) CK_RV;
 pub const CK_C_DigestKey = ?*const fn (hSession: CK_SESSION_HANDLE, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_DigestFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pDigest: CK_BYTE_PTR, pulDigestLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_SignInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_Sign = ?*const fn (hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pSignature: CK_BYTE_PTR, pulSignatureLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_SignUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_SignFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pSignature: CK_BYTE_PTR, pulSignatureLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_SignRecoverInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_SignRecover = ?*const fn (hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pSignature: CK_BYTE_PTR, pulSignatureLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_VerifyInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_Verify = ?*const fn (hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pSignature: CK_BYTE_PTR, ulSignatureLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_VerifyUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_VerifyFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pSignature: CK_BYTE_PTR, ulSignatureLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_VerifyRecoverInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_VerifyRecover = ?*const fn (hSession: CK_SESSION_HANDLE, pSignature: CK_BYTE_PTR, ulSignatureLen: CK_ULONG, pData: CK_BYTE_PTR, pulDataLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DigestEncryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG, pEncryptedPart: CK_BYTE_PTR, pulEncryptedPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DecryptDigestUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedPart: CK_BYTE_PTR, ulEncryptedPartLen: CK_ULONG, pPart: CK_BYTE_PTR, pulPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_SignEncryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG, pEncryptedPart: CK_BYTE_PTR, pulEncryptedPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_DecryptVerifyUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedPart: CK_BYTE_PTR, ulEncryptedPartLen: CK_ULONG, pPart: CK_BYTE_PTR, pulPartLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_GenerateKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG, phKey: CK_OBJECT_HANDLE_PTR) callconv(.c) CK_RV;
-pub const CK_C_GenerateKeyPair = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, pPublicKeyTemplate: CK_ATTRIBUTE_PTR, ulPublicKeyAttributeCount: CK_ULONG, pPrivateKeyTemplate: CK_ATTRIBUTE_PTR, ulPrivateKeyAttributeCount: CK_ULONG, phPublicKey: CK_OBJECT_HANDLE_PTR, phPrivateKey: CK_OBJECT_HANDLE_PTR) callconv(.c) CK_RV;
-pub const CK_C_WrapKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hWrappingKey: CK_OBJECT_HANDLE, hKey: CK_OBJECT_HANDLE, pWrappedKey: CK_BYTE_PTR, pulWrappedKeyLen: CK_ULONG_PTR) callconv(.c) CK_RV;
-pub const CK_C_UnwrapKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hUnwrappingKey: CK_OBJECT_HANDLE, pWrappedKey: CK_BYTE_PTR, ulWrappedKeyLen: CK_ULONG, pTemplate: CK_ATTRIBUTE_PTR, ulAttributeCount: CK_ULONG, phKey: CK_OBJECT_HANDLE_PTR) callconv(.c) CK_RV;
-pub const CK_C_DeriveKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hBaseKey: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulAttributeCount: CK_ULONG, phKey: CK_OBJECT_HANDLE_PTR) callconv(.c) CK_RV;
-pub const CK_C_SeedRandom = ?*const fn (hSession: CK_SESSION_HANDLE, pSeed: CK_BYTE_PTR, ulSeedLen: CK_ULONG) callconv(.c) CK_RV;
-pub const CK_C_GenerateRandom = ?*const fn (hSession: CK_SESSION_HANDLE, RandomData: CK_BYTE_PTR, ulRandomLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DigestFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pDigest: [*c]CK_BYTE, pulDigestLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SignInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_Sign = ?*const fn (hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pSignature: [*c]CK_BYTE, pulSignatureLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SignUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SignFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pSignature: [*c]CK_BYTE, pulSignatureLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SignRecoverInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_SignRecover = ?*const fn (hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pSignature: [*c]CK_BYTE, pulSignatureLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_VerifyInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_Verify = ?*const fn (hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pSignature: [*c]CK_BYTE, ulSignatureLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_VerifyUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_VerifyFinal = ?*const fn (hSession: CK_SESSION_HANDLE, pSignature: [*c]CK_BYTE, ulSignatureLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_VerifyRecoverInit = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_VerifyRecover = ?*const fn (hSession: CK_SESSION_HANDLE, pSignature: [*c]CK_BYTE, ulSignatureLen: CK_ULONG, pData: [*c]CK_BYTE, pulDataLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DigestEncryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG, pEncryptedPart: [*c]CK_BYTE, pulEncryptedPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DecryptDigestUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedPart: [*c]CK_BYTE, ulEncryptedPartLen: CK_ULONG, pPart: [*c]CK_BYTE, pulPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_SignEncryptUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG, pEncryptedPart: [*c]CK_BYTE, pulEncryptedPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_DecryptVerifyUpdate = ?*const fn (hSession: CK_SESSION_HANDLE, pEncryptedPart: [*c]CK_BYTE, ulEncryptedPartLen: CK_ULONG, pPart: [*c]CK_BYTE, pulPartLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_GenerateKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG, phKey: [*c]CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_GenerateKeyPair = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, pPublicKeyTemplate: [*c]CK_ATTRIBUTE, ulPublicKeyAttributeCount: CK_ULONG, pPrivateKeyTemplate: [*c]CK_ATTRIBUTE, ulPrivateKeyAttributeCount: CK_ULONG, phPublicKey: [*c]CK_OBJECT_HANDLE, phPrivateKey: [*c]CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_WrapKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hWrappingKey: CK_OBJECT_HANDLE, hKey: CK_OBJECT_HANDLE, pWrappedKey: [*c]CK_BYTE, pulWrappedKeyLen: [*c]CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_UnwrapKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hUnwrappingKey: CK_OBJECT_HANDLE, pWrappedKey: [*c]CK_BYTE, ulWrappedKeyLen: CK_ULONG, pTemplate: [*c]CK_ATTRIBUTE, ulAttributeCount: CK_ULONG, phKey: [*c]CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_DeriveKey = ?*const fn (hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hBaseKey: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulAttributeCount: CK_ULONG, phKey: [*c]CK_OBJECT_HANDLE) callconv(.c) CK_RV;
+pub const CK_C_SeedRandom = ?*const fn (hSession: CK_SESSION_HANDLE, pSeed: [*c]CK_BYTE, ulSeedLen: CK_ULONG) callconv(.c) CK_RV;
+pub const CK_C_GenerateRandom = ?*const fn (hSession: CK_SESSION_HANDLE, RandomData: [*c]CK_BYTE, ulRandomLen: CK_ULONG) callconv(.c) CK_RV;
 pub const CK_C_GetFunctionStatus = ?*const fn (hSession: CK_SESSION_HANDLE) callconv(.c) CK_RV;
 pub const CK_C_CancelFunction = ?*const fn (hSession: CK_SESSION_HANDLE) callconv(.c) CK_RV;
-pub const CK_C_WaitForSlotEvent = ?*const fn (flags: CK_FLAGS, pSlot: CK_SLOT_ID_PTR, pRserved: CK_VOID_PTR) callconv(.c) CK_RV;
-pub const struct_CK_FUNCTION_LIST = extern struct {
+pub const CK_C_WaitForSlotEvent = ?*const fn (flags: CK_FLAGS, pSlot: [*c]CK_SLOT_ID, pRserved: CK_VOID_PTR) callconv(.c) CK_RV;
+
+pub const CK_FUNCTION_LIST = extern struct {
     version: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     C_Initialize: CK_C_Initialize = null,
     C_Finalize: CK_C_Finalize = null,
@@ -257,11 +236,11 @@ pub const struct_CK_FUNCTION_LIST = extern struct {
     C_CancelFunction: CK_C_CancelFunction = null,
     C_WaitForSlotEvent: CK_C_WaitForSlotEvent = null,
 };
-pub const CK_CREATEMUTEX = ?*const fn (ppMutex: CK_VOID_PTR_PTR) callconv(.c) CK_RV;
+pub const CK_CREATEMUTEX = ?*const fn (ppMutex: [*c]CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_DESTROYMUTEX = ?*const fn (pMutex: CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_LOCKMUTEX = ?*const fn (pMutex: CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_UNLOCKMUTEX = ?*const fn (pMutex: CK_VOID_PTR) callconv(.c) CK_RV;
-pub const struct_CK_C_INITIALIZE_ARGS = extern struct {
+pub const CK_C_INITIALIZE_ARGS = extern struct {
     CreateMutex: CK_CREATEMUTEX = null,
     DestroyMutex: CK_DESTROYMUTEX = null,
     LockMutex: CK_LOCKMUTEX = null,
@@ -269,291 +248,227 @@ pub const struct_CK_C_INITIALIZE_ARGS = extern struct {
     flags: CK_FLAGS = 0,
     pReserved: CK_VOID_PTR = null,
 };
-pub const CK_C_INITIALIZE_ARGS = struct_CK_C_INITIALIZE_ARGS;
-pub const CK_C_INITIALIZE_ARGS_PTR = [*c]CK_C_INITIALIZE_ARGS;
 pub const CK_RSA_PKCS_MGF_TYPE = CK_ULONG;
-pub const CK_RSA_PKCS_MGF_TYPE_PTR = [*c]CK_RSA_PKCS_MGF_TYPE;
 pub const CK_RSA_PKCS_OAEP_SOURCE_TYPE = CK_ULONG;
-pub const CK_RSA_PKCS_OAEP_SOURCE_TYPE_PTR = [*c]CK_RSA_PKCS_OAEP_SOURCE_TYPE;
-pub const struct_CK_RSA_PKCS_OAEP_PARAMS = extern struct {
+pub const CK_RSA_PKCS_OAEP_PARAMS = extern struct {
     hashAlg: CK_MECHANISM_TYPE = 0,
     mgf: CK_RSA_PKCS_MGF_TYPE = 0,
     source: CK_RSA_PKCS_OAEP_SOURCE_TYPE = 0,
     pSourceData: CK_VOID_PTR = null,
     ulSourceDataLen: CK_ULONG = 0,
 };
-pub const CK_RSA_PKCS_OAEP_PARAMS = struct_CK_RSA_PKCS_OAEP_PARAMS;
-pub const CK_RSA_PKCS_OAEP_PARAMS_PTR = [*c]CK_RSA_PKCS_OAEP_PARAMS;
-pub const struct_CK_RSA_PKCS_PSS_PARAMS = extern struct {
+pub const CK_RSA_PKCS_PSS_PARAMS = extern struct {
     hashAlg: CK_MECHANISM_TYPE = 0,
     mgf: CK_RSA_PKCS_MGF_TYPE = 0,
     sLen: CK_ULONG = 0,
 };
-pub const CK_RSA_PKCS_PSS_PARAMS = struct_CK_RSA_PKCS_PSS_PARAMS;
-pub const CK_RSA_PKCS_PSS_PARAMS_PTR = [*c]CK_RSA_PKCS_PSS_PARAMS;
 pub const CK_EC_KDF_TYPE = CK_ULONG;
-pub const struct_CK_ECDH1_DERIVE_PARAMS = extern struct {
+pub const CK_ECDH1_DERIVE_PARAMS = extern struct {
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
-    pSharedData: CK_BYTE_PTR = null,
+    pSharedData: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
 };
-pub const CK_ECDH1_DERIVE_PARAMS = struct_CK_ECDH1_DERIVE_PARAMS;
-pub const CK_ECDH1_DERIVE_PARAMS_PTR = [*c]CK_ECDH1_DERIVE_PARAMS;
-pub const struct_CK_ECDH2_DERIVE_PARAMS = extern struct {
+pub const CK_ECDH2_DERIVE_PARAMS = extern struct {
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
-    pSharedData: CK_BYTE_PTR = null,
+    pSharedData: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
     ulPrivateDataLen: CK_ULONG = 0,
     hPrivateData: CK_OBJECT_HANDLE = 0,
     ulPublicDataLen2: CK_ULONG = 0,
-    pPublicData2: CK_BYTE_PTR = null,
+    pPublicData2: [*c]CK_BYTE = null,
 };
-pub const CK_ECDH2_DERIVE_PARAMS = struct_CK_ECDH2_DERIVE_PARAMS;
-pub const CK_ECDH2_DERIVE_PARAMS_PTR = [*c]CK_ECDH2_DERIVE_PARAMS;
-pub const struct_CK_ECMQV_DERIVE_PARAMS = extern struct {
+pub const CK_ECMQV_DERIVE_PARAMS = extern struct {
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
-    pSharedData: CK_BYTE_PTR = null,
+    pSharedData: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
     ulPrivateDataLen: CK_ULONG = 0,
     hPrivateData: CK_OBJECT_HANDLE = 0,
     ulPublicDataLen2: CK_ULONG = 0,
-    pPublicData2: CK_BYTE_PTR = null,
+    pPublicData2: [*c]CK_BYTE = null,
     publicKey: CK_OBJECT_HANDLE = 0,
 };
-pub const CK_ECMQV_DERIVE_PARAMS = struct_CK_ECMQV_DERIVE_PARAMS;
-pub const CK_ECMQV_DERIVE_PARAMS_PTR = [*c]CK_ECMQV_DERIVE_PARAMS;
 pub const CK_X9_42_DH_KDF_TYPE = CK_ULONG;
-pub const CK_X9_42_DH_KDF_TYPE_PTR = [*c]CK_X9_42_DH_KDF_TYPE;
-pub const struct_CK_X9_42_DH1_DERIVE_PARAMS = extern struct {
+pub const CK_X9_42_DH1_DERIVE_PARAMS = extern struct {
     kdf: CK_X9_42_DH_KDF_TYPE = 0,
     ulOtherInfoLen: CK_ULONG = 0,
-    pOtherInfo: CK_BYTE_PTR = null,
+    pOtherInfo: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
 };
-pub const CK_X9_42_DH1_DERIVE_PARAMS = struct_CK_X9_42_DH1_DERIVE_PARAMS;
-pub const CK_X9_42_DH1_DERIVE_PARAMS_PTR = [*c]struct_CK_X9_42_DH1_DERIVE_PARAMS;
-pub const struct_CK_X9_42_DH2_DERIVE_PARAMS = extern struct {
+pub const CK_X9_42_DH2_DERIVE_PARAMS = extern struct {
     kdf: CK_X9_42_DH_KDF_TYPE = 0,
     ulOtherInfoLen: CK_ULONG = 0,
-    pOtherInfo: CK_BYTE_PTR = null,
+    pOtherInfo: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
     ulPrivateDataLen: CK_ULONG = 0,
     hPrivateData: CK_OBJECT_HANDLE = 0,
     ulPublicDataLen2: CK_ULONG = 0,
-    pPublicData2: CK_BYTE_PTR = null,
+    pPublicData2: [*c]CK_BYTE = null,
 };
-pub const CK_X9_42_DH2_DERIVE_PARAMS = struct_CK_X9_42_DH2_DERIVE_PARAMS;
-pub const CK_X9_42_DH2_DERIVE_PARAMS_PTR = [*c]CK_X9_42_DH2_DERIVE_PARAMS;
-pub const struct_CK_X9_42_MQV_DERIVE_PARAMS = extern struct {
+pub const CK_X9_42_MQV_DERIVE_PARAMS = extern struct {
     kdf: CK_X9_42_DH_KDF_TYPE = 0,
     ulOtherInfoLen: CK_ULONG = 0,
-    pOtherInfo: CK_BYTE_PTR = null,
+    pOtherInfo: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
     ulPrivateDataLen: CK_ULONG = 0,
     hPrivateData: CK_OBJECT_HANDLE = 0,
     ulPublicDataLen2: CK_ULONG = 0,
-    pPublicData2: CK_BYTE_PTR = null,
+    pPublicData2: [*c]CK_BYTE = null,
     publicKey: CK_OBJECT_HANDLE = 0,
 };
-pub const CK_X9_42_MQV_DERIVE_PARAMS = struct_CK_X9_42_MQV_DERIVE_PARAMS;
-pub const CK_X9_42_MQV_DERIVE_PARAMS_PTR = [*c]CK_X9_42_MQV_DERIVE_PARAMS;
-pub const struct_CK_KEA_DERIVE_PARAMS = extern struct {
+pub const CK_KEA_DERIVE_PARAMS = extern struct {
     isSender: CK_BBOOL = 0,
     ulRandomLen: CK_ULONG = 0,
-    pRandomA: CK_BYTE_PTR = null,
-    pRandomB: CK_BYTE_PTR = null,
+    pRandomA: [*c]CK_BYTE = null,
+    pRandomB: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
 };
-pub const CK_KEA_DERIVE_PARAMS = struct_CK_KEA_DERIVE_PARAMS;
-pub const CK_KEA_DERIVE_PARAMS_PTR = [*c]CK_KEA_DERIVE_PARAMS;
 pub const CK_RC2_PARAMS = CK_ULONG;
-pub const CK_RC2_PARAMS_PTR = [*c]CK_RC2_PARAMS;
-pub const struct_CK_RC2_CBC_PARAMS = extern struct {
+pub const CK_RC2_CBC_PARAMS = extern struct {
     ulEffectiveBits: CK_ULONG = 0,
     iv: [8]CK_BYTE = @import("std").mem.zeroes([8]CK_BYTE),
 };
-pub const CK_RC2_CBC_PARAMS = struct_CK_RC2_CBC_PARAMS;
-pub const CK_RC2_CBC_PARAMS_PTR = [*c]CK_RC2_CBC_PARAMS;
-pub const struct_CK_RC2_MAC_GENERAL_PARAMS = extern struct {
+pub const CK_RC2_MAC_GENERAL_PARAMS = extern struct {
     ulEffectiveBits: CK_ULONG = 0,
     ulMacLength: CK_ULONG = 0,
 };
-pub const CK_RC2_MAC_GENERAL_PARAMS = struct_CK_RC2_MAC_GENERAL_PARAMS;
-pub const CK_RC2_MAC_GENERAL_PARAMS_PTR = [*c]CK_RC2_MAC_GENERAL_PARAMS;
-pub const struct_CK_RC5_PARAMS = extern struct {
+pub const CK_RC5_PARAMS = extern struct {
     ulWordsize: CK_ULONG = 0,
     ulRounds: CK_ULONG = 0,
 };
-pub const CK_RC5_PARAMS = struct_CK_RC5_PARAMS;
-pub const CK_RC5_PARAMS_PTR = [*c]CK_RC5_PARAMS;
-pub const struct_CK_RC5_CBC_PARAMS = extern struct {
+pub const CK_RC5_CBC_PARAMS = extern struct {
     ulWordsize: CK_ULONG = 0,
     ulRounds: CK_ULONG = 0,
-    pIv: CK_BYTE_PTR = null,
+    pIv: [*c]CK_BYTE = null,
     ulIvLen: CK_ULONG = 0,
 };
-pub const CK_RC5_CBC_PARAMS = struct_CK_RC5_CBC_PARAMS;
-pub const CK_RC5_CBC_PARAMS_PTR = [*c]CK_RC5_CBC_PARAMS;
-pub const struct_CK_RC5_MAC_GENERAL_PARAMS = extern struct {
+pub const CK_RC5_MAC_GENERAL_PARAMS = extern struct {
     ulWordsize: CK_ULONG = 0,
     ulRounds: CK_ULONG = 0,
     ulMacLength: CK_ULONG = 0,
 };
-pub const CK_RC5_MAC_GENERAL_PARAMS = struct_CK_RC5_MAC_GENERAL_PARAMS;
-pub const CK_RC5_MAC_GENERAL_PARAMS_PTR = [*c]CK_RC5_MAC_GENERAL_PARAMS;
 pub const CK_MAC_GENERAL_PARAMS = CK_ULONG;
-pub const CK_MAC_GENERAL_PARAMS_PTR = [*c]CK_MAC_GENERAL_PARAMS;
-pub const struct_CK_DES_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+pub const CK_DES_CBC_ENCRYPT_DATA_PARAMS = extern struct {
     iv: [8]CK_BYTE = @import("std").mem.zeroes([8]CK_BYTE),
-    pData: CK_BYTE_PTR = null,
+    pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
 };
-pub const CK_DES_CBC_ENCRYPT_DATA_PARAMS = struct_CK_DES_CBC_ENCRYPT_DATA_PARAMS;
-pub const CK_DES_CBC_ENCRYPT_DATA_PARAMS_PTR = [*c]CK_DES_CBC_ENCRYPT_DATA_PARAMS;
-pub const struct_CK_AES_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+pub const CK_AES_CBC_ENCRYPT_DATA_PARAMS = extern struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
-    pData: CK_BYTE_PTR = null,
+    pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
 };
-pub const CK_AES_CBC_ENCRYPT_DATA_PARAMS = struct_CK_AES_CBC_ENCRYPT_DATA_PARAMS;
-pub const CK_AES_CBC_ENCRYPT_DATA_PARAMS_PTR = [*c]CK_AES_CBC_ENCRYPT_DATA_PARAMS;
-pub const struct_CK_SKIPJACK_PRIVATE_WRAP_PARAMS = extern struct {
+pub const CK_SKIPJACK_PRIVATE_WRAP_PARAMS = extern struct {
     ulPasswordLen: CK_ULONG = 0,
-    pPassword: CK_BYTE_PTR = null,
+    pPassword: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
     ulPAndGLen: CK_ULONG = 0,
     ulQLen: CK_ULONG = 0,
     ulRandomLen: CK_ULONG = 0,
-    pRandomA: CK_BYTE_PTR = null,
-    pPrimeP: CK_BYTE_PTR = null,
-    pBaseG: CK_BYTE_PTR = null,
-    pSubprimeQ: CK_BYTE_PTR = null,
+    pRandomA: [*c]CK_BYTE = null,
+    pPrimeP: [*c]CK_BYTE = null,
+    pBaseG: [*c]CK_BYTE = null,
+    pSubprimeQ: [*c]CK_BYTE = null,
 };
-pub const CK_SKIPJACK_PRIVATE_WRAP_PARAMS = struct_CK_SKIPJACK_PRIVATE_WRAP_PARAMS;
-pub const CK_SKIPJACK_PRIVATE_WRAP_PARAMS_PTR = [*c]CK_SKIPJACK_PRIVATE_WRAP_PARAMS;
-pub const struct_CK_SKIPJACK_RELAYX_PARAMS = extern struct {
+pub const CK_SKIPJACK_RELAYX_PARAMS = extern struct {
     ulOldWrappedXLen: CK_ULONG = 0,
-    pOldWrappedX: CK_BYTE_PTR = null,
+    pOldWrappedX: [*c]CK_BYTE = null,
     ulOldPasswordLen: CK_ULONG = 0,
-    pOldPassword: CK_BYTE_PTR = null,
+    pOldPassword: [*c]CK_BYTE = null,
     ulOldPublicDataLen: CK_ULONG = 0,
-    pOldPublicData: CK_BYTE_PTR = null,
+    pOldPublicData: [*c]CK_BYTE = null,
     ulOldRandomLen: CK_ULONG = 0,
-    pOldRandomA: CK_BYTE_PTR = null,
+    pOldRandomA: [*c]CK_BYTE = null,
     ulNewPasswordLen: CK_ULONG = 0,
-    pNewPassword: CK_BYTE_PTR = null,
+    pNewPassword: [*c]CK_BYTE = null,
     ulNewPublicDataLen: CK_ULONG = 0,
-    pNewPublicData: CK_BYTE_PTR = null,
+    pNewPublicData: [*c]CK_BYTE = null,
     ulNewRandomLen: CK_ULONG = 0,
-    pNewRandomA: CK_BYTE_PTR = null,
+    pNewRandomA: [*c]CK_BYTE = null,
 };
-pub const CK_SKIPJACK_RELAYX_PARAMS = struct_CK_SKIPJACK_RELAYX_PARAMS;
-pub const CK_SKIPJACK_RELAYX_PARAMS_PTR = [*c]CK_SKIPJACK_RELAYX_PARAMS;
-pub const struct_CK_PBE_PARAMS = extern struct {
-    pInitVector: CK_BYTE_PTR = null,
-    pPassword: CK_UTF8CHAR_PTR = null,
+pub const CK_PBE_PARAMS = extern struct {
+    pInitVector: [*c]CK_BYTE = null,
+    pPassword: [*c]CK_UTF8CHAR = null,
     ulPasswordLen: CK_ULONG = 0,
-    pSalt: CK_BYTE_PTR = null,
+    pSalt: [*c]CK_BYTE = null,
     ulSaltLen: CK_ULONG = 0,
     ulIteration: CK_ULONG = 0,
 };
-pub const CK_PBE_PARAMS = struct_CK_PBE_PARAMS;
-pub const CK_PBE_PARAMS_PTR = [*c]CK_PBE_PARAMS;
-pub const struct_CK_KEY_WRAP_SET_OAEP_PARAMS = extern struct {
+pub const CK_KEY_WRAP_SET_OAEP_PARAMS = extern struct {
     bBC: CK_BYTE = 0,
-    pX: CK_BYTE_PTR = null,
+    pX: [*c]CK_BYTE = null,
     ulXLen: CK_ULONG = 0,
 };
-pub const CK_KEY_WRAP_SET_OAEP_PARAMS = struct_CK_KEY_WRAP_SET_OAEP_PARAMS;
-pub const CK_KEY_WRAP_SET_OAEP_PARAMS_PTR = [*c]CK_KEY_WRAP_SET_OAEP_PARAMS;
-pub const struct_CK_SSL3_RANDOM_DATA = extern struct {
-    pClientRandom: CK_BYTE_PTR = null,
+pub const CK_SSL3_RANDOM_DATA = extern struct {
+    pClientRandom: [*c]CK_BYTE = null,
     ulClientRandomLen: CK_ULONG = 0,
-    pServerRandom: CK_BYTE_PTR = null,
+    pServerRandom: [*c]CK_BYTE = null,
     ulServerRandomLen: CK_ULONG = 0,
 };
-pub const CK_SSL3_RANDOM_DATA = struct_CK_SSL3_RANDOM_DATA;
-pub const struct_CK_SSL3_MASTER_KEY_DERIVE_PARAMS = extern struct {
+pub const CK_SSL3_MASTER_KEY_DERIVE_PARAMS = extern struct {
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
-    pVersion: CK_VERSION_PTR = null,
+    pVersion: [*c]CK_VERSION = null,
 };
-pub const CK_SSL3_MASTER_KEY_DERIVE_PARAMS = struct_CK_SSL3_MASTER_KEY_DERIVE_PARAMS;
-pub const CK_SSL3_MASTER_KEY_DERIVE_PARAMS_PTR = [*c]struct_CK_SSL3_MASTER_KEY_DERIVE_PARAMS;
-pub const struct_CK_SSL3_KEY_MAT_OUT = extern struct {
+pub const CK_SSL3_KEY_MAT_OUT = extern struct {
     hClientMacSecret: CK_OBJECT_HANDLE = 0,
     hServerMacSecret: CK_OBJECT_HANDLE = 0,
     hClientKey: CK_OBJECT_HANDLE = 0,
     hServerKey: CK_OBJECT_HANDLE = 0,
-    pIVClient: CK_BYTE_PTR = null,
-    pIVServer: CK_BYTE_PTR = null,
+    pIVClient: [*c]CK_BYTE = null,
+    pIVServer: [*c]CK_BYTE = null,
 };
-pub const CK_SSL3_KEY_MAT_OUT = struct_CK_SSL3_KEY_MAT_OUT;
-pub const CK_SSL3_KEY_MAT_OUT_PTR = [*c]CK_SSL3_KEY_MAT_OUT;
-pub const struct_CK_SSL3_KEY_MAT_PARAMS = extern struct {
+pub const CK_SSL3_KEY_MAT_PARAMS = extern struct {
     ulMacSizeInBits: CK_ULONG = 0,
     ulKeySizeInBits: CK_ULONG = 0,
     ulIVSizeInBits: CK_ULONG = 0,
     bIsExport: CK_BBOOL = 0,
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
-    pReturnedKeyMaterial: CK_SSL3_KEY_MAT_OUT_PTR = null,
+    pReturnedKeyMaterial: [*c]CK_SSL3_KEY_MAT_OUT = null,
 };
-pub const CK_SSL3_KEY_MAT_PARAMS = struct_CK_SSL3_KEY_MAT_PARAMS;
-pub const CK_SSL3_KEY_MAT_PARAMS_PTR = [*c]CK_SSL3_KEY_MAT_PARAMS;
-pub const struct_CK_TLS_PRF_PARAMS = extern struct {
-    pSeed: CK_BYTE_PTR = null,
+pub const CK_TLS_PRF_PARAMS = extern struct {
+    pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
-    pLabel: CK_BYTE_PTR = null,
+    pLabel: [*c]CK_BYTE = null,
     ulLabelLen: CK_ULONG = 0,
-    pOutput: CK_BYTE_PTR = null,
-    pulOutputLen: CK_ULONG_PTR = null,
+    pOutput: [*c]CK_BYTE = null,
+    pulOutputLen: [*c]CK_ULONG = null,
 };
-pub const CK_TLS_PRF_PARAMS = struct_CK_TLS_PRF_PARAMS;
-pub const CK_TLS_PRF_PARAMS_PTR = [*c]CK_TLS_PRF_PARAMS;
-pub const struct_CK_WTLS_RANDOM_DATA = extern struct {
-    pClientRandom: CK_BYTE_PTR = null,
+pub const CK_WTLS_RANDOM_DATA = extern struct {
+    pClientRandom: [*c]CK_BYTE = null,
     ulClientRandomLen: CK_ULONG = 0,
-    pServerRandom: CK_BYTE_PTR = null,
+    pServerRandom: [*c]CK_BYTE = null,
     ulServerRandomLen: CK_ULONG = 0,
 };
-pub const CK_WTLS_RANDOM_DATA = struct_CK_WTLS_RANDOM_DATA;
-pub const CK_WTLS_RANDOM_DATA_PTR = [*c]CK_WTLS_RANDOM_DATA;
-pub const struct_CK_WTLS_MASTER_KEY_DERIVE_PARAMS = extern struct {
+pub const CK_WTLS_MASTER_KEY_DERIVE_PARAMS = extern struct {
     DigestMechanism: CK_MECHANISM_TYPE = 0,
     RandomInfo: CK_WTLS_RANDOM_DATA = @import("std").mem.zeroes(CK_WTLS_RANDOM_DATA),
-    pVersion: CK_BYTE_PTR = null,
+    pVersion: [*c]CK_BYTE = null,
 };
-pub const CK_WTLS_MASTER_KEY_DERIVE_PARAMS = struct_CK_WTLS_MASTER_KEY_DERIVE_PARAMS;
-pub const CK_WTLS_MASTER_KEY_DERIVE_PARAMS_PTR = [*c]CK_WTLS_MASTER_KEY_DERIVE_PARAMS;
-pub const struct_CK_WTLS_PRF_PARAMS = extern struct {
+pub const CK_WTLS_PRF_PARAMS = extern struct {
     DigestMechanism: CK_MECHANISM_TYPE = 0,
-    pSeed: CK_BYTE_PTR = null,
+    pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
-    pLabel: CK_BYTE_PTR = null,
+    pLabel: [*c]CK_BYTE = null,
     ulLabelLen: CK_ULONG = 0,
-    pOutput: CK_BYTE_PTR = null,
-    pulOutputLen: CK_ULONG_PTR = null,
+    pOutput: [*c]CK_BYTE = null,
+    pulOutputLen: [*c]CK_ULONG = null,
 };
-pub const CK_WTLS_PRF_PARAMS = struct_CK_WTLS_PRF_PARAMS;
-pub const CK_WTLS_PRF_PARAMS_PTR = [*c]CK_WTLS_PRF_PARAMS;
-pub const struct_CK_WTLS_KEY_MAT_OUT = extern struct {
+pub const CK_WTLS_KEY_MAT_OUT = extern struct {
     hMacSecret: CK_OBJECT_HANDLE = 0,
     hKey: CK_OBJECT_HANDLE = 0,
-    pIV: CK_BYTE_PTR = null,
+    pIV: [*c]CK_BYTE = null,
 };
-pub const CK_WTLS_KEY_MAT_OUT = struct_CK_WTLS_KEY_MAT_OUT;
-pub const CK_WTLS_KEY_MAT_OUT_PTR = [*c]CK_WTLS_KEY_MAT_OUT;
-pub const struct_CK_WTLS_KEY_MAT_PARAMS = extern struct {
+pub const CK_WTLS_KEY_MAT_PARAMS = extern struct {
     DigestMechanism: CK_MECHANISM_TYPE = 0,
     ulMacSizeInBits: CK_ULONG = 0,
     ulKeySizeInBits: CK_ULONG = 0,
@@ -561,35 +476,26 @@ pub const struct_CK_WTLS_KEY_MAT_PARAMS = extern struct {
     ulSequenceNumber: CK_ULONG = 0,
     bIsExport: CK_BBOOL = 0,
     RandomInfo: CK_WTLS_RANDOM_DATA = @import("std").mem.zeroes(CK_WTLS_RANDOM_DATA),
-    pReturnedKeyMaterial: CK_WTLS_KEY_MAT_OUT_PTR = null,
+    pReturnedKeyMaterial: [*c]CK_WTLS_KEY_MAT_OUT = null,
 };
-pub const CK_WTLS_KEY_MAT_PARAMS = struct_CK_WTLS_KEY_MAT_PARAMS;
-pub const CK_WTLS_KEY_MAT_PARAMS_PTR = [*c]CK_WTLS_KEY_MAT_PARAMS;
-pub const struct_CK_CMS_SIG_PARAMS = extern struct {
+pub const CK_CMS_SIG_PARAMS = extern struct {
     certificateHandle: CK_OBJECT_HANDLE = 0,
-    pSigningMechanism: CK_MECHANISM_PTR = null,
-    pDigestMechanism: CK_MECHANISM_PTR = null,
-    pContentType: CK_UTF8CHAR_PTR = null,
-    pRequestedAttributes: CK_BYTE_PTR = null,
+    pSigningMechanism: [*c]CK_MECHANISM = null,
+    pDigestMechanism: [*c]CK_MECHANISM = null,
+    pContentType: [*c]CK_UTF8CHAR = null,
+    pRequestedAttributes: [*c]CK_BYTE = null,
     ulRequestedAttributesLen: CK_ULONG = 0,
-    pRequiredAttributes: CK_BYTE_PTR = null,
+    pRequiredAttributes: [*c]CK_BYTE = null,
     ulRequiredAttributesLen: CK_ULONG = 0,
 };
-pub const CK_CMS_SIG_PARAMS = struct_CK_CMS_SIG_PARAMS;
-pub const CK_CMS_SIG_PARAMS_PTR = [*c]CK_CMS_SIG_PARAMS;
-pub const struct_CK_KEY_DERIVATION_STRING_DATA = extern struct {
-    pData: CK_BYTE_PTR = null,
+pub const CK_KEY_DERIVATION_STRING_DATA = extern struct {
+    pData: [*c]CK_BYTE = null,
     ulLen: CK_ULONG = 0,
 };
-pub const CK_KEY_DERIVATION_STRING_DATA = struct_CK_KEY_DERIVATION_STRING_DATA;
-pub const CK_KEY_DERIVATION_STRING_DATA_PTR = [*c]CK_KEY_DERIVATION_STRING_DATA;
 pub const CK_EXTRACT_PARAMS = CK_ULONG;
-pub const CK_EXTRACT_PARAMS_PTR = [*c]CK_EXTRACT_PARAMS;
 pub const CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = CK_ULONG;
-pub const CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE_PTR = [*c]CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE;
 pub const CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = CK_ULONG;
-pub const CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE_PTR = [*c]CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE;
-pub const struct_CK_PKCS5_PBKD2_PARAMS = extern struct {
+pub const CK_PKCS5_PBKD2_PARAMS = extern struct {
     saltSource: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = 0,
     pSaltSourceData: CK_VOID_PTR = null,
     ulSaltSourceDataLen: CK_ULONG = 0,
@@ -597,12 +503,10 @@ pub const struct_CK_PKCS5_PBKD2_PARAMS = extern struct {
     prf: CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0,
     pPrfData: CK_VOID_PTR = null,
     ulPrfDataLen: CK_ULONG = 0,
-    pPassword: CK_UTF8CHAR_PTR = null,
-    ulPasswordLen: CK_ULONG_PTR = null,
+    pPassword: [*c]CK_UTF8CHAR = null,
+    ulPasswordLen: [*c]CK_ULONG = null,
 };
-pub const CK_PKCS5_PBKD2_PARAMS = struct_CK_PKCS5_PBKD2_PARAMS;
-pub const CK_PKCS5_PBKD2_PARAMS_PTR = [*c]CK_PKCS5_PBKD2_PARAMS;
-pub const struct_CK_PKCS5_PBKD2_PARAMS2 = extern struct {
+pub const CK_PKCS5_PBKD2_PARAMS2 = extern struct {
     saltSource: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = 0,
     pSaltSourceData: CK_VOID_PTR = null,
     ulSaltSourceDataLen: CK_ULONG = 0,
@@ -610,259 +514,213 @@ pub const struct_CK_PKCS5_PBKD2_PARAMS2 = extern struct {
     prf: CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0,
     pPrfData: CK_VOID_PTR = null,
     ulPrfDataLen: CK_ULONG = 0,
-    pPassword: CK_UTF8CHAR_PTR = null,
+    pPassword: [*c]CK_UTF8CHAR = null,
     ulPasswordLen: CK_ULONG = 0,
 };
-pub const CK_PKCS5_PBKD2_PARAMS2 = struct_CK_PKCS5_PBKD2_PARAMS2;
-pub const CK_PKCS5_PBKD2_PARAMS2_PTR = [*c]CK_PKCS5_PBKD2_PARAMS2;
 pub const CK_OTP_PARAM_TYPE = CK_ULONG;
 pub const CK_PARAM_TYPE = CK_OTP_PARAM_TYPE;
-pub const struct_CK_OTP_PARAM = extern struct {
+pub const CK_OTP_PARAM = extern struct {
     type: CK_OTP_PARAM_TYPE = 0,
     pValue: CK_VOID_PTR = null,
     ulValueLen: CK_ULONG = 0,
 };
-pub const CK_OTP_PARAM = struct_CK_OTP_PARAM;
-pub const CK_OTP_PARAM_PTR = [*c]CK_OTP_PARAM;
-pub const struct_CK_OTP_PARAMS = extern struct {
-    pParams: CK_OTP_PARAM_PTR = null,
+pub const CK_OTP_PARAMS = extern struct {
+    pParams: [*c]CK_OTP_PARAM = null,
     ulCount: CK_ULONG = 0,
 };
-pub const CK_OTP_PARAMS = struct_CK_OTP_PARAMS;
-pub const CK_OTP_PARAMS_PTR = [*c]CK_OTP_PARAMS;
-pub const struct_CK_OTP_SIGNATURE_INFO = extern struct {
-    pParams: CK_OTP_PARAM_PTR = null,
+pub const CK_OTP_SIGNATURE_INFO = extern struct {
+    pParams: [*c]CK_OTP_PARAM = null,
     ulCount: CK_ULONG = 0,
 };
-pub const CK_OTP_SIGNATURE_INFO = struct_CK_OTP_SIGNATURE_INFO;
-pub const CK_OTP_SIGNATURE_INFO_PTR = [*c]CK_OTP_SIGNATURE_INFO;
-pub const struct_CK_KIP_PARAMS = extern struct {
-    pMechanism: CK_MECHANISM_PTR = null,
+pub const CK_KIP_PARAMS = extern struct {
+    pMechanism: [*c]CK_MECHANISM = null,
     hKey: CK_OBJECT_HANDLE = 0,
-    pSeed: CK_BYTE_PTR = null,
+    pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
 };
-pub const CK_KIP_PARAMS = struct_CK_KIP_PARAMS;
-pub const CK_KIP_PARAMS_PTR = [*c]CK_KIP_PARAMS;
-pub const struct_CK_AES_CTR_PARAMS = extern struct {
+pub const CK_AES_CTR_PARAMS = extern struct {
     ulCounterBits: CK_ULONG = 0,
     cb: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
 };
-pub const CK_AES_CTR_PARAMS = struct_CK_AES_CTR_PARAMS;
-pub const CK_AES_CTR_PARAMS_PTR = [*c]CK_AES_CTR_PARAMS;
-pub const struct_CK_GCM_PARAMS = extern struct {
-    pIv: CK_BYTE_PTR = null,
+pub const CK_GCM_PARAMS = extern struct {
+    pIv: [*c]CK_BYTE = null,
     ulIvLen: CK_ULONG = 0,
     ulIvBits: CK_ULONG = 0,
-    pAAD: CK_BYTE_PTR = null,
+    pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulTagBits: CK_ULONG = 0,
 };
-pub const CK_GCM_PARAMS = struct_CK_GCM_PARAMS;
-pub const CK_GCM_PARAMS_PTR = [*c]CK_GCM_PARAMS;
-pub const struct_CK_CCM_PARAMS = extern struct {
+pub const CK_CCM_PARAMS = extern struct {
     ulDataLen: CK_ULONG = 0,
-    pNonce: CK_BYTE_PTR = null,
+    pNonce: [*c]CK_BYTE = null,
     ulNonceLen: CK_ULONG = 0,
-    pAAD: CK_BYTE_PTR = null,
+    pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulMACLen: CK_ULONG = 0,
 };
-pub const CK_CCM_PARAMS = struct_CK_CCM_PARAMS;
-pub const CK_CCM_PARAMS_PTR = [*c]CK_CCM_PARAMS;
-pub const struct_CK_AES_GCM_PARAMS = extern struct {
-    pIv: CK_BYTE_PTR = null,
+pub const CK_AES_GCM_PARAMS = extern struct {
+    pIv: [*c]CK_BYTE = null,
     ulIvLen: CK_ULONG = 0,
     ulIvBits: CK_ULONG = 0,
-    pAAD: CK_BYTE_PTR = null,
+    pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulTagBits: CK_ULONG = 0,
 };
-pub const CK_AES_GCM_PARAMS = struct_CK_AES_GCM_PARAMS;
-pub const CK_AES_GCM_PARAMS_PTR = [*c]CK_AES_GCM_PARAMS;
-pub const struct_CK_AES_CCM_PARAMS = extern struct {
+pub const CK_AES_CCM_PARAMS = extern struct {
     ulDataLen: CK_ULONG = 0,
-    pNonce: CK_BYTE_PTR = null,
+    pNonce: [*c]CK_BYTE = null,
     ulNonceLen: CK_ULONG = 0,
-    pAAD: CK_BYTE_PTR = null,
+    pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulMACLen: CK_ULONG = 0,
 };
-pub const CK_AES_CCM_PARAMS = struct_CK_AES_CCM_PARAMS;
-pub const CK_AES_CCM_PARAMS_PTR = [*c]CK_AES_CCM_PARAMS;
-pub const struct_CK_CAMELLIA_CTR_PARAMS = extern struct {
+pub const CK_CAMELLIA_CTR_PARAMS = extern struct {
     ulCounterBits: CK_ULONG = 0,
     cb: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
 };
-pub const CK_CAMELLIA_CTR_PARAMS = struct_CK_CAMELLIA_CTR_PARAMS;
-pub const CK_CAMELLIA_CTR_PARAMS_PTR = [*c]CK_CAMELLIA_CTR_PARAMS;
-pub const struct_CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+pub const CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS = extern struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
-    pData: CK_BYTE_PTR = null,
+    pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
 };
-pub const CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS = struct_CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS;
-pub const CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS_PTR = [*c]CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS;
-pub const struct_CK_ARIA_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+pub const CK_ARIA_CBC_ENCRYPT_DATA_PARAMS = extern struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
-    pData: CK_BYTE_PTR = null,
+    pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
 };
-pub const CK_ARIA_CBC_ENCRYPT_DATA_PARAMS = struct_CK_ARIA_CBC_ENCRYPT_DATA_PARAMS;
-pub const CK_ARIA_CBC_ENCRYPT_DATA_PARAMS_PTR = [*c]CK_ARIA_CBC_ENCRYPT_DATA_PARAMS;
-pub const struct_CK_DSA_PARAMETER_GEN_PARAM = extern struct {
+pub const CK_DSA_PARAMETER_GEN_PARAM = extern struct {
     hash: CK_MECHANISM_TYPE = 0,
-    pSeed: CK_BYTE_PTR = null,
+    pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
     ulIndex: CK_ULONG = 0,
 };
-pub const CK_DSA_PARAMETER_GEN_PARAM = struct_CK_DSA_PARAMETER_GEN_PARAM;
-pub const CK_DSA_PARAMETER_GEN_PARAM_PTR = [*c]CK_DSA_PARAMETER_GEN_PARAM;
-pub const struct_CK_ECDH_AES_KEY_WRAP_PARAMS = extern struct {
+pub const CK_ECDH_AES_KEY_WRAP_PARAMS = extern struct {
     ulAESKeyBits: CK_ULONG = 0,
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
-    pSharedData: CK_BYTE_PTR = null,
+    pSharedData: [*c]CK_BYTE = null,
 };
-pub const CK_ECDH_AES_KEY_WRAP_PARAMS = struct_CK_ECDH_AES_KEY_WRAP_PARAMS;
-pub const CK_ECDH_AES_KEY_WRAP_PARAMS_PTR = [*c]CK_ECDH_AES_KEY_WRAP_PARAMS;
 pub const CK_JAVA_MIDP_SECURITY_DOMAIN = CK_ULONG;
 pub const CK_CERTIFICATE_CATEGORY = CK_ULONG;
-pub const struct_CK_RSA_AES_KEY_WRAP_PARAMS = extern struct {
+pub const CK_RSA_AES_KEY_WRAP_PARAMS = extern struct {
     ulAESKeyBits: CK_ULONG = 0,
-    pOAEPParams: CK_RSA_PKCS_OAEP_PARAMS_PTR = null,
+    pOAEPParams: [*c]CK_RSA_PKCS_OAEP_PARAMS = null,
 };
-pub const CK_RSA_AES_KEY_WRAP_PARAMS = struct_CK_RSA_AES_KEY_WRAP_PARAMS;
-pub const CK_RSA_AES_KEY_WRAP_PARAMS_PTR = [*c]CK_RSA_AES_KEY_WRAP_PARAMS;
-pub const struct_CK_TLS12_MASTER_KEY_DERIVE_PARAMS = extern struct {
+pub const CK_TLS12_MASTER_KEY_DERIVE_PARAMS = extern struct {
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
-    pVersion: CK_VERSION_PTR = null,
+    pVersion: [*c]CK_VERSION = null,
     prfHashMechanism: CK_MECHANISM_TYPE = 0,
 };
-pub const CK_TLS12_MASTER_KEY_DERIVE_PARAMS = struct_CK_TLS12_MASTER_KEY_DERIVE_PARAMS;
-pub const CK_TLS12_MASTER_KEY_DERIVE_PARAMS_PTR = [*c]CK_TLS12_MASTER_KEY_DERIVE_PARAMS;
-pub const struct_CK_TLS12_KEY_MAT_PARAMS = extern struct {
+pub const CK_TLS12_KEY_MAT_PARAMS = extern struct {
     ulMacSizeInBits: CK_ULONG = 0,
     ulKeySizeInBits: CK_ULONG = 0,
     ulIVSizeInBits: CK_ULONG = 0,
     bIsExport: CK_BBOOL = 0,
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
-    pReturnedKeyMaterial: CK_SSL3_KEY_MAT_OUT_PTR = null,
+    pReturnedKeyMaterial: [*c]CK_SSL3_KEY_MAT_OUT = null,
     prfHashMechanism: CK_MECHANISM_TYPE = 0,
 };
-pub const CK_TLS12_KEY_MAT_PARAMS = struct_CK_TLS12_KEY_MAT_PARAMS;
-pub const CK_TLS12_KEY_MAT_PARAMS_PTR = [*c]CK_TLS12_KEY_MAT_PARAMS;
-pub const struct_CK_TLS_KDF_PARAMS = extern struct {
+pub const CK_TLS_KDF_PARAMS = extern struct {
     prfMechanism: CK_MECHANISM_TYPE = 0,
-    pLabel: CK_BYTE_PTR = null,
+    pLabel: [*c]CK_BYTE = null,
     ulLabelLength: CK_ULONG = 0,
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
-    pContextData: CK_BYTE_PTR = null,
+    pContextData: [*c]CK_BYTE = null,
     ulContextDataLength: CK_ULONG = 0,
 };
-pub const CK_TLS_KDF_PARAMS = struct_CK_TLS_KDF_PARAMS;
-pub const CK_TLS_KDF_PARAMS_PTR = [*c]CK_TLS_KDF_PARAMS;
-pub const struct_CK_TLS_MAC_PARAMS = extern struct {
+pub const CK_TLS_MAC_PARAMS = extern struct {
     prfHashMechanism: CK_MECHANISM_TYPE = 0,
     ulMacLength: CK_ULONG = 0,
     ulServerOrClient: CK_ULONG = 0,
 };
-pub const CK_TLS_MAC_PARAMS = struct_CK_TLS_MAC_PARAMS;
-pub const CK_TLS_MAC_PARAMS_PTR = [*c]CK_TLS_MAC_PARAMS;
-pub const struct_CK_GOSTR3410_DERIVE_PARAMS = extern struct {
+pub const CK_GOSTR3410_DERIVE_PARAMS = extern struct {
     kdf: CK_EC_KDF_TYPE = 0,
-    pPublicData: CK_BYTE_PTR = null,
+    pPublicData: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
-    pUKM: CK_BYTE_PTR = null,
+    pUKM: [*c]CK_BYTE = null,
     ulUKMLen: CK_ULONG = 0,
 };
-pub const CK_GOSTR3410_DERIVE_PARAMS = struct_CK_GOSTR3410_DERIVE_PARAMS;
-pub const CK_GOSTR3410_DERIVE_PARAMS_PTR = [*c]CK_GOSTR3410_DERIVE_PARAMS;
-pub const struct_CK_GOSTR3410_KEY_WRAP_PARAMS = extern struct {
-    pWrapOID: CK_BYTE_PTR = null,
+pub const CK_GOSTR3410_KEY_WRAP_PARAMS = extern struct {
+    pWrapOID: [*c]CK_BYTE = null,
     ulWrapOIDLen: CK_ULONG = 0,
-    pUKM: CK_BYTE_PTR = null,
+    pUKM: [*c]CK_BYTE = null,
     ulUKMLen: CK_ULONG = 0,
     hKey: CK_OBJECT_HANDLE = 0,
 };
-pub const CK_GOSTR3410_KEY_WRAP_PARAMS = struct_CK_GOSTR3410_KEY_WRAP_PARAMS;
-pub const CK_GOSTR3410_KEY_WRAP_PARAMS_PTR = [*c]CK_GOSTR3410_KEY_WRAP_PARAMS;
-pub const struct_CK_SEED_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+pub const CK_SEED_CBC_ENCRYPT_DATA_PARAMS = extern struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
-    pData: CK_BYTE_PTR = null,
+    pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
 };
-pub const CK_SEED_CBC_ENCRYPT_DATA_PARAMS = struct_CK_SEED_CBC_ENCRYPT_DATA_PARAMS;
-pub const CK_SEED_CBC_ENCRYPT_DATA_PARAMS_PTR = [*c]CK_SEED_CBC_ENCRYPT_DATA_PARAMS;
 
 pub extern fn C_Initialize(pInitArgs: CK_VOID_PTR) CK_RV;
 pub extern fn C_Finalize(pReserved: CK_VOID_PTR) CK_RV;
-pub extern fn C_GetInfo(pInfo: CK_INFO_PTR) CK_RV;
-pub extern fn C_GetFunctionList(ppFunctionList: CK_FUNCTION_LIST_PTR_PTR) CK_RV;
-pub extern fn C_GetSlotList(tokenPresent: CK_BBOOL, pSlotList: CK_SLOT_ID_PTR, pulCount: CK_ULONG_PTR) CK_RV;
-pub extern fn C_GetSlotInfo(slotID: CK_SLOT_ID, pInfo: CK_SLOT_INFO_PTR) CK_RV;
-pub extern fn C_GetTokenInfo(slotID: CK_SLOT_ID, pInfo: CK_TOKEN_INFO_PTR) CK_RV;
-pub extern fn C_GetMechanismList(slotID: CK_SLOT_ID, pMechanismList: CK_MECHANISM_TYPE_PTR, pulCount: CK_ULONG_PTR) CK_RV;
-pub extern fn C_GetMechanismInfo(slotID: CK_SLOT_ID, @"type": CK_MECHANISM_TYPE, pInfo: CK_MECHANISM_INFO_PTR) CK_RV;
-pub extern fn C_InitToken(slotID: CK_SLOT_ID, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG, pLabel: CK_UTF8CHAR_PTR) CK_RV;
-pub extern fn C_InitPIN(hSession: CK_SESSION_HANDLE, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG) CK_RV;
-pub extern fn C_SetPIN(hSession: CK_SESSION_HANDLE, pOldPin: CK_UTF8CHAR_PTR, ulOldLen: CK_ULONG, pNewPin: CK_UTF8CHAR_PTR, ulNewLen: CK_ULONG) CK_RV;
-pub extern fn C_OpenSession(slotID: CK_SLOT_ID, flags: CK_FLAGS, pApplication: CK_VOID_PTR, Notify: CK_NOTIFY, phSession: CK_SESSION_HANDLE_PTR) CK_RV;
+pub extern fn C_GetInfo(pInfo: [*c]CK_INFO) CK_RV;
+pub extern fn C_GetFunctionList(ppFunctionList: [*c][*c]CK_FUNCTION_LIST) CK_RV;
+pub extern fn C_GetSlotList(tokenPresent: CK_BBOOL, pSlotList: [*c]CK_SLOT_ID, pulCount: [*c]CK_ULONG) CK_RV;
+pub extern fn C_GetSlotInfo(slotID: CK_SLOT_ID, pInfo: [*c]CK_SLOT_INFO) CK_RV;
+pub extern fn C_GetTokenInfo(slotID: CK_SLOT_ID, pInfo: [*c]CK_TOKEN_INFO) CK_RV;
+pub extern fn C_GetMechanismList(slotID: CK_SLOT_ID, pMechanismList: [*c]CK_MECHANISM_TYPE, pulCount: [*c]CK_ULONG) CK_RV;
+pub extern fn C_GetMechanismInfo(slotID: CK_SLOT_ID, @"type": CK_MECHANISM_TYPE, pInfo: [*c]CK_MECHANISM_INFO) CK_RV;
+pub extern fn C_InitToken(slotID: CK_SLOT_ID, pPin: [*c]CK_UTF8CHAR, ulPinLen: CK_ULONG, pLabel: [*c]CK_UTF8CHAR) CK_RV;
+pub extern fn C_InitPIN(hSession: CK_SESSION_HANDLE, pPin: [*c]CK_UTF8CHAR, ulPinLen: CK_ULONG) CK_RV;
+pub extern fn C_SetPIN(hSession: CK_SESSION_HANDLE, pOldPin: [*c]CK_UTF8CHAR, ulOldLen: CK_ULONG, pNewPin: [*c]CK_UTF8CHAR, ulNewLen: CK_ULONG) CK_RV;
+pub extern fn C_OpenSession(slotID: CK_SLOT_ID, flags: CK_FLAGS, pApplication: CK_VOID_PTR, Notify: CK_NOTIFY, phSession: [*c]CK_SESSION_HANDLE) CK_RV;
 pub extern fn C_CloseSession(hSession: CK_SESSION_HANDLE) CK_RV;
 pub extern fn C_CloseAllSessions(slotID: CK_SLOT_ID) CK_RV;
-pub extern fn C_GetSessionInfo(hSession: CK_SESSION_HANDLE, pInfo: CK_SESSION_INFO_PTR) CK_RV;
-pub extern fn C_GetOperationState(hSession: CK_SESSION_HANDLE, pOperationState: CK_BYTE_PTR, pulOperationStateLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_SetOperationState(hSession: CK_SESSION_HANDLE, pOperationState: CK_BYTE_PTR, ulOperationStateLen: CK_ULONG, hEncryptionKey: CK_OBJECT_HANDLE, hAuthenticationKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_Login(hSession: CK_SESSION_HANDLE, userType: CK_USER_TYPE, pPin: CK_UTF8CHAR_PTR, ulPinLen: CK_ULONG) CK_RV;
+pub extern fn C_GetSessionInfo(hSession: CK_SESSION_HANDLE, pInfo: [*c]CK_SESSION_INFO) CK_RV;
+pub extern fn C_GetOperationState(hSession: CK_SESSION_HANDLE, pOperationState: [*c]CK_BYTE, pulOperationStateLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_SetOperationState(hSession: CK_SESSION_HANDLE, pOperationState: [*c]CK_BYTE, ulOperationStateLen: CK_ULONG, hEncryptionKey: CK_OBJECT_HANDLE, hAuthenticationKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_Login(hSession: CK_SESSION_HANDLE, userType: CK_USER_TYPE, pPin: [*c]CK_UTF8CHAR, ulPinLen: CK_ULONG) CK_RV;
 pub extern fn C_Logout(hSession: CK_SESSION_HANDLE) CK_RV;
-pub extern fn C_CreateObject(hSession: CK_SESSION_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG, phObject: CK_OBJECT_HANDLE_PTR) CK_RV;
-pub extern fn C_CopyObject(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG, phNewObject: CK_OBJECT_HANDLE_PTR) CK_RV;
+pub extern fn C_CreateObject(hSession: CK_SESSION_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG, phObject: [*c]CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_CopyObject(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG, phNewObject: [*c]CK_OBJECT_HANDLE) CK_RV;
 pub extern fn C_DestroyObject(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_GetObjectSize(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pulSize: CK_ULONG_PTR) CK_RV;
-pub extern fn C_GetAttributeValue(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG) CK_RV;
-pub extern fn C_SetAttributeValue(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG) CK_RV;
-pub extern fn C_FindObjectsInit(hSession: CK_SESSION_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG) CK_RV;
-pub extern fn C_FindObjects(hSession: CK_SESSION_HANDLE, phObject: CK_OBJECT_HANDLE_PTR, ulMaxObjectCount: CK_ULONG, pulObjectCount: CK_ULONG_PTR) CK_RV;
+pub extern fn C_GetObjectSize(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pulSize: [*c]CK_ULONG) CK_RV;
+pub extern fn C_GetAttributeValue(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG) CK_RV;
+pub extern fn C_SetAttributeValue(hSession: CK_SESSION_HANDLE, hObject: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG) CK_RV;
+pub extern fn C_FindObjectsInit(hSession: CK_SESSION_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG) CK_RV;
+pub extern fn C_FindObjects(hSession: CK_SESSION_HANDLE, phObject: [*c]CK_OBJECT_HANDLE, ulMaxObjectCount: CK_ULONG, pulObjectCount: [*c]CK_ULONG) CK_RV;
 pub extern fn C_FindObjectsFinal(hSession: CK_SESSION_HANDLE) CK_RV;
-pub extern fn C_EncryptInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_Encrypt(hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pEncryptedData: CK_BYTE_PTR, pulEncryptedDataLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_EncryptUpdate(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG, pEncryptedPart: CK_BYTE_PTR, pulEncryptedPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_EncryptFinal(hSession: CK_SESSION_HANDLE, pLastEncryptedPart: CK_BYTE_PTR, pulLastEncryptedPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DecryptInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_Decrypt(hSession: CK_SESSION_HANDLE, pEncryptedData: CK_BYTE_PTR, ulEncryptedDataLen: CK_ULONG, pData: CK_BYTE_PTR, pulDataLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DecryptUpdate(hSession: CK_SESSION_HANDLE, pEncryptedPart: CK_BYTE_PTR, ulEncryptedPartLen: CK_ULONG, pPart: CK_BYTE_PTR, pulPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DecryptFinal(hSession: CK_SESSION_HANDLE, pLastPart: CK_BYTE_PTR, pulLastPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DigestInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR) CK_RV;
-pub extern fn C_Digest(hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pDigest: CK_BYTE_PTR, pulDigestLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DigestUpdate(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) CK_RV;
+pub extern fn C_EncryptInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_Encrypt(hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pEncryptedData: [*c]CK_BYTE, pulEncryptedDataLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_EncryptUpdate(hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG, pEncryptedPart: [*c]CK_BYTE, pulEncryptedPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_EncryptFinal(hSession: CK_SESSION_HANDLE, pLastEncryptedPart: [*c]CK_BYTE, pulLastEncryptedPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DecryptInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_Decrypt(hSession: CK_SESSION_HANDLE, pEncryptedData: [*c]CK_BYTE, ulEncryptedDataLen: CK_ULONG, pData: [*c]CK_BYTE, pulDataLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DecryptUpdate(hSession: CK_SESSION_HANDLE, pEncryptedPart: [*c]CK_BYTE, ulEncryptedPartLen: CK_ULONG, pPart: [*c]CK_BYTE, pulPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DecryptFinal(hSession: CK_SESSION_HANDLE, pLastPart: [*c]CK_BYTE, pulLastPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DigestInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM) CK_RV;
+pub extern fn C_Digest(hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pDigest: [*c]CK_BYTE, pulDigestLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DigestUpdate(hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG) CK_RV;
 pub extern fn C_DigestKey(hSession: CK_SESSION_HANDLE, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_DigestFinal(hSession: CK_SESSION_HANDLE, pDigest: CK_BYTE_PTR, pulDigestLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_SignInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_Sign(hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pSignature: CK_BYTE_PTR, pulSignatureLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_SignUpdate(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) CK_RV;
-pub extern fn C_SignFinal(hSession: CK_SESSION_HANDLE, pSignature: CK_BYTE_PTR, pulSignatureLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_SignRecoverInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_SignRecover(hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pSignature: CK_BYTE_PTR, pulSignatureLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_VerifyInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_Verify(hSession: CK_SESSION_HANDLE, pData: CK_BYTE_PTR, ulDataLen: CK_ULONG, pSignature: CK_BYTE_PTR, ulSignatureLen: CK_ULONG) CK_RV;
-pub extern fn C_VerifyUpdate(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG) CK_RV;
-pub extern fn C_VerifyFinal(hSession: CK_SESSION_HANDLE, pSignature: CK_BYTE_PTR, ulSignatureLen: CK_ULONG) CK_RV;
-pub extern fn C_VerifyRecoverInit(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hKey: CK_OBJECT_HANDLE) CK_RV;
-pub extern fn C_VerifyRecover(hSession: CK_SESSION_HANDLE, pSignature: CK_BYTE_PTR, ulSignatureLen: CK_ULONG, pData: CK_BYTE_PTR, pulDataLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DigestEncryptUpdate(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG, pEncryptedPart: CK_BYTE_PTR, pulEncryptedPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DecryptDigestUpdate(hSession: CK_SESSION_HANDLE, pEncryptedPart: CK_BYTE_PTR, ulEncryptedPartLen: CK_ULONG, pPart: CK_BYTE_PTR, pulPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_SignEncryptUpdate(hSession: CK_SESSION_HANDLE, pPart: CK_BYTE_PTR, ulPartLen: CK_ULONG, pEncryptedPart: CK_BYTE_PTR, pulEncryptedPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_DecryptVerifyUpdate(hSession: CK_SESSION_HANDLE, pEncryptedPart: CK_BYTE_PTR, ulEncryptedPartLen: CK_ULONG, pPart: CK_BYTE_PTR, pulPartLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_GenerateKey(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, pTemplate: CK_ATTRIBUTE_PTR, ulCount: CK_ULONG, phKey: CK_OBJECT_HANDLE_PTR) CK_RV;
-pub extern fn C_GenerateKeyPair(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, pPublicKeyTemplate: CK_ATTRIBUTE_PTR, ulPublicKeyAttributeCount: CK_ULONG, pPrivateKeyTemplate: CK_ATTRIBUTE_PTR, ulPrivateKeyAttributeCount: CK_ULONG, phPublicKey: CK_OBJECT_HANDLE_PTR, phPrivateKey: CK_OBJECT_HANDLE_PTR) CK_RV;
-pub extern fn C_WrapKey(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hWrappingKey: CK_OBJECT_HANDLE, hKey: CK_OBJECT_HANDLE, pWrappedKey: CK_BYTE_PTR, pulWrappedKeyLen: CK_ULONG_PTR) CK_RV;
-pub extern fn C_UnwrapKey(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hUnwrappingKey: CK_OBJECT_HANDLE, pWrappedKey: CK_BYTE_PTR, ulWrappedKeyLen: CK_ULONG, pTemplate: CK_ATTRIBUTE_PTR, ulAttributeCount: CK_ULONG, phKey: CK_OBJECT_HANDLE_PTR) CK_RV;
-pub extern fn C_DeriveKey(hSession: CK_SESSION_HANDLE, pMechanism: CK_MECHANISM_PTR, hBaseKey: CK_OBJECT_HANDLE, pTemplate: CK_ATTRIBUTE_PTR, ulAttributeCount: CK_ULONG, phKey: CK_OBJECT_HANDLE_PTR) CK_RV;
-pub extern fn C_SeedRandom(hSession: CK_SESSION_HANDLE, pSeed: CK_BYTE_PTR, ulSeedLen: CK_ULONG) CK_RV;
-pub extern fn C_GenerateRandom(hSession: CK_SESSION_HANDLE, RandomData: CK_BYTE_PTR, ulRandomLen: CK_ULONG) CK_RV;
+pub extern fn C_DigestFinal(hSession: CK_SESSION_HANDLE, pDigest: [*c]CK_BYTE, pulDigestLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_SignInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_Sign(hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pSignature: [*c]CK_BYTE, pulSignatureLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_SignUpdate(hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG) CK_RV;
+pub extern fn C_SignFinal(hSession: CK_SESSION_HANDLE, pSignature: [*c]CK_BYTE, pulSignatureLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_SignRecoverInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_SignRecover(hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pSignature: [*c]CK_BYTE, pulSignatureLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_VerifyInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_Verify(hSession: CK_SESSION_HANDLE, pData: [*c]CK_BYTE, ulDataLen: CK_ULONG, pSignature: [*c]CK_BYTE, ulSignatureLen: CK_ULONG) CK_RV;
+pub extern fn C_VerifyUpdate(hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG) CK_RV;
+pub extern fn C_VerifyFinal(hSession: CK_SESSION_HANDLE, pSignature: [*c]CK_BYTE, ulSignatureLen: CK_ULONG) CK_RV;
+pub extern fn C_VerifyRecoverInit(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hKey: CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_VerifyRecover(hSession: CK_SESSION_HANDLE, pSignature: [*c]CK_BYTE, ulSignatureLen: CK_ULONG, pData: [*c]CK_BYTE, pulDataLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DigestEncryptUpdate(hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG, pEncryptedPart: [*c]CK_BYTE, pulEncryptedPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DecryptDigestUpdate(hSession: CK_SESSION_HANDLE, pEncryptedPart: [*c]CK_BYTE, ulEncryptedPartLen: CK_ULONG, pPart: [*c]CK_BYTE, pulPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_SignEncryptUpdate(hSession: CK_SESSION_HANDLE, pPart: [*c]CK_BYTE, ulPartLen: CK_ULONG, pEncryptedPart: [*c]CK_BYTE, pulEncryptedPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_DecryptVerifyUpdate(hSession: CK_SESSION_HANDLE, pEncryptedPart: [*c]CK_BYTE, ulEncryptedPartLen: CK_ULONG, pPart: [*c]CK_BYTE, pulPartLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_GenerateKey(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, pTemplate: [*c]CK_ATTRIBUTE, ulCount: CK_ULONG, phKey: [*c]CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_GenerateKeyPair(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, pPublicKeyTemplate: [*c]CK_ATTRIBUTE, ulPublicKeyAttributeCount: CK_ULONG, pPrivateKeyTemplate: [*c]CK_ATTRIBUTE, ulPrivateKeyAttributeCount: CK_ULONG, phPublicKey: [*c]CK_OBJECT_HANDLE, phPrivateKey: [*c]CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_WrapKey(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hWrappingKey: CK_OBJECT_HANDLE, hKey: CK_OBJECT_HANDLE, pWrappedKey: [*c]CK_BYTE, pulWrappedKeyLen: [*c]CK_ULONG) CK_RV;
+pub extern fn C_UnwrapKey(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hUnwrappingKey: CK_OBJECT_HANDLE, pWrappedKey: [*c]CK_BYTE, ulWrappedKeyLen: CK_ULONG, pTemplate: [*c]CK_ATTRIBUTE, ulAttributeCount: CK_ULONG, phKey: [*c]CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_DeriveKey(hSession: CK_SESSION_HANDLE, pMechanism: [*c]CK_MECHANISM, hBaseKey: CK_OBJECT_HANDLE, pTemplate: [*c]CK_ATTRIBUTE, ulAttributeCount: CK_ULONG, phKey: [*c]CK_OBJECT_HANDLE) CK_RV;
+pub extern fn C_SeedRandom(hSession: CK_SESSION_HANDLE, pSeed: [*c]CK_BYTE, ulSeedLen: CK_ULONG) CK_RV;
+pub extern fn C_GenerateRandom(hSession: CK_SESSION_HANDLE, RandomData: [*c]CK_BYTE, ulRandomLen: CK_ULONG) CK_RV;
 pub extern fn C_GetFunctionStatus(hSession: CK_SESSION_HANDLE) CK_RV;
 pub extern fn C_CancelFunction(hSession: CK_SESSION_HANDLE) CK_RV;
-pub extern fn C_WaitForSlotEvent(flags: CK_FLAGS, pSlot: CK_SLOT_ID_PTR, pRserved: CK_VOID_PTR) CK_RV;
+pub extern fn C_WaitForSlotEvent(flags: CK_FLAGS, pSlot: [*c]CK_SLOT_ID, pRserved: CK_VOID_PTR) CK_RV;
 
 pub const NULL_PTR = @as(c_int, 0);
 
