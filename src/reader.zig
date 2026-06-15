@@ -87,8 +87,8 @@ pub const ReaderState = struct {
         const before = self.name[0..open_index.?];
         const after = self.name[(close_index.? + 1)..];
 
-        const trimmed_before = std.mem.trimRight(u8, before, " ");
-        const trimmed_after = std.mem.trimLeft(u8, after, " ");
+        const trimmed_before = std.mem.trimStart(u8, before, " ");
+        const trimmed_after = std.mem.trimEnd(u8, after, " ");
 
         var idx: usize = 0;
 
