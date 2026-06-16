@@ -71,7 +71,7 @@ pub export fn C_GetSlotInfo(
     var reader_state = reader.reader_states.getPtr(slot_ID) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
 
-    reader_state.writeShortName(&slot_info.?.slotDescription);
+    @memcpy(&slot_info.?.slotDescription, &reader_state.writeShortName());
     @memset(&slot_info.?.manufacturerID, ' ');
 
     reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|

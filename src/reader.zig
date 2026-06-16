@@ -73,42 +73,44 @@ pub const ReaderState = struct {
         self.*.token_serial_number = token_info.token_serial_number;
     }
 
-    pub fn writeShortName(self: *const ReaderState, output: []u8) void {
-        const open_index = std.mem.indexOfScalar(u8, self.name, '[');
-        const close_index = std.mem.indexOfScalar(u8, self.name, ']');
+    pub fn writeShortName(self: *const ReaderState) [64]u8 {
+        var buffer: [64]u8 = [_]u8{' '} ** 64;
 
-        if (open_index == null or close_index == null or close_index.? <= open_index.?) {
-            const len = @min(self.name.len, output.len);
-            @memcpy(output[0..len], self.name[0..len]);
-            if (len < output.len) output[len] = 0;
-            return;
+        var open_index = std.mem.findScalar(u8, self.name, '[');
+        var close_index = std.mem.findScalar(u8, self.name, ']');
+
+        if (open_index == null or close_index == null or open_index.? > close_index.?) {
+            const len = @min(self.name.len, buffer.len - 1);
+            @memcpy(buffer[0..len], self.name[0..len]);
+            return buffer;
         }
 
-        const before = self.name[0..open_index.?];
-        const after = self.name[(close_index.? + 1)..];
-
-        const trimmed_before = std.mem.trimStart(u8, before, " ");
-        const trimmed_after = std.mem.trimEnd(u8, after, " ");
-
-        var idx: usize = 0;
-
-        if (idx + trimmed_before.len <= output.len) {
-            @memcpy(output[idx..][0..trimmed_before.len], trimmed_before);
-            idx += trimmed_before.len;
+        while (open_index.? > 0) {
+            if (self.name[open_index.? - 1] == ' ')
+                open_index.? -= 1
+            else
+                break;
         }
 
-        if (trimmed_after.len > 0 and idx < output.len) {
-            output[idx] = ' ';
-            idx += 1;
+        @memcpy(buffer[0..open_index.?], self.name[0..open_index.?]);
+
+        while (close_index.? < self.name.len - 1) {
+            if (self.name[close_index.?] == ' ')
+                close_index.? += 1
+            else if (self.name[close_index.?] == ']')
+                close_index.? += 1
+            else
+                break;
         }
 
-        if (idx + trimmed_after.len <= output.len) {
-            @memcpy(output[idx..][0..trimmed_after.len], trimmed_after);
-            idx += trimmed_after.len;
-        }
+        if (open_index.? > 0)
+            open_index.? += 1;
 
-        if (idx < output.len)
-            output[idx] = 0;
+        const len = @min(self.name.len - close_index.?, buffer.len - 1 - open_index.?);
+
+        @memcpy(buffer[open_index.? .. open_index.? + len], self.name[close_index.? .. close_index.? + len]);
+
+        return buffer;
     }
 };
 
@@ -264,4 +266,57 @@ test "set and get user types" {
     try std.testing.expectEqual(UserType.None, getUserType(2));
 
     deinit(std.testing.allocator);
+}
+
+test "reader short name" {
+    const test_cases = [_]struct {
+        name: [:0]const u8,
+        expected: []const u8,
+    }{
+        .{ .name = "", .expected = "" },
+        .{ .name = "reader0", .expected = "reader0" },
+        .{ .name = "reader1 ABC", .expected = "reader1 ABC" },
+        .{ .name = "reader2 ABC [XYZ]", .expected = "reader2 ABC" },
+        .{ .name = "[XYZ] reader3", .expected = "reader3" },
+        .{ .name = "reader4 ABC - 123 [XYZ] model", .expected = "reader4 ABC - 123 model" },
+        .{ .name = "123456789012345678901234567890[23456789]ABCDEFGHIJABCDEFGHIJ321", .expected = "123456789012345678901234567890 ABCDEFGHIJABCDEFGHIJ321" },
+        .{ .name = "123456789012345678901234567890[23456789]ABCDEFGHIJABCDEFGHIJABCDEFGHIJ1234567890", .expected = "123456789012345678901234567890 ABCDEFGHIJABCDEFGHIJABCDEFGHIJ12 " },
+    };
+
+    for (test_cases) |tc| {
+        const reader_state = ReaderState{
+            .active = true,
+            .card_present = true,
+            .recognized = true,
+            .user_type = .User,
+            .name = tc.name,
+        };
+
+        const output = reader_state.writeShortName();
+        const min = @min(tc.expected.len, output.len);
+        try std.testing.expectEqualSlices(u8, tc.expected[0..min], output[0..min]);
+    }
+}
+
+test "reader short name should not be null terminated" {
+    const test_cases = [_]struct {
+        name: [:0]const u8,
+    }{
+        .{ .name = "" },
+        .{ .name = "reader" },
+        .{ .name = "reader ABC - 123 [XYZ] model" },
+    };
+
+    for (test_cases) |tc| {
+        const reader_state = ReaderState{
+            .active = true,
+            .card_present = true,
+            .recognized = true,
+            .user_type = .User,
+            .name = tc.name,
+        };
+
+        const output = reader_state.writeShortName();
+        try std.testing.expect(!std.mem.containsAtLeastScalar2(u8, &output, 0x00, 1));
+    }
 }
