@@ -11,8 +11,9 @@ pub export fn C_OpenSession(
     _: pkcs.CK_NOTIFY,
     session_handle: ?*pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -32,8 +33,9 @@ pub export fn C_OpenSession(
 }
 
 pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -45,14 +47,16 @@ pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV 
 }
 
 pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    reader.lock.lock();
-    defer reader.lock.unlock();
+    reader.lock.lock(state.io) catch
+        return pkcs.CKR_FUNCTION_CANCELED;
+    defer reader.lock.unlock(state.io);
 
     if (!reader.reader_states.contains(slot_id))
         return pkcs.CKR_SLOT_ID_INVALID;
@@ -66,8 +70,9 @@ pub export fn C_GetSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -132,8 +137,9 @@ pub export fn C_Login(
     pin: ?[*]const pkcs.CK_UTF8CHAR,
     pin_length: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -155,8 +161,9 @@ pub export fn C_Login(
 }
 
 pub export fn C_Logout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);

@@ -17,7 +17,7 @@ var next_session_id: pkcs.CK_SESSION_HANDLE = 1;
 
 var sessions: std.AutoHashMap(pkcs.CK_SESSION_HANDLE, Session) = undefined;
 
-var lock = std.Thread.RwLock{};
+var lock = std.Io.RwLock.init;
 
 pub const Session = struct {
     allocator: std.mem.Allocator,
@@ -167,9 +167,9 @@ pub const Session = struct {
 };
 
 pub fn initSessions(allocator: std.mem.Allocator) PkcsError!void {
-    if (!lock.tryLock())
+    if (!lock.tryLock(state.io))
         return PkcsError.FunctionFailed;
-    defer lock.unlock();
+    defer lock.unlock(state.io);
 
     sessions = std.AutoHashMap(pkcs.CK_SLOT_ID, Session).init(allocator);
 }
@@ -179,9 +179,9 @@ pub fn newSession(
     slot_id: pkcs.CK_SESSION_HANDLE,
     write_enabled: bool,
 ) PkcsError!pkcs.CK_SESSION_HANDLE {
-    if (!lock.tryLock())
+    if (!lock.tryLock(state.io))
         return PkcsError.FunctionFailed;
-    defer lock.unlock();
+    defer lock.unlock(state.io);
 
     const session_id: pkcs.CK_SESSION_HANDLE = next_session_id;
     next_session_id += 1;
@@ -228,9 +228,9 @@ pub fn getSession(
     session_handle: pkcs.CK_SESSION_HANDLE,
     login_required: bool,
 ) PkcsError!*Session {
-    if (!lock.tryLockShared())
+    if (!lock.tryLockShared(state.io))
         return PkcsError.FunctionFailed;
-    defer lock.unlockShared();
+    defer lock.unlockShared(state.io);
 
     if (!state.initialized)
         return PkcsError.CryptokiNotInitialized;
@@ -245,9 +245,9 @@ pub fn getSession(
 }
 
 pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
-    if (!lock.tryLock())
+    if (!lock.tryLock(state.io))
         return PkcsError.FunctionFailed;
-    defer lock.unlock();
+    defer lock.unlock(state.io);
 
     const current_session = sessions.getPtr(session_handle) orelse
         return PkcsError.SessionHandleInvalid;
@@ -290,9 +290,11 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
     return err;
 }
 
-pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sessions: *c_ulong) void {
-    lock.lockShared();
-    defer lock.unlockShared();
+pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sessions: *c_ulong) PkcsError!void {
+    lock.lockShared(state.io) catch
+        return pkcs_error.PkcsError.FunctionFailed;
+
+    defer lock.unlockShared(state.io);
 
     total_sessions.* = 0;
     rw_sessions.* = 0;

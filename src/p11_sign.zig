@@ -13,8 +13,9 @@ pub export fn C_SignInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -37,7 +38,7 @@ pub export fn C_SignInit(
         hash = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
             return pkcs.CKR_HOST_MEMORY;
     } else {
-        msg_buffer = std.ArrayList(u8){};
+        msg_buffer = std.ArrayList(u8).empty;
     }
 
     const found_object = current_session.getObject(key) catch
@@ -75,8 +76,9 @@ pub export fn C_Sign(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -143,8 +145,9 @@ pub export fn C_SignUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -171,8 +174,9 @@ pub export fn C_SignFinal(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);

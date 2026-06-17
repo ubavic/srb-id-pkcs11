@@ -11,8 +11,9 @@ pub export fn C_DigestInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -66,8 +67,9 @@ pub export fn C_Digest(
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -120,8 +122,9 @@ pub export fn C_DigestUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -157,8 +160,9 @@ pub export fn C_DigestFinal(
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);

@@ -12,8 +12,9 @@ pub export fn C_DecryptInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -50,7 +51,7 @@ pub export fn C_DecryptInit(
         .decrypt = operation.Decrypt{
             .private_key = key,
             .multipart_operation = false,
-            .msg_buffer = std.ArrayList(u8){},
+            .msg_buffer = std.ArrayList(u8).empty,
             .raw = raw,
         },
     };
@@ -65,8 +66,9 @@ pub export fn C_Decrypt(
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -130,8 +132,9 @@ pub export fn C_DecryptUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -174,8 +177,9 @@ pub export fn C_DecryptFinal(
     last_part: ?[*]pkcs.CK_BYTE,
     last_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);

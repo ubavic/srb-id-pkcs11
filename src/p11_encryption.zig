@@ -13,8 +13,9 @@ pub export fn C_EncryptInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -61,7 +62,7 @@ pub export fn C_EncryptInit(
         .encrypt = operation.Encrypt{
             .public_key = key,
             .multipart_operation = false,
-            .msg_buffer = std.ArrayList(u8){},
+            .msg_buffer = std.ArrayList(u8).empty,
             .raw = raw,
             .modulus = modulus,
             .exponent = exponent,
@@ -78,8 +79,9 @@ pub export fn C_Encrypt(
     encrypted_data: ?[*]pkcs.CK_BYTE,
     encrypted_data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -116,7 +118,7 @@ pub export fn C_Encrypt(
     _ = current_operation.update(current_session.allocator, data.?[0..data_len]) catch |err|
         return pkcs_error.toRV(err);
 
-    const computed_encrypted_data = current_operation.encrypt(current_session.allocator) catch |err|
+    const computed_encrypted_data = current_operation.encrypt(current_session.allocator, state.io) catch |err|
         return pkcs_error.toRV(err);
 
     if (computed_encrypted_data.len > encrypted_data_len.?.*)
@@ -135,8 +137,9 @@ pub export fn C_EncryptUpdate(
     encrypted_part: ?[*]pkcs.CK_BYTE,
     encrypted_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -179,8 +182,9 @@ pub export fn C_EncryptFinal(
     last_encrypted_part: ?[*]pkcs.CK_BYTE,
     last_encrypted_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
@@ -206,7 +210,7 @@ pub export fn C_EncryptFinal(
 
     defer current_session.resetOperation();
 
-    const computed_encrypted_data = current_operation.encrypt(current_session.allocator) catch |err|
+    const computed_encrypted_data = current_operation.encrypt(current_session.allocator, state.io) catch |err|
         return pkcs_error.toRV(err);
 
     if (computed_encrypted_data.len > last_encrypted_part_len.?.*)

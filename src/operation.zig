@@ -141,7 +141,7 @@ pub const Encrypt = struct {
         return &[_]u8{};
     }
 
-    fn pad(self: *Encrypt, allocator: std.mem.Allocator) PkcsError![256]u8 {
+    fn pad(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![256]u8 {
         var buf: [256]u8 = [1]u8{0x00} ** encrypted_data_size;
 
         if (self.raw) {
@@ -158,13 +158,13 @@ pub const Encrypt = struct {
         defer std.crypto.secureZero(u8, msg);
 
         if (!self.raw) {
-            const rand = std.crypto.random;
+            const rand: std.Random.IoSource = .{ .io = io };
             const difference: usize = encrypted_data_size - msg.len - 3;
 
             buf[1] = 0x02;
 
             for (2..2 + difference) |i| {
-                buf[i] = rand.uintLessThan(u8, std.math.maxInt(u8)) + 1;
+                buf[i] = rand.interface().uintLessThan(u8, std.math.maxInt(u8)) + 1;
             }
         }
 
@@ -173,7 +173,7 @@ pub const Encrypt = struct {
         return buf;
     }
 
-    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator) PkcsError![256]u8 {
+    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![256]u8 {
         const rsa_public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(self.exponent, self.modulus) catch
             return PkcsError.GeneralError;
 
@@ -181,7 +181,7 @@ pub const Encrypt = struct {
         const Modulus = std.crypto.ff.Modulus(max_modulus_bits);
         const Fe = Modulus.Fe;
 
-        const buffer = try self.pad(allocator);
+        const buffer = try self.pad(allocator, io);
 
         const m = Fe.fromBytes(rsa_public_key.n, buffer[0..], .big) catch
             return PkcsError.GeneralError;
@@ -424,7 +424,7 @@ test "deinit sha1 sign" {
 
 test "deinit plain sign" {
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
-    const msg_buffer = std.ArrayList(u8){};
+    const msg_buffer = std.ArrayList(u8).empty;
 
     var sign_operation = Sign{
         .hasher = null,
@@ -510,7 +510,7 @@ test "strip pad raw" {
     const decrypt = Decrypt{
         .private_key = 0,
         .multipart_operation = false,
-        .msg_buffer = std.ArrayList(u8){},
+        .msg_buffer = std.ArrayList(u8).empty,
         .raw = true,
     };
 
@@ -532,7 +532,7 @@ test "strip pad padded" {
     const decrypt = Decrypt{
         .private_key = 0,
         .multipart_operation = false,
-        .msg_buffer = std.ArrayList(u8){},
+        .msg_buffer = std.ArrayList(u8).empty,
         .raw = false,
     };
 
@@ -568,7 +568,7 @@ test "strip pad padded malformed" {
     const decrypt = Decrypt{
         .private_key = 0,
         .multipart_operation = false,
-        .msg_buffer = std.ArrayList(u8){},
+        .msg_buffer = std.ArrayList(u8).empty,
         .raw = false,
     };
 
@@ -589,7 +589,7 @@ test "pad and strip" {
     const decrypt = Decrypt{
         .private_key = 0,
         .multipart_operation = false,
-        .msg_buffer = std.ArrayList(u8){},
+        .msg_buffer = std.ArrayList(u8).empty,
         .raw = false,
     };
 
@@ -600,19 +600,21 @@ test "pad and strip" {
         &([_]u8{0x01} ** 245),
     };
 
+    const io = std.testing.io;
+
     for (test_cases) |tc| {
         var encrypt = Encrypt{
             .public_key = 0,
             .multipart_operation = false,
             .modulus = &[_]u8{ 0x01, 0x02, 0x00 },
             .exponent = &[_]u8{ 0x01, 0x02, 0x00 },
-            .msg_buffer = std.ArrayList(u8){},
+            .msg_buffer = std.ArrayList(u8).empty,
             .raw = false,
         };
 
         _ = try encrypt.update(std.testing.allocator, tc);
 
-        const padded = try encrypt.pad(std.testing.allocator);
+        const padded = try encrypt.pad(std.testing.allocator, io);
         defer encrypt.msg_buffer.deinit(std.testing.allocator);
 
         const result = try decrypt.stripPad(&padded);
@@ -622,7 +624,7 @@ test "pad and strip" {
 }
 
 test "raw sign request with invalid length" {
-    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8).empty;
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 50);
 
     const result = createRawSignRequest(&msg_buffer, std.testing.allocator, 128);
@@ -634,7 +636,7 @@ test "raw sign request with invalid length" {
 test "raw sign request with valid length" {
     const key_size: comptime_int = 128;
 
-    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8).empty;
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, key_size);
 
     const result = try createRawSignRequest(&msg_buffer, std.testing.allocator, key_size);
@@ -648,7 +650,7 @@ test "raw sign request with valid length" {
 }
 
 test "pkcs1 padded sign request with invalid length" {
-    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8).empty;
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 118);
 
     const result = createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, 128);
@@ -660,7 +662,7 @@ test "pkcs1 padded sign request with invalid length" {
 test "pkcs1 padded request with valid length" {
     const key_size: comptime_int = 128;
 
-    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8){};
+    var msg_buffer: ?std.ArrayList(u8) = std.ArrayList(u8).empty;
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 117);
 
     const result = try createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, key_size);

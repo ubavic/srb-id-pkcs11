@@ -11,8 +11,9 @@ pub export fn C_SeedRandom(
     _: [*c]pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     _ = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -25,8 +26,9 @@ pub export fn C_GenerateRandom(
     random_data: [*c]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);

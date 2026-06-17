@@ -64,11 +64,12 @@ pub export fn C_GetObjectSize(
 pub export fn C_GetAttributeValue(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
-    template: [*c]pkcs.CK_ATTRIBUTE,
+    template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     var has_attribute_sensitive = false;
     var has_attribute_type_invalid = false;
@@ -95,7 +96,7 @@ pub export fn C_GetAttributeValue(
                     continue;
                 },
                 PkcsError.AttributeTypeInvalid => {
-                    template[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
+                    template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
                     has_attribute_type_invalid = true;
                     continue;
                 },
@@ -104,21 +105,21 @@ pub export fn C_GetAttributeValue(
         };
         defer object_attribute.deinit(current_session.allocator);
 
-        if (template[i].pValue == null) {
-            template[i].ulValueLen = @intCast(object_attribute.value.len);
+        if (template.?[i].pValue == null) {
+            template.?[i].ulValueLen = @intCast(object_attribute.value.len);
             continue;
         }
 
-        const target_buffer: [*]u8 = @ptrCast(template[i].pValue.?);
+        const target_buffer: [*]u8 = @ptrCast(template.?[i].pValue.?);
 
-        if (template[i].ulValueLen < object_attribute.value.len) {
+        if (template.?[i].ulValueLen < object_attribute.value.len) {
             has_small_buffer = true;
-            template[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
+            template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
             continue;
         }
 
-        template[i].ulValueLen = @intCast(object_attribute.value.len);
-        std.mem.copyForwards(u8, target_buffer[0..template[i].ulValueLen], object_attribute.value);
+        template.?[i].ulValueLen = @intCast(object_attribute.value.len);
+        std.mem.copyForwards(u8, target_buffer[0..template.?[i].ulValueLen], object_attribute.value);
     }
 
     if (has_attribute_sensitive)
@@ -151,8 +152,9 @@ pub export fn C_FindObjectsInit(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -189,8 +191,9 @@ pub export fn C_FindObjects(
     max_object_count: pkcs.CK_ULONG,
     object_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
@@ -230,8 +233,9 @@ pub export fn C_FindObjects(
 pub export fn C_FindObjectsFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);

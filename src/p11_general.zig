@@ -22,13 +22,13 @@ const p11_slot_and_token = @import("p11_slot_and_token.zig");
 const p11_verify = @import("p11_verify.zig");
 
 export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
-    if (!state.lock.tryLock())
+    if (!state.lock.tryLock(state.io))
         return pkcs.CKR_FUNCTION_FAILED;
-    defer state.lock.unlock();
+    defer state.lock.unlock(state.io);
 
-    if (!reader.lock.tryLock())
+    if (!reader.lock.tryLock(state.io))
         return pkcs.CKR_FUNCTION_FAILED;
-    defer reader.lock.unlock();
+    defer reader.lock.unlock(state.io);
 
     if (state.initialized)
         return pkcs.CKR_CRYPTOKI_ALREADY_INITIALIZED;
@@ -63,9 +63,9 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
 }
 
 export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
-    if (!state.lock.tryLock())
+    if (!state.lock.tryLock(state.io))
         return pkcs.CKR_FUNCTION_FAILED;
-    defer state.lock.unlock();
+    defer state.lock.unlock(state.io);
 
     if (reserved != null)
         return pkcs.CKR_ARGUMENTS_BAD;
@@ -83,8 +83,9 @@ export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
 }
 
 export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
-    state.lock.lockShared();
-    defer state.lock.unlockShared();
+    state.lock.lockShared(state.io) catch
+        return pkcs.CKR_FUNCTION_FAILED;
+    defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;

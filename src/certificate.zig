@@ -239,7 +239,7 @@ pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificat
         return PkcsError.HostMemory;
     defer allocator.free(decompress_buffer);
 
-    var reader = std.io.Reader.fixed(compressed_certificate_data[6..]);
+    var reader = std.Io.Reader.fixed(compressed_certificate_data[6..]);
     var decompress: std.compress.flate.Decompress = .init(&reader, std.compress.flate.Container.zlib, decompress_buffer);
 
     var buf2: [512]u8 = undefined;
@@ -262,8 +262,9 @@ pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificat
 
 test "allocate and deallocate objects" {
     const ta = std.testing.allocator;
+    const tio = std.testing.io;
 
-    const der = try std.fs.Dir.readFileAlloc(std.fs.cwd(), ta, "testdata/test.der", 1024 * 1024);
+    const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, "testdata/test.der", ta, .unlimited);
     defer ta.free(der);
 
     const id = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
@@ -276,8 +277,9 @@ test "allocate and deallocate objects" {
 
 test "parse objects" {
     const ta = std.testing.allocator;
+    const tio = std.testing.io;
 
-    const der = try std.fs.Dir.readFileAlloc(std.fs.cwd(), ta, "testdata/test.der", 1024 * 1024);
+    const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, "testdata/test.der", ta, .unlimited);
     defer ta.free(der);
 
     const id = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };

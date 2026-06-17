@@ -2,6 +2,7 @@ lib/
 test/*
 zig-out/
 .zig-cache/
+zig-pkg/
 .vscode/
 
 
