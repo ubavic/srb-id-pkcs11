@@ -192,7 +192,7 @@ fn parseMultiString(allocator: std.mem.Allocator, input: [*:0]const u8) std.mem.
 }
 
 pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
-    lock.lock(state.io) catch {};
+    lock.lockUncancelable(state.io);
     defer lock.unlock(state.io);
 
     const reader_entry = reader_states.getPtr(slot_id) orelse
@@ -202,7 +202,7 @@ pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
 }
 
 pub fn getUserType(slot_id: pkcs.CK_SLOT_ID) UserType {
-    lock.lockShared(state.io) catch {};
+    lock.lockSharedUncancelable(state.io);
     defer lock.unlockShared(state.io);
 
     const reader_entry = reader_states.get(slot_id) orelse

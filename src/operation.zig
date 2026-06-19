@@ -158,13 +158,14 @@ pub const Encrypt = struct {
         defer std.crypto.secureZero(u8, msg);
 
         if (!self.raw) {
-            const rand: std.Random.IoSource = .{ .io = io };
             const difference: usize = encrypted_data_size - msg.len - 3;
 
             buf[1] = 0x02;
 
+            const rng_source = std.Random.IoSource{ .io = io };
+            const rng = rng_source.interface();
             for (2..2 + difference) |i| {
-                buf[i] = rand.interface().uintLessThan(u8, std.math.maxInt(u8)) + 1;
+                buf[i] = rng.intRangeAtMost(u8, 1, 255);
             }
         }
 
@@ -600,8 +601,6 @@ test "pad and strip" {
         &([_]u8{0x01} ** 245),
     };
 
-    const io = std.testing.io;
-
     for (test_cases) |tc| {
         var encrypt = Encrypt{
             .public_key = 0,
@@ -614,7 +613,7 @@ test "pad and strip" {
 
         _ = try encrypt.update(std.testing.allocator, tc);
 
-        const padded = try encrypt.pad(std.testing.allocator, io);
+        const padded = try encrypt.pad(std.testing.allocator);
         defer encrypt.msg_buffer.deinit(std.testing.allocator);
 
         const result = try decrypt.stripPad(&padded);

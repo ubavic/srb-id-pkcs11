@@ -83,8 +83,7 @@ export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
 }
 
 export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
