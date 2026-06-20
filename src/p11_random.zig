@@ -43,13 +43,15 @@ pub export fn C_GenerateRandom(
 
         const segment = current_session.card.readRandom(current_session.allocator, segment_size) catch |err|
             return pkcs_error.toRV(err);
+        defer current_session.allocator.free(segment);
+
+        if (segment.len < segment_size + 2)
+            return pkcs.CKR_DEVICE_ERROR;
 
         @memcpy(random_data[i .. i + segment_size], segment[0..segment_size]);
 
         i += segment_size;
         remaining_size -= segment_size;
-
-        current_session.allocator.free(segment);
     }
 
     return pkcs.CKR_OK;
