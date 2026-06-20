@@ -33,6 +33,9 @@ pub export fn C_GenerateRandom(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
+    if (random_data == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
+
     var i: c_ulong = 0;
     var remaining_size = random_size;
     while (i < random_size) {
