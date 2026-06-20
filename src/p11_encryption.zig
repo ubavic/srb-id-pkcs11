@@ -54,6 +54,7 @@ pub export fn C_EncryptInit(
 
     const modulus = current_session.allocator.dupe(u8, public_key.*.modulus) catch
         return pkcs.CKR_HOST_MEMORY;
+    errdefer current_session.allocator.free(modulus);
 
     const exponent = current_session.allocator.dupe(u8, public_key.*.public_exponent) catch
         return pkcs.CKR_HOST_MEMORY;

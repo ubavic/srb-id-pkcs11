@@ -198,6 +198,8 @@ pub const Encrypt = struct {
 
     pub fn deinit(self: *Encrypt, allocator: std.mem.Allocator) void {
         self.msg_buffer.deinit(allocator);
+        allocator.free(self.modulus);
+        allocator.free(self.exponent);
     }
 };
 
