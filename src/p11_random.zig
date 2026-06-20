@@ -8,7 +8,7 @@ const session = @import("session.zig");
 // not supported in the original module
 pub export fn C_SeedRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    _: [*c]pkcs.CK_BYTE,
+    _: ?[*]pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared(state.io) catch
@@ -23,7 +23,7 @@ pub export fn C_SeedRandom(
 
 pub export fn C_GenerateRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    random_data: [*c]pkcs.CK_BYTE,
+    random_data: ?[*]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared(state.io) catch
@@ -48,7 +48,7 @@ pub export fn C_GenerateRandom(
         if (segment.len < segment_size + 2)
             return pkcs.CKR_DEVICE_ERROR;
 
-        @memcpy(random_data[i .. i + segment_size], segment[0..segment_size]);
+        @memcpy(random_data.?[i .. i + segment_size], segment[0..segment_size]);
 
         i += segment_size;
         remaining_size -= segment_size;

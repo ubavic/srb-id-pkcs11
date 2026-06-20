@@ -280,7 +280,7 @@ pub export fn C_InitToken(
 
 pub export fn C_InitPIN(
     _: pkcs.CK_SESSION_HANDLE,
-    _: [*c]pkcs.CK_UTF8CHAR,
+    _: ?[*]pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
@@ -288,9 +288,9 @@ pub export fn C_InitPIN(
 
 pub export fn C_SetPIN(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    old_pin: [*c]pkcs.CK_UTF8CHAR,
+    old_pin: ?[*]pkcs.CK_UTF8CHAR,
     old_pin_len: pkcs.CK_ULONG,
-    new_pin: [*c]pkcs.CK_UTF8CHAR,
+    new_pin: ?[*]pkcs.CK_UTF8CHAR,
     new_pin_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
     state.lock.lockShared(state.io) catch
@@ -306,7 +306,7 @@ pub export fn C_SetPIN(
     if (old_pin == null or new_pin == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    current_session.card.setPin(state.allocator, old_pin[0..old_pin_len], new_pin[0..new_pin_len]) catch |err|
+    current_session.card.setPin(state.allocator, old_pin.?[0..old_pin_len], new_pin.?[0..new_pin_len]) catch |err|
         return pkcs_error.toRV(err);
     return pkcs.CKR_OK;
 }
