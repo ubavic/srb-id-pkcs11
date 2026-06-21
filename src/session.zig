@@ -164,6 +164,19 @@ pub const Session = struct {
         self.objects = object_list.toOwnedSlice(allocator) catch
             return PkcsError.HostMemory;
     }
+
+    fn closeSession(self: *Session, allocator: std.mem.Allocator) PkcsError!void {
+        if (self.closed)
+            return PkcsError.SessionClosed;
+
+        self.closed = true;
+        self.resetOperation();
+
+        for (self.objects) |*o|
+            o.deinit(allocator);
+
+        self.card.disconnect() catch {};
+    }
 };
 
 pub fn initSessions(allocator: std.mem.Allocator) PkcsError!void {
@@ -252,42 +265,42 @@ pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSIO
     const current_session = sessions.getPtr(session_handle) orelse
         return PkcsError.SessionHandleInvalid;
 
-    if (current_session.closed)
-        return PkcsError.SessionClosed;
-
-    current_session.closed = true;
-
-    current_session.resetOperation();
-
-    for (current_session.objects) |*o| {
-        o.deinit(allocator);
-    }
-
-    current_session.card.disconnect() catch {};
+    try current_session.closeSession(allocator);
 
     if (!sessions.remove(session_handle))
         return PkcsError.GeneralError;
 }
 
-pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
-    var err: pkcs.CK_RV = pkcs.CKR_OK;
+pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) PkcsError!void {
+    if (!lock.tryLock(state.io))
+        return PkcsError.FunctionFailed;
+    defer lock.unlock(state.io);
+
+    var err: ?PkcsError = null;
 
     var sessions_to_close = std.ArrayList(pkcs.CK_SESSION_HANDLE).initCapacity(allocator, sessions.count()) catch
-        return pkcs.CKR_HOST_MEMORY;
+        return PkcsError.HostMemory;
     defer sessions_to_close.deinit(allocator);
 
     var it = sessions.iterator();
     while (it.next()) |entry| {
-        if (entry.value_ptr.reader_id == slot_id)
-            sessions_to_close.append(allocator, entry.key_ptr.*) catch {};
+        if (entry.value_ptr.reader_id != slot_id)
+            continue;
+
+        entry.value_ptr.closeSession(allocator) catch |e| {
+            err = e;
+            continue;
+        };
+
+        sessions_to_close.append(allocator, entry.key_ptr.*) catch
+            return PkcsError.HostMemory;
     }
 
-    for (sessions_to_close.items) |id| {
-        closeSession(allocator, id) catch |e| {
-            err = pkcs_error.toRV(e);
-        };
-    }
-    return err;
+    for (sessions_to_close.items) |key|
+        _ = sessions.remove(key);
+
+    if (err != null)
+        return err.?;
 }
 
 pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sessions: *c_ulong) PkcsError!void {

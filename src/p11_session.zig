@@ -61,9 +61,12 @@ pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
     if (!reader.reader_states.contains(slot_id))
         return pkcs.CKR_SLOT_ID_INVALID;
 
-    return session.closeAllSessions(state.allocator, slot_id);
+    session.closeAllSessions(state.allocator, slot_id) catch |err|
+        return pkcs_error.toRV(err);
 
     // TODO: refresh reader status;
+
+    return pkcs.CKR_OK;
 }
 
 pub export fn C_GetSessionInfo(
