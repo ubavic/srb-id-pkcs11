@@ -92,10 +92,11 @@ pub const Sign = struct {
 };
 
 pub const Verify = struct {
-    private_key: pkcs.CK_OBJECT_HANDLE,
     key_size: usize,
     sign_type: SignType,
     multipart_operation: bool,
+    modulus: []const u8,
+    exponent: []const u8,
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
@@ -109,11 +110,11 @@ pub const Verify = struct {
         }
     }
 
-    pub fn createSignRequest(self: *Verify, allocator: std.mem.Allocator) PkcsError![]u8 {
+    pub fn createVerifyBlock(self: *Verify, allocator: std.mem.Allocator) PkcsError![]u8 {
         return switch (self.sign_type) {
             .RawRsa => createRawSignRequest(&self.msg_buffer, allocator, self.key_size),
             .Pkcs1Pad => createPkcs1PaddedSignRequest(&self.msg_buffer, allocator, self.key_size),
-            .DigestAndSign => createHashedSignRequest(&self.hasher.?, allocator),
+            .DigestAndSign => createPkcs1PaddedHashRequest(&self.hasher.?, allocator, self.key_size),
         };
     }
 
@@ -123,6 +124,9 @@ pub const Verify = struct {
 
         if (self.msg_buffer != null)
             self.msg_buffer.?.deinit(allocator);
+
+        allocator.free(self.modulus);
+        allocator.free(self.exponent);
     }
 };
 
@@ -199,6 +203,8 @@ pub const Encrypt = struct {
 
     pub fn deinit(self: *Encrypt, allocator: std.mem.Allocator) void {
         self.msg_buffer.deinit(allocator);
+        allocator.free(self.modulus);
+        allocator.free(self.exponent);
     }
 };
 
@@ -325,6 +331,30 @@ fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) P
 
     @memcpy(request[0..prefix.len], prefix);
     @memcpy(request[prefix.len..], payload);
+
+    return request;
+}
+
+fn createPkcs1PaddedHashRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
+    const prefix = getPrefixFromHasher(hash);
+    const digest = hash.finalize(allocator) catch
+        return PkcsError.HostMemory;
+    defer allocator.free(digest);
+
+    const digest_info_len = prefix.len + digest.len;
+    if (digest_info_len > key_size - 11)
+        return PkcsError.DataLenRange;
+
+    const request = allocator.alloc(u8, key_size) catch
+        return PkcsError.HostMemory;
+
+    @memset(request, 0xff);
+    const data_start = key_size - digest_info_len;
+    request[0] = 0x00;
+    request[1] = 0x01;
+    request[data_start - 1] = 0x00;
+    @memcpy(request[data_start..][0..prefix.len], prefix);
+    @memcpy(request[data_start + prefix.len ..][0..digest.len], digest);
 
     return request;
 }

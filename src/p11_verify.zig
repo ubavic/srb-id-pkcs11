@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const consts = @import("consts.zig");
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
@@ -16,7 +15,7 @@ pub export fn C_VerifyInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     if (mechanism == null)
@@ -54,8 +53,11 @@ pub export fn C_VerifyInit(
         else => return pkcs.CKR_KEY_HANDLE_INVALID,
     }
 
-    const private_key_handle = consts.getPrivateKeyFormPublicKey(key) catch |err|
-        return pkcs_error.toRV(err);
+    const modulus = current_session.allocator.dupe(u8, found_object.public_key.modulus) catch
+        return pkcs.CKR_HOST_MEMORY;
+    errdefer current_session.allocator.free(modulus);
+    const exponent = current_session.allocator.dupe(u8, found_object.public_key.public_exponent) catch
+        return pkcs.CKR_HOST_MEMORY;
 
     current_session.operation = operation.Operation{
         .verify = operation.Verify{
@@ -63,7 +65,8 @@ pub export fn C_VerifyInit(
             .key_size = found_object.public_key.modulus.len,
             .sign_type = sign_type,
             .multipart_operation = false,
-            .private_key = private_key_handle,
+            .modulus = modulus,
+            .exponent = exponent,
             .msg_buffer = msg_buffer,
         },
     };
@@ -81,7 +84,7 @@ pub export fn C_Verify(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     defer current_session.resetOperation();
@@ -106,24 +109,35 @@ pub export fn C_Verify(
     current_operation.update(current_session.allocator, data.?[0..data_len]) catch
         return pkcs.CKR_HOST_MEMORY;
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
+    const sign_request = current_operation.createVerifyBlock(current_session.allocator) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(sign_request);
 
-    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
-        return pkcs_error.toRV(err);
+    const rsa_public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
+        current_operation.exponent,
+        current_operation.modulus,
+    ) catch return pkcs.CKR_GENERAL_ERROR;
 
-    const computed_signature = current_session.card.sign(
-        current_session.allocator,
-        key_id,
-        current_operation.sign_type != .DigestAndSign,
-        sign_request,
-    ) catch |err|
-        return pkcs_error.toRV(err);
-    defer current_session.allocator.free(computed_signature);
+    const max_modulus_bits = 4096;
+    const Modulus = std.crypto.ff.Modulus(max_modulus_bits);
+    const Fe = Modulus.Fe;
 
-    if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
+    const sig_fe = Fe.fromBytes(rsa_public_key.n, signature.?[0..signature_len], .big) catch
         return pkcs.CKR_SIGNATURE_INVALID;
+
+    const recovered = rsa_public_key.n.powPublic(sig_fe, rsa_public_key.e) catch
+        return pkcs.CKR_SIGNATURE_INVALID;
+
+    var recovered_bytes: [256]u8 = undefined;
+    recovered.toBytes(&recovered_bytes, .big) catch
+        return pkcs.CKR_GENERAL_ERROR;
+
+    if (sign_request.len != 256)
+        return pkcs.CKR_GENERAL_ERROR;
+
+    var mismatch: u8 = 0;
+    for (recovered_bytes, sign_request[0..256]) |a, b| mismatch |= a ^ b;
+    if (mismatch != 0) return pkcs.CKR_SIGNATURE_INVALID;
 
     return pkcs.CKR_OK;
 }
@@ -164,7 +178,7 @@ pub export fn C_VerifyFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     defer current_session.resetOperation();
@@ -180,24 +194,35 @@ pub export fn C_VerifyFinal(
     if (signature_len != operation.signature_size)
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
+    const sign_request = current_operation.createVerifyBlock(current_session.allocator) catch |err|
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(sign_request);
 
-    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
-        return pkcs_error.toRV(err);
+    const rsa_public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
+        current_operation.exponent,
+        current_operation.modulus,
+    ) catch return pkcs.CKR_GENERAL_ERROR;
 
-    const computed_signature = current_session.card.sign(
-        current_session.allocator,
-        key_id,
-        current_operation.sign_type != .DigestAndSign,
-        sign_request,
-    ) catch |err|
-        return pkcs_error.toRV(err);
-    defer current_session.allocator.free(computed_signature);
+    const max_modulus_bits = 4096;
+    const Modulus = std.crypto.ff.Modulus(max_modulus_bits);
+    const Fe = Modulus.Fe;
 
-    if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
+    const sig_fe = Fe.fromBytes(rsa_public_key.n, signature.?[0..signature_len], .big) catch
         return pkcs.CKR_SIGNATURE_INVALID;
+
+    const recovered = rsa_public_key.n.powPublic(sig_fe, rsa_public_key.e) catch
+        return pkcs.CKR_SIGNATURE_INVALID;
+
+    var recovered_bytes: [256]u8 = undefined;
+    recovered.toBytes(&recovered_bytes, .big) catch
+        return pkcs.CKR_GENERAL_ERROR;
+
+    if (sign_request.len != 256)
+        return pkcs.CKR_GENERAL_ERROR;
+
+    var mismatch: u8 = 0;
+    for (recovered_bytes, sign_request[0..256]) |a, b| mismatch |= a ^ b;
+    if (mismatch != 0) return pkcs.CKR_SIGNATURE_INVALID;
 
     return pkcs.CKR_OK;
 }
