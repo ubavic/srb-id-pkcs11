@@ -7,7 +7,7 @@ on:
 
 env:
   LIB_NAME: "libsrb-id-pkcs11"
-  ZIG_VERSION: "0.15.1"
+  ZIG_VERSION: "0.16.0"
   VERSION_FILE: "src/version.zig"
 
 jobs:
