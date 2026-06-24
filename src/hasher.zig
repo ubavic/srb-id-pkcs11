@@ -2,8 +2,9 @@ const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
 const PkcsError = @import("pkcs_error.zig").PkcsError;
+const Ripemd160 = @import("ripemd160.zig");
 
-pub const HasherType = enum { md5, sha1, sha256, sha384, sha512 };
+pub const HasherType = enum { md5, sha1, sha256, sha384, sha512, ripemd160 };
 
 pub const Hasher = struct {
     hasherType: ?HasherType,
@@ -12,6 +13,7 @@ pub const Hasher = struct {
     sha256: ?*std.crypto.hash.sha2.Sha256 = null,
     sha384: ?*std.crypto.hash.sha2.Sha384 = null,
     sha512: ?*std.crypto.hash.sha2.Sha512 = null,
+    ripemd160: ?*Ripemd160 = null,
 
     pub fn update(self: *Hasher, data: []const u8) void {
         switch (self.hasherType.?) {
@@ -20,6 +22,7 @@ pub const Hasher = struct {
             HasherType.sha256 => self.sha256.?.*.update(data),
             HasherType.sha384 => self.sha384.?.*.update(data),
             HasherType.sha512 => self.sha512.?.*.update(data),
+            HasherType.ripemd160 => self.ripemd160.?.*.update(data),
         }
     }
 
@@ -37,6 +40,7 @@ pub const Hasher = struct {
             HasherType.sha256 => self.sha256.?.final(@ptrCast(hash.ptr)),
             HasherType.sha384 => self.sha384.?.final(@ptrCast(hash.ptr)),
             HasherType.sha512 => self.sha512.?.final(@ptrCast(hash.ptr)),
+            HasherType.ripemd160 => self.ripemd160.?.final(@ptrCast(hash.ptr)),
         }
 
         self.destroy(allocator);
@@ -72,6 +76,11 @@ pub const Hasher = struct {
             allocator.destroy(self.sha512.?);
             self.sha512 = null;
         }
+
+        if (self.ripemd160 != null) {
+            allocator.destroy(self.ripemd160.?);
+            self.ripemd160 = null;
+        }
     }
 
     pub fn digestLength(self: Hasher) usize {
@@ -84,6 +93,7 @@ pub const Hasher = struct {
             HasherType.sha256 => std.crypto.hash.sha2.Sha256.digest_length,
             HasherType.sha384 => std.crypto.hash.sha2.Sha384.digest_length,
             HasherType.sha512 => std.crypto.hash.sha2.Sha512.digest_length,
+            HasherType.ripemd160 => Ripemd160.digest_length,
         };
     }
 };
@@ -122,6 +132,10 @@ pub fn createAndInit(
             hasher.sha512 = try allocator.create(std.crypto.hash.sha2.Sha512);
             hasher.sha512.?.* = std.crypto.hash.sha2.Sha512.init(options);
         },
+        HasherType.ripemd160 => {
+            hasher.ripemd160 = try allocator.create(Ripemd160);
+            hasher.ripemd160.?.* = Ripemd160.init();
+        },
     }
 
     return hasher;
@@ -134,6 +148,7 @@ pub fn fromSignMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!?HasherTyp
         pkcs.CKM_SHA256_RSA_PKCS => HasherType.sha256,
         pkcs.CKM_SHA384_RSA_PKCS => HasherType.sha384,
         pkcs.CKM_SHA512_RSA_PKCS => HasherType.sha512,
+        pkcs.CKM_RIPEMD160_RSA_PKCS => HasherType.ripemd160,
         pkcs.CKM_RSA_PKCS, pkcs.CKM_RSA_X_509 => null,
         else => return PkcsError.MechanismInvalid,
     };

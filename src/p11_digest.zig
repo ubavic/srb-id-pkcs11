@@ -24,24 +24,13 @@ pub export fn C_DigestInit(
     var hash_mechanism: hasher.HasherType = undefined;
 
     switch (mechanism.?.*.mechanism) {
-        pkcs.CKM_MD5 => {
-            hash_mechanism = hasher.HasherType.md5;
-        },
-        pkcs.CKM_SHA_1 => {
-            hash_mechanism = hasher.HasherType.sha1;
-        },
-        pkcs.CKM_SHA256 => {
-            hash_mechanism = hasher.HasherType.sha256;
-        },
-        pkcs.CKM_SHA384 => {
-            hash_mechanism = hasher.HasherType.sha384;
-        },
-        pkcs.CKM_SHA512 => {
-            hash_mechanism = hasher.HasherType.sha512;
-        },
-        else => {
-            return pkcs.CKR_MECHANISM_INVALID;
-        },
+        pkcs.CKM_MD5 => hash_mechanism = hasher.HasherType.md5,
+        pkcs.CKM_SHA_1 => hash_mechanism = hasher.HasherType.sha1,
+        pkcs.CKM_SHA256 => hash_mechanism = hasher.HasherType.sha256,
+        pkcs.CKM_SHA384 => hash_mechanism = hasher.HasherType.sha384,
+        pkcs.CKM_SHA512 => hash_mechanism = hasher.HasherType.sha512,
+        pkcs.CKM_RIPEMD160 => hash_mechanism = hasher.HasherType.ripemd160,
+        else => return pkcs.CKR_MECHANISM_INVALID,
     }
 
     current_session.assertNoOperation() catch |err|
