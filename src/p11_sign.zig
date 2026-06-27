@@ -35,7 +35,7 @@ pub export fn C_SignInit(
     var hash: ?hasher.Hasher = null;
     var msg_buffer: ?std.ArrayList(u8) = null;
     if (hash_mechanism != null) {
-        hash = hasher.createAndInit(hash_mechanism.?, current_session.allocator) catch
+        hash = hasher.createAndInit(hash_mechanism.?) catch
             return pkcs.CKR_HOST_MEMORY;
     } else {
         msg_buffer = std.ArrayList(u8).empty;

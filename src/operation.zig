@@ -52,10 +52,6 @@ pub const None = struct {};
 pub const Digest = struct {
     hasher: hasher.Hasher,
     multipart_operation: bool,
-
-    pub fn deinit(self: *Digest, allocator: std.mem.Allocator) void {
-        self.hasher.destroy(allocator);
-    }
 };
 
 pub const Sign = struct {
@@ -85,8 +81,7 @@ pub const Sign = struct {
     }
 
     pub fn deinit(self: *Sign, allocator: std.mem.Allocator) void {
-        if (self.hasher != null)
-            self.hasher.?.destroy(allocator);
+        self.hasher = null;
 
         if (self.msg_buffer != null)
             self.msg_buffer.?.deinit(allocator);
@@ -120,8 +115,7 @@ pub const Verify = struct {
     }
 
     pub fn deinit(self: *Verify, allocator: std.mem.Allocator) void {
-        if (self.hasher != null)
-            self.hasher.?.destroy(allocator);
+        self.hasher = null;
 
         if (self.msg_buffer != null)
             self.msg_buffer.?.deinit(allocator);
@@ -267,8 +261,7 @@ pub const Operation = union(enum) {
 
     pub fn deinit(self: *Operation, allocator: std.mem.Allocator) void {
         switch (self.*) {
-            .none => {},
-            .digest => self.digest.deinit(allocator),
+            .none, .digest => {},
             .sign => self.sign.deinit(allocator),
             .verify => self.verify.deinit(allocator),
             .encrypt => self.encrypt.deinit(allocator),
@@ -333,7 +326,7 @@ fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) P
 }
 
 fn getPrefixFromHasher(hash: *hasher.Hasher) []const u8 {
-    return switch (hash.*.hasherType.?) {
+    return switch (hash.*) {
         .md5 => md5_prefix[0..md5_prefix.len],
         .sha1 => sha1_prefix[0..sha1_prefix.len],
         .sha256 => sha256_prefix[0..sha256_prefix.len],
@@ -347,10 +340,7 @@ test "sha1" {
     const expected_sign_request = [_]u8{ 0x30, 0x21, 0x30, 0x9, 0x6, 0x5, 0x2b, 0xe, 0x3, 0x2, 0x1a, 0x5, 0x0, 0x4, 0x14, 0x71, 0x10, 0xed, 0xa4, 0xd0, 0x9e, 0x6, 0x2a, 0xa5, 0xe4, 0xa3, 0x90, 0xb0, 0xa5, 0x72, 0xac, 0xd, 0x2c, 0x2, 0x20 };
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(
-        hasher.HasherType.sha1,
-        std.testing.allocator,
-    );
+    const hash = try hasher.createAndInit(hasher.HasherType.sha1);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -378,10 +368,7 @@ test "2 step sha1" {
     const data1 = [_]u8{ 0x31, 0x32 };
     const data2 = [_]u8{ 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(
-        hasher.HasherType.sha1,
-        std.testing.allocator,
-    );
+    const hash = try hasher.createAndInit(hasher.HasherType.sha1);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -408,10 +395,7 @@ test "2 step sha1" {
 test "deinit sha1 sign" {
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(
-        hasher.HasherType.sha1,
-        std.testing.allocator,
-    );
+    const hash = try hasher.createAndInit(hasher.HasherType.sha1);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -455,10 +439,7 @@ test "sha512" {
     };
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(
-        hasher.HasherType.sha512,
-        std.testing.allocator,
-    );
+    const hash = try hasher.createAndInit(hasher.HasherType.sha512);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -485,10 +466,7 @@ test "sha256" {
     const expected_sign_request = [_]u8{ 0x30, 0x31, 0x30, 0xd, 0x6, 0x9, 0x60, 0x86, 0x48, 0x1, 0x65, 0x3, 0x4, 0x2, 0x1, 0x5, 0x0, 0x4, 0x20, 0x3, 0xac, 0x67, 0x42, 0x16, 0xf3, 0xe1, 0x5c, 0x76, 0x1e, 0xe1, 0xa5, 0xe2, 0x55, 0xf0, 0x67, 0x95, 0x36, 0x23, 0xc8, 0xb3, 0x88, 0xb4, 0x45, 0x9e, 0x13, 0xf9, 0x78, 0xd7, 0xc8, 0x46, 0xf4 };
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(
-        hasher.HasherType.sha256,
-        std.testing.allocator,
-    );
+    const hash = try hasher.createAndInit(hasher.HasherType.sha256);
 
     var sign_operation = Sign{
         .hasher = hash,

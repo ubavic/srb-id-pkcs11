@@ -21,22 +21,13 @@ pub export fn C_DigestInit(
     if (mechanism == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    var hash_mechanism: hasher.HasherType = undefined;
-
-    switch (mechanism.?.*.mechanism) {
-        pkcs.CKM_MD5 => hash_mechanism = hasher.HasherType.md5,
-        pkcs.CKM_SHA_1 => hash_mechanism = hasher.HasherType.sha1,
-        pkcs.CKM_SHA256 => hash_mechanism = hasher.HasherType.sha256,
-        pkcs.CKM_SHA384 => hash_mechanism = hasher.HasherType.sha384,
-        pkcs.CKM_SHA512 => hash_mechanism = hasher.HasherType.sha512,
-        pkcs.CKM_RIPEMD160 => hash_mechanism = hasher.HasherType.ripemd160,
-        else => return pkcs.CKR_MECHANISM_INVALID,
-    }
+    const hash_mechanism = hasher.fromDigestMechanism(mechanism.?.mechanism) catch |err|
+        return pkcs_error.toRV(err);
 
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    const hash = hasher.createAndInit(hash_mechanism, current_session.allocator) catch
+    const hash = hasher.createAndInit(hash_mechanism) catch
         return pkcs.CKR_HOST_MEMORY;
 
     current_session.operation = operation.Operation{
