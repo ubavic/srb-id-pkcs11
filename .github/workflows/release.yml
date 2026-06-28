@@ -18,6 +18,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check tag version
+        id: setversion
+        run: |
+          zon_version=$(grep -Po '(?<=^\s{4}.version = ")[\d\.]+(?=",)' build.zig.zon)
+          tag="${{github.ref_name}}"
+
+          if [ "$tag" != "v$zon_version" ]; then
+            echo "Error: tag ($tag) does not match zon file version ($zon_version)"
+            exit 1
+          fi
+
+          echo "version=$zon_version" >> $GITHUB_OUTPUT
       - name: Install Linux deps
         run: |
           sudo apt update
@@ -29,22 +41,6 @@ jobs:
       - name: Test
         run: |
           zig build test
-      - name: Check tag version
-        id: setversion
-        run: |
-          major=$(grep -Po 'pub const major = \K\d+' "$VERSION_FILE")
-          minor=$(grep -Po 'pub const minor = \K\d+' "$VERSION_FILE")
-          patch=$(grep -Po 'pub const patch = \K\d+' "$VERSION_FILE")
-
-          version="v$major.$minor.$patch"
-          tag="${{github.ref_name}}"
-
-          if [ "$tag" != "$version" ]; then
-            echo "Error: tag ($tag) does not match version ($version)"
-            exit 1
-          fi
-
-          echo "version=$major.$minor.$patch" >> $GITHUB_OUTPUT
 
   buildLinux:
     runs-on: ubuntu-latest

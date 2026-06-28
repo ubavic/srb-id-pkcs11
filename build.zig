@@ -1,12 +1,7 @@
 const std = @import("std");
 
-const version = @import("src/version.zig");
-
-const semver = std.SemanticVersion{
-    .major = version.major,
-    .minor = version.minor,
-    .patch = version.patch,
-};
+const versionString = @import("./build.zig.zon").version;
+const semver = std.SemanticVersion.parse(versionString) catch |err| std.debug.panic("semver parsing: {}", .{err});
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -17,6 +12,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("src/p11_general.zig"),
     });
+
+    const options = b.addOptions();
+    options.addOption(std.SemanticVersion, "version", semver);
+    mod.addImport("options", options.createModule());
 
     const pcsc_dep = b.dependency("pcsc", .{
         .target = target,

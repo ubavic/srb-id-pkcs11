@@ -6,7 +6,7 @@ const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("reader.zig");
 const session = @import("session.zig");
 const state = @import("state.zig");
-const version = @import("version.zig");
+const version = @import("options").version;
 
 const p11_decryption = @import("p11_decryption.zig");
 const p11_digest = @import("p11_digest.zig");
