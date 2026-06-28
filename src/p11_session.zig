@@ -11,8 +11,7 @@ pub export fn C_OpenSession(
     _: pkcs.CK_NOTIFY,
     session_handle: ?*pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
@@ -33,8 +32,7 @@ pub export fn C_OpenSession(
 }
 
 pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
@@ -47,15 +45,13 @@ pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV 
 }
 
 pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    reader.lock.lock(state.io) catch
-        return pkcs.CKR_FUNCTION_CANCELED;
+    reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
     if (!reader.reader_states.contains(slot_id))
@@ -73,8 +69,7 @@ pub export fn C_GetSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
@@ -140,8 +135,7 @@ pub export fn C_Login(
     pin: ?[*]const pkcs.CK_UTF8CHAR,
     pin_length: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
@@ -164,8 +158,7 @@ pub export fn C_Login(
 }
 
 pub export fn C_Logout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|

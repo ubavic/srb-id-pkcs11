@@ -67,8 +67,7 @@ pub export fn C_GetAttributeValue(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     var has_attribute_sensitive = false;
@@ -152,8 +151,7 @@ pub export fn C_FindObjectsInit(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
@@ -191,8 +189,7 @@ pub export fn C_FindObjects(
     max_object_count: pkcs.CK_ULONG,
     object_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
@@ -233,8 +230,7 @@ pub export fn C_FindObjects(
 pub export fn C_FindObjectsFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|

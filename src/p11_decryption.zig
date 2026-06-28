@@ -12,8 +12,7 @@ pub export fn C_DecryptInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
@@ -66,8 +65,7 @@ pub export fn C_Decrypt(
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
@@ -132,8 +130,7 @@ pub export fn C_DecryptUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|
@@ -177,8 +174,7 @@ pub export fn C_DecryptFinal(
     last_part: ?[*]pkcs.CK_BYTE,
     last_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, true) catch |err|

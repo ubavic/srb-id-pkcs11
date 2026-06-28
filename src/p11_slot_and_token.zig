@@ -11,8 +11,7 @@ pub export fn C_GetSlotList(
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
@@ -57,8 +56,7 @@ pub export fn C_GetSlotInfo(
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
@@ -67,8 +65,7 @@ pub export fn C_GetSlotInfo(
     if (slot_info == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    reader.lock.lock(state.io) catch
-        return pkcs.CKR_FUNCTION_CANCELED;
+    reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
     var reader_state = reader.reader_states.getPtr(slot_ID) orelse
@@ -96,8 +93,7 @@ pub export fn C_GetTokenInfo(
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
@@ -106,8 +102,7 @@ pub export fn C_GetTokenInfo(
     if (token_info == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    reader.lock.lock(state.io) catch
-        return pkcs.CKR_FUNCTION_CANCELED;
+    reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
     var reader_state = reader.reader_states.getPtr(slot_id) orelse
@@ -151,8 +146,7 @@ pub export fn C_GetMechanismList(
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (count == null)
@@ -179,8 +173,7 @@ pub export fn C_GetMechanismList(
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    reader.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_CANCELED;
+    reader.lock.lockSharedUncancelable(state.io);
     defer reader.lock.unlockShared(state.io);
 
     const reader_state = reader.reader_states.getPtr(slot_id) orelse
@@ -210,15 +203,13 @@ pub export fn C_GetMechanismInfo(
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
         return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
 
-    reader.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_CANCELED;
+    reader.lock.lockSharedUncancelable(state.io);
     defer reader.lock.unlockShared(state.io);
 
     const reader_state = reader.reader_states.get(slot_id) orelse
@@ -293,8 +284,7 @@ pub export fn C_SetPIN(
     new_pin: ?[*]pkcs.CK_UTF8CHAR,
     new_pin_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    state.lock.lockShared(state.io) catch
-        return pkcs.CKR_FUNCTION_FAILED;
+    state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     const current_session = session.getSession(session_handle, false) catch |err|
