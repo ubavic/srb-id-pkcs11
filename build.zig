@@ -2,9 +2,6 @@ const std = @import("std");
 
 const version = @import("src/version.zig");
 
-const base_url = "https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/";
-const files = [3][]const u8{ "pkcs11.h", "pkcs11f.h", "pkcs11t.h" };
-
 const semver = std.SemanticVersion{
     .major = version.major,
     .minor = version.minor,
