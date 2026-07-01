@@ -77,6 +77,9 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
+      - name: Test
+        run: |
+          zig build test
       - name: Build
         run: |
           zig build -Doptimize=ReleaseSmall -Dcpu=baseline
