@@ -1,5 +1,3 @@
-const __root = @This();
-
 const std = @import("std");
 const builtin = @import("builtin");
 
@@ -69,8 +67,6 @@ pub const CK_INFO = Align(struct {
     flags: CK_FLAGS = 0,
     libraryDescription: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     libraryVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
-    pub const C_GetInfo = __root.C_GetInfo;
-    pub const GetInfo = __root.C_GetInfo;
 });
 
 pub const CK_NOTIFICATION = CK_ULONG;
