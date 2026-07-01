@@ -107,7 +107,7 @@ export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
     return pkcs.CKR_OK;
 }
 
-var functionList = pkcs.CK_FUNCTION_LIST{
+const functionList = pkcs.CK_FUNCTION_LIST{
     .version = pkcs.CK_VERSION{ .major = 2, .minor = 40 },
     .C_Initialize = C_Initialize,
     .C_Finalize = C_Finalize,
@@ -183,6 +183,6 @@ export fn C_GetFunctionList(function_list: ?*?*pkcs.CK_FUNCTION_LIST) pkcs.CK_RV
     if (function_list == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    function_list.?.* = &functionList;
+    function_list.?.* = @constCast(&functionList);
     return pkcs.CKR_OK;
 }
