@@ -1,5 +1,53 @@
 const __root = @This();
 
+const std = @import("std");
+const builtin = @import("builtin");
+
+pub fn Align(comptime T: type) type {
+    const struct_info = @typeInfo(T).@"struct";
+
+    var field_names: [struct_info.fields.len][]const u8 = undefined;
+    var types: [struct_info.fields.len]type = undefined;
+    var attributes: [struct_info.fields.len]std.builtin.Type.StructField.Attributes = undefined;
+
+    for (struct_info.fields, 0..) |field, i| {
+        field_names[i] = field.name;
+
+        types[i] = field.type;
+
+        attributes[i] = std.builtin.Type.StructField.Attributes{
+            .@"align" = if (builtin.os.tag == .windows) 1 else field.alignment,
+            .@"comptime" = field.is_comptime,
+            .default_value_ptr = field.default_value_ptr,
+        };
+    }
+
+    return @Struct(
+        .@"extern",
+        null,
+        &field_names,
+        &types,
+        &attributes,
+    );
+}
+
+test "align" {
+    const T = if (builtin.os.tag == .windows) extern struct {
+        a: CK_BYTE align(1),
+        b: c_ulong align(1),
+    } else extern struct {
+        a: CK_BYTE,
+        b: c_ulong,
+    };
+
+    const S = struct {
+        a: CK_BYTE,
+        b: c_ulong,
+    };
+
+    try std.testing.expectEqual(@typeInfo(T), @typeInfo(Align(S)));
+}
+
 pub const CK_BYTE = u8;
 pub const CK_CHAR = CK_BYTE;
 pub const CK_UTF8CHAR = CK_BYTE;
@@ -10,12 +58,12 @@ pub const CK_FLAGS = CK_ULONG;
 
 pub const CK_VOID_PTR = ?*anyopaque;
 
-pub const CK_VERSION = extern struct {
+pub const CK_VERSION = Align(struct {
     major: CK_BYTE = 0,
     minor: CK_BYTE = 0,
-};
+});
 
-pub const CK_INFO = extern struct {
+pub const CK_INFO = Align(struct {
     cryptokiVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     manufacturerID: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     flags: CK_FLAGS = 0,
@@ -23,20 +71,20 @@ pub const CK_INFO = extern struct {
     libraryVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     pub const C_GetInfo = __root.C_GetInfo;
     pub const GetInfo = __root.C_GetInfo;
-};
+});
 
 pub const CK_NOTIFICATION = CK_ULONG;
 pub const CK_SLOT_ID = CK_ULONG;
 
-pub const CK_SLOT_INFO = extern struct {
+pub const CK_SLOT_INFO = Align(struct {
     slotDescription: [64]CK_UTF8CHAR = @import("std").mem.zeroes([64]CK_UTF8CHAR),
     manufacturerID: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     flags: CK_FLAGS = 0,
     hardwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     firmwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
-};
+});
 
-pub const CK_TOKEN_INFO = extern struct {
+pub const CK_TOKEN_INFO = Align(struct {
     label: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     manufacturerID: [32]CK_UTF8CHAR = @import("std").mem.zeroes([32]CK_UTF8CHAR),
     model: [16]CK_UTF8CHAR = @import("std").mem.zeroes([16]CK_UTF8CHAR),
@@ -55,44 +103,44 @@ pub const CK_TOKEN_INFO = extern struct {
     hardwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     firmwareVersion: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     utcTime: [16]CK_CHAR = @import("std").mem.zeroes([16]CK_CHAR),
-};
+});
 
 pub const CK_SESSION_HANDLE = CK_ULONG;
 pub const CK_USER_TYPE = CK_ULONG;
 pub const CK_STATE = CK_ULONG;
-pub const CK_SESSION_INFO = extern struct {
+pub const CK_SESSION_INFO = Align(struct {
     slotID: CK_SLOT_ID = 0,
     state: CK_STATE = 0,
     flags: CK_FLAGS = 0,
     ulDeviceError: CK_ULONG = 0,
-};
+});
 pub const CK_OBJECT_HANDLE = CK_ULONG;
 pub const CK_OBJECT_CLASS = CK_ULONG;
 pub const CK_HW_FEATURE_TYPE = CK_ULONG;
 pub const CK_KEY_TYPE = CK_ULONG;
 pub const CK_CERTIFICATE_TYPE = CK_ULONG;
 pub const CK_ATTRIBUTE_TYPE = CK_ULONG;
-pub const CK_ATTRIBUTE = extern struct {
+pub const CK_ATTRIBUTE = Align(struct {
     type: CK_ATTRIBUTE_TYPE = 0,
     pValue: CK_VOID_PTR = null,
     ulValueLen: CK_ULONG = 0,
-};
-pub const CK_DATE = extern struct {
+});
+pub const CK_DATE = Align(struct {
     year: [4]CK_CHAR = @import("std").mem.zeroes([4]CK_CHAR),
     month: [2]CK_CHAR = @import("std").mem.zeroes([2]CK_CHAR),
     day: [2]CK_CHAR = @import("std").mem.zeroes([2]CK_CHAR),
-};
+});
 pub const CK_MECHANISM_TYPE = CK_ULONG;
-pub const CK_MECHANISM = extern struct {
+pub const CK_MECHANISM = Align(struct {
     mechanism: CK_MECHANISM_TYPE = 0,
     pParameter: CK_VOID_PTR = null,
     ulParameterLen: CK_ULONG = 0,
-};
-pub const CK_MECHANISM_INFO = extern struct {
+});
+pub const CK_MECHANISM_INFO = Align(struct {
     ulMinKeySize: CK_ULONG = 0,
     ulMaxKeySize: CK_ULONG = 0,
     flags: CK_FLAGS = 0,
-};
+});
 pub const CK_RV = CK_ULONG;
 
 pub const CK_NOTIFY = ?*const fn (hSession: CK_SESSION_HANDLE, event: CK_NOTIFICATION, pApplication: CK_VOID_PTR) callconv(.c) CK_RV;
@@ -165,12 +213,12 @@ pub const CK_C_GetFunctionStatus = ?*const fn (hSession: CK_SESSION_HANDLE) call
 pub const CK_C_CancelFunction = ?*const fn (hSession: CK_SESSION_HANDLE) callconv(.c) CK_RV;
 pub const CK_C_WaitForSlotEvent = ?*const fn (flags: CK_FLAGS, pSlot: [*c]CK_SLOT_ID, pRserved: CK_VOID_PTR) callconv(.c) CK_RV;
 
-pub const CK_FUNCTION_LIST = extern struct {
+pub const CK_FUNCTION_LIST = Align(struct {
     version: CK_VERSION = @import("std").mem.zeroes(CK_VERSION),
     C_Initialize: CK_C_Initialize = null,
     C_Finalize: CK_C_Finalize = null,
     C_GetInfo: CK_C_GetInfo = null,
-    C_GetFunctionList: CK_C_GetFunctionList = null,
+    C_GetFunctionList: ?*anyopaque = null,
     C_GetSlotList: CK_C_GetSlotList = null,
     C_GetSlotInfo: CK_C_GetSlotInfo = null,
     C_GetTokenInfo: CK_C_GetTokenInfo = null,
@@ -235,42 +283,42 @@ pub const CK_FUNCTION_LIST = extern struct {
     C_GetFunctionStatus: CK_C_GetFunctionStatus = null,
     C_CancelFunction: CK_C_CancelFunction = null,
     C_WaitForSlotEvent: CK_C_WaitForSlotEvent = null,
-};
+});
 pub const CK_CREATEMUTEX = ?*const fn (ppMutex: [*c]CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_DESTROYMUTEX = ?*const fn (pMutex: CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_LOCKMUTEX = ?*const fn (pMutex: CK_VOID_PTR) callconv(.c) CK_RV;
 pub const CK_UNLOCKMUTEX = ?*const fn (pMutex: CK_VOID_PTR) callconv(.c) CK_RV;
-pub const CK_C_INITIALIZE_ARGS = extern struct {
+pub const CK_C_INITIALIZE_ARGS = Align(struct {
     CreateMutex: CK_CREATEMUTEX = null,
     DestroyMutex: CK_DESTROYMUTEX = null,
     LockMutex: CK_LOCKMUTEX = null,
     UnlockMutex: CK_UNLOCKMUTEX = null,
     flags: CK_FLAGS = 0,
     pReserved: CK_VOID_PTR = null,
-};
+});
 pub const CK_RSA_PKCS_MGF_TYPE = CK_ULONG;
 pub const CK_RSA_PKCS_OAEP_SOURCE_TYPE = CK_ULONG;
-pub const CK_RSA_PKCS_OAEP_PARAMS = extern struct {
+pub const CK_RSA_PKCS_OAEP_PARAMS = Align(struct {
     hashAlg: CK_MECHANISM_TYPE = 0,
     mgf: CK_RSA_PKCS_MGF_TYPE = 0,
     source: CK_RSA_PKCS_OAEP_SOURCE_TYPE = 0,
     pSourceData: CK_VOID_PTR = null,
     ulSourceDataLen: CK_ULONG = 0,
-};
-pub const CK_RSA_PKCS_PSS_PARAMS = extern struct {
+});
+pub const CK_RSA_PKCS_PSS_PARAMS = Align(struct {
     hashAlg: CK_MECHANISM_TYPE = 0,
     mgf: CK_RSA_PKCS_MGF_TYPE = 0,
     sLen: CK_ULONG = 0,
-};
+});
 pub const CK_EC_KDF_TYPE = CK_ULONG;
-pub const CK_ECDH1_DERIVE_PARAMS = extern struct {
+pub const CK_ECDH1_DERIVE_PARAMS = Align(struct {
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
     pSharedData: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
     pPublicData: [*c]CK_BYTE = null,
-};
-pub const CK_ECDH2_DERIVE_PARAMS = extern struct {
+});
+pub const CK_ECDH2_DERIVE_PARAMS = Align(struct {
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
     pSharedData: [*c]CK_BYTE = null,
@@ -280,8 +328,8 @@ pub const CK_ECDH2_DERIVE_PARAMS = extern struct {
     hPrivateData: CK_OBJECT_HANDLE = 0,
     ulPublicDataLen2: CK_ULONG = 0,
     pPublicData2: [*c]CK_BYTE = null,
-};
-pub const CK_ECMQV_DERIVE_PARAMS = extern struct {
+});
+pub const CK_ECMQV_DERIVE_PARAMS = Align(struct {
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
     pSharedData: [*c]CK_BYTE = null,
@@ -292,16 +340,16 @@ pub const CK_ECMQV_DERIVE_PARAMS = extern struct {
     ulPublicDataLen2: CK_ULONG = 0,
     pPublicData2: [*c]CK_BYTE = null,
     publicKey: CK_OBJECT_HANDLE = 0,
-};
+});
 pub const CK_X9_42_DH_KDF_TYPE = CK_ULONG;
-pub const CK_X9_42_DH1_DERIVE_PARAMS = extern struct {
+pub const CK_X9_42_DH1_DERIVE_PARAMS = Align(struct {
     kdf: CK_X9_42_DH_KDF_TYPE = 0,
     ulOtherInfoLen: CK_ULONG = 0,
     pOtherInfo: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
     pPublicData: [*c]CK_BYTE = null,
-};
-pub const CK_X9_42_DH2_DERIVE_PARAMS = extern struct {
+});
+pub const CK_X9_42_DH2_DERIVE_PARAMS = Align(struct {
     kdf: CK_X9_42_DH_KDF_TYPE = 0,
     ulOtherInfoLen: CK_ULONG = 0,
     pOtherInfo: [*c]CK_BYTE = null,
@@ -311,8 +359,8 @@ pub const CK_X9_42_DH2_DERIVE_PARAMS = extern struct {
     hPrivateData: CK_OBJECT_HANDLE = 0,
     ulPublicDataLen2: CK_ULONG = 0,
     pPublicData2: [*c]CK_BYTE = null,
-};
-pub const CK_X9_42_MQV_DERIVE_PARAMS = extern struct {
+});
+pub const CK_X9_42_MQV_DERIVE_PARAMS = Align(struct {
     kdf: CK_X9_42_DH_KDF_TYPE = 0,
     ulOtherInfoLen: CK_ULONG = 0,
     pOtherInfo: [*c]CK_BYTE = null,
@@ -323,51 +371,51 @@ pub const CK_X9_42_MQV_DERIVE_PARAMS = extern struct {
     ulPublicDataLen2: CK_ULONG = 0,
     pPublicData2: [*c]CK_BYTE = null,
     publicKey: CK_OBJECT_HANDLE = 0,
-};
-pub const CK_KEA_DERIVE_PARAMS = extern struct {
+});
+pub const CK_KEA_DERIVE_PARAMS = Align(struct {
     isSender: CK_BBOOL = 0,
     ulRandomLen: CK_ULONG = 0,
     pRandomA: [*c]CK_BYTE = null,
     pRandomB: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
     pPublicData: [*c]CK_BYTE = null,
-};
+});
 pub const CK_RC2_PARAMS = CK_ULONG;
-pub const CK_RC2_CBC_PARAMS = extern struct {
+pub const CK_RC2_CBC_PARAMS = Align(struct {
     ulEffectiveBits: CK_ULONG = 0,
     iv: [8]CK_BYTE = @import("std").mem.zeroes([8]CK_BYTE),
-};
-pub const CK_RC2_MAC_GENERAL_PARAMS = extern struct {
+});
+pub const CK_RC2_MAC_GENERAL_PARAMS = Align(struct {
     ulEffectiveBits: CK_ULONG = 0,
     ulMacLength: CK_ULONG = 0,
-};
-pub const CK_RC5_PARAMS = extern struct {
+});
+pub const CK_RC5_PARAMS = Align(struct {
     ulWordsize: CK_ULONG = 0,
     ulRounds: CK_ULONG = 0,
-};
-pub const CK_RC5_CBC_PARAMS = extern struct {
+});
+pub const CK_RC5_CBC_PARAMS = Align(struct {
     ulWordsize: CK_ULONG = 0,
     ulRounds: CK_ULONG = 0,
     pIv: [*c]CK_BYTE = null,
     ulIvLen: CK_ULONG = 0,
-};
-pub const CK_RC5_MAC_GENERAL_PARAMS = extern struct {
+});
+pub const CK_RC5_MAC_GENERAL_PARAMS = Align(struct {
     ulWordsize: CK_ULONG = 0,
     ulRounds: CK_ULONG = 0,
     ulMacLength: CK_ULONG = 0,
-};
+});
 pub const CK_MAC_GENERAL_PARAMS = CK_ULONG;
-pub const CK_DES_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+pub const CK_DES_CBC_ENCRYPT_DATA_PARAMS = Align(struct {
     iv: [8]CK_BYTE = @import("std").mem.zeroes([8]CK_BYTE),
     pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
-};
-pub const CK_AES_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+});
+pub const CK_AES_CBC_ENCRYPT_DATA_PARAMS = Align(struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
     pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
-};
-pub const CK_SKIPJACK_PRIVATE_WRAP_PARAMS = extern struct {
+});
+pub const CK_SKIPJACK_PRIVATE_WRAP_PARAMS = Align(struct {
     ulPasswordLen: CK_ULONG = 0,
     pPassword: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
@@ -379,8 +427,8 @@ pub const CK_SKIPJACK_PRIVATE_WRAP_PARAMS = extern struct {
     pPrimeP: [*c]CK_BYTE = null,
     pBaseG: [*c]CK_BYTE = null,
     pSubprimeQ: [*c]CK_BYTE = null,
-};
-pub const CK_SKIPJACK_RELAYX_PARAMS = extern struct {
+});
+pub const CK_SKIPJACK_RELAYX_PARAMS = Align(struct {
     ulOldWrappedXLen: CK_ULONG = 0,
     pOldWrappedX: [*c]CK_BYTE = null,
     ulOldPasswordLen: CK_ULONG = 0,
@@ -395,66 +443,66 @@ pub const CK_SKIPJACK_RELAYX_PARAMS = extern struct {
     pNewPublicData: [*c]CK_BYTE = null,
     ulNewRandomLen: CK_ULONG = 0,
     pNewRandomA: [*c]CK_BYTE = null,
-};
-pub const CK_PBE_PARAMS = extern struct {
+});
+pub const CK_PBE_PARAMS = Align(struct {
     pInitVector: [*c]CK_BYTE = null,
     pPassword: [*c]CK_UTF8CHAR = null,
     ulPasswordLen: CK_ULONG = 0,
     pSalt: [*c]CK_BYTE = null,
     ulSaltLen: CK_ULONG = 0,
     ulIteration: CK_ULONG = 0,
-};
-pub const CK_KEY_WRAP_SET_OAEP_PARAMS = extern struct {
+});
+pub const CK_KEY_WRAP_SET_OAEP_PARAMS = Align(struct {
     bBC: CK_BYTE = 0,
     pX: [*c]CK_BYTE = null,
     ulXLen: CK_ULONG = 0,
-};
-pub const CK_SSL3_RANDOM_DATA = extern struct {
+});
+pub const CK_SSL3_RANDOM_DATA = Align(struct {
     pClientRandom: [*c]CK_BYTE = null,
     ulClientRandomLen: CK_ULONG = 0,
     pServerRandom: [*c]CK_BYTE = null,
     ulServerRandomLen: CK_ULONG = 0,
-};
-pub const CK_SSL3_MASTER_KEY_DERIVE_PARAMS = extern struct {
+});
+pub const CK_SSL3_MASTER_KEY_DERIVE_PARAMS = Align(struct {
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
     pVersion: [*c]CK_VERSION = null,
-};
-pub const CK_SSL3_KEY_MAT_OUT = extern struct {
+});
+pub const CK_SSL3_KEY_MAT_OUT = Align(struct {
     hClientMacSecret: CK_OBJECT_HANDLE = 0,
     hServerMacSecret: CK_OBJECT_HANDLE = 0,
     hClientKey: CK_OBJECT_HANDLE = 0,
     hServerKey: CK_OBJECT_HANDLE = 0,
     pIVClient: [*c]CK_BYTE = null,
     pIVServer: [*c]CK_BYTE = null,
-};
-pub const CK_SSL3_KEY_MAT_PARAMS = extern struct {
+});
+pub const CK_SSL3_KEY_MAT_PARAMS = Align(struct {
     ulMacSizeInBits: CK_ULONG = 0,
     ulKeySizeInBits: CK_ULONG = 0,
     ulIVSizeInBits: CK_ULONG = 0,
     bIsExport: CK_BBOOL = 0,
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
     pReturnedKeyMaterial: [*c]CK_SSL3_KEY_MAT_OUT = null,
-};
-pub const CK_TLS_PRF_PARAMS = extern struct {
+});
+pub const CK_TLS_PRF_PARAMS = Align(struct {
     pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
     pLabel: [*c]CK_BYTE = null,
     ulLabelLen: CK_ULONG = 0,
     pOutput: [*c]CK_BYTE = null,
     pulOutputLen: [*c]CK_ULONG = null,
-};
-pub const CK_WTLS_RANDOM_DATA = extern struct {
+});
+pub const CK_WTLS_RANDOM_DATA = Align(struct {
     pClientRandom: [*c]CK_BYTE = null,
     ulClientRandomLen: CK_ULONG = 0,
     pServerRandom: [*c]CK_BYTE = null,
     ulServerRandomLen: CK_ULONG = 0,
-};
-pub const CK_WTLS_MASTER_KEY_DERIVE_PARAMS = extern struct {
+});
+pub const CK_WTLS_MASTER_KEY_DERIVE_PARAMS = Align(struct {
     DigestMechanism: CK_MECHANISM_TYPE = 0,
     RandomInfo: CK_WTLS_RANDOM_DATA = @import("std").mem.zeroes(CK_WTLS_RANDOM_DATA),
     pVersion: [*c]CK_BYTE = null,
-};
-pub const CK_WTLS_PRF_PARAMS = extern struct {
+});
+pub const CK_WTLS_PRF_PARAMS = Align(struct {
     DigestMechanism: CK_MECHANISM_TYPE = 0,
     pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
@@ -462,13 +510,13 @@ pub const CK_WTLS_PRF_PARAMS = extern struct {
     ulLabelLen: CK_ULONG = 0,
     pOutput: [*c]CK_BYTE = null,
     pulOutputLen: [*c]CK_ULONG = null,
-};
-pub const CK_WTLS_KEY_MAT_OUT = extern struct {
+});
+pub const CK_WTLS_KEY_MAT_OUT = Align(struct {
     hMacSecret: CK_OBJECT_HANDLE = 0,
     hKey: CK_OBJECT_HANDLE = 0,
     pIV: [*c]CK_BYTE = null,
-};
-pub const CK_WTLS_KEY_MAT_PARAMS = extern struct {
+});
+pub const CK_WTLS_KEY_MAT_PARAMS = Align(struct {
     DigestMechanism: CK_MECHANISM_TYPE = 0,
     ulMacSizeInBits: CK_ULONG = 0,
     ulKeySizeInBits: CK_ULONG = 0,
@@ -477,8 +525,8 @@ pub const CK_WTLS_KEY_MAT_PARAMS = extern struct {
     bIsExport: CK_BBOOL = 0,
     RandomInfo: CK_WTLS_RANDOM_DATA = @import("std").mem.zeroes(CK_WTLS_RANDOM_DATA),
     pReturnedKeyMaterial: [*c]CK_WTLS_KEY_MAT_OUT = null,
-};
-pub const CK_CMS_SIG_PARAMS = extern struct {
+});
+pub const CK_CMS_SIG_PARAMS = Align(struct {
     certificateHandle: CK_OBJECT_HANDLE = 0,
     pSigningMechanism: [*c]CK_MECHANISM = null,
     pDigestMechanism: [*c]CK_MECHANISM = null,
@@ -487,15 +535,15 @@ pub const CK_CMS_SIG_PARAMS = extern struct {
     ulRequestedAttributesLen: CK_ULONG = 0,
     pRequiredAttributes: [*c]CK_BYTE = null,
     ulRequiredAttributesLen: CK_ULONG = 0,
-};
-pub const CK_KEY_DERIVATION_STRING_DATA = extern struct {
+});
+pub const CK_KEY_DERIVATION_STRING_DATA = Align(struct {
     pData: [*c]CK_BYTE = null,
     ulLen: CK_ULONG = 0,
-};
+});
 pub const CK_EXTRACT_PARAMS = CK_ULONG;
 pub const CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = CK_ULONG;
 pub const CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = CK_ULONG;
-pub const CK_PKCS5_PBKD2_PARAMS = extern struct {
+pub const CK_PKCS5_PBKD2_PARAMS = Align(struct {
     saltSource: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = 0,
     pSaltSourceData: CK_VOID_PTR = null,
     ulSaltSourceDataLen: CK_ULONG = 0,
@@ -505,8 +553,8 @@ pub const CK_PKCS5_PBKD2_PARAMS = extern struct {
     ulPrfDataLen: CK_ULONG = 0,
     pPassword: [*c]CK_UTF8CHAR = null,
     ulPasswordLen: [*c]CK_ULONG = null,
-};
-pub const CK_PKCS5_PBKD2_PARAMS2 = extern struct {
+});
+pub const CK_PKCS5_PBKD2_PARAMS2 = Align(struct {
     saltSource: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = 0,
     pSaltSourceData: CK_VOID_PTR = null,
     ulSaltSourceDataLen: CK_ULONG = 0,
@@ -516,102 +564,102 @@ pub const CK_PKCS5_PBKD2_PARAMS2 = extern struct {
     ulPrfDataLen: CK_ULONG = 0,
     pPassword: [*c]CK_UTF8CHAR = null,
     ulPasswordLen: CK_ULONG = 0,
-};
+});
 pub const CK_OTP_PARAM_TYPE = CK_ULONG;
 pub const CK_PARAM_TYPE = CK_OTP_PARAM_TYPE;
-pub const CK_OTP_PARAM = extern struct {
+pub const CK_OTP_PARAM = Align(struct {
     type: CK_OTP_PARAM_TYPE = 0,
     pValue: CK_VOID_PTR = null,
     ulValueLen: CK_ULONG = 0,
-};
-pub const CK_OTP_PARAMS = extern struct {
+});
+pub const CK_OTP_PARAMS = Align(struct {
     pParams: [*c]CK_OTP_PARAM = null,
     ulCount: CK_ULONG = 0,
-};
-pub const CK_OTP_SIGNATURE_INFO = extern struct {
+});
+pub const CK_OTP_SIGNATURE_INFO = Align(struct {
     pParams: [*c]CK_OTP_PARAM = null,
     ulCount: CK_ULONG = 0,
-};
-pub const CK_KIP_PARAMS = extern struct {
+});
+pub const CK_KIP_PARAMS = Align(struct {
     pMechanism: [*c]CK_MECHANISM = null,
     hKey: CK_OBJECT_HANDLE = 0,
     pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
-};
-pub const CK_AES_CTR_PARAMS = extern struct {
+});
+pub const CK_AES_CTR_PARAMS = Align(struct {
     ulCounterBits: CK_ULONG = 0,
     cb: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
-};
-pub const CK_GCM_PARAMS = extern struct {
+});
+pub const CK_GCM_PARAMS = Align(struct {
     pIv: [*c]CK_BYTE = null,
     ulIvLen: CK_ULONG = 0,
     ulIvBits: CK_ULONG = 0,
     pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulTagBits: CK_ULONG = 0,
-};
-pub const CK_CCM_PARAMS = extern struct {
+});
+pub const CK_CCM_PARAMS = Align(struct {
     ulDataLen: CK_ULONG = 0,
     pNonce: [*c]CK_BYTE = null,
     ulNonceLen: CK_ULONG = 0,
     pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulMACLen: CK_ULONG = 0,
-};
-pub const CK_AES_GCM_PARAMS = extern struct {
+});
+pub const CK_AES_GCM_PARAMS = Align(struct {
     pIv: [*c]CK_BYTE = null,
     ulIvLen: CK_ULONG = 0,
     ulIvBits: CK_ULONG = 0,
     pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulTagBits: CK_ULONG = 0,
-};
-pub const CK_AES_CCM_PARAMS = extern struct {
+});
+pub const CK_AES_CCM_PARAMS = Align(struct {
     ulDataLen: CK_ULONG = 0,
     pNonce: [*c]CK_BYTE = null,
     ulNonceLen: CK_ULONG = 0,
     pAAD: [*c]CK_BYTE = null,
     ulAADLen: CK_ULONG = 0,
     ulMACLen: CK_ULONG = 0,
-};
-pub const CK_CAMELLIA_CTR_PARAMS = extern struct {
+});
+pub const CK_CAMELLIA_CTR_PARAMS = Align(struct {
     ulCounterBits: CK_ULONG = 0,
     cb: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
-};
-pub const CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+});
+pub const CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS = Align(struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
     pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
-};
-pub const CK_ARIA_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+});
+pub const CK_ARIA_CBC_ENCRYPT_DATA_PARAMS = Align(struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
     pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
-};
-pub const CK_DSA_PARAMETER_GEN_PARAM = extern struct {
+});
+pub const CK_DSA_PARAMETER_GEN_PARAM = Align(struct {
     hash: CK_MECHANISM_TYPE = 0,
     pSeed: [*c]CK_BYTE = null,
     ulSeedLen: CK_ULONG = 0,
     ulIndex: CK_ULONG = 0,
-};
-pub const CK_ECDH_AES_KEY_WRAP_PARAMS = extern struct {
+});
+pub const CK_ECDH_AES_KEY_WRAP_PARAMS = Align(struct {
     ulAESKeyBits: CK_ULONG = 0,
     kdf: CK_EC_KDF_TYPE = 0,
     ulSharedDataLen: CK_ULONG = 0,
     pSharedData: [*c]CK_BYTE = null,
-};
+});
 pub const CK_JAVA_MIDP_SECURITY_DOMAIN = CK_ULONG;
 pub const CK_CERTIFICATE_CATEGORY = CK_ULONG;
-pub const CK_RSA_AES_KEY_WRAP_PARAMS = extern struct {
+pub const CK_RSA_AES_KEY_WRAP_PARAMS = Align(struct {
     ulAESKeyBits: CK_ULONG = 0,
     pOAEPParams: [*c]CK_RSA_PKCS_OAEP_PARAMS = null,
-};
-pub const CK_TLS12_MASTER_KEY_DERIVE_PARAMS = extern struct {
+});
+pub const CK_TLS12_MASTER_KEY_DERIVE_PARAMS = Align(struct {
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
     pVersion: [*c]CK_VERSION = null,
     prfHashMechanism: CK_MECHANISM_TYPE = 0,
-};
-pub const CK_TLS12_KEY_MAT_PARAMS = extern struct {
+});
+pub const CK_TLS12_KEY_MAT_PARAMS = Align(struct {
     ulMacSizeInBits: CK_ULONG = 0,
     ulKeySizeInBits: CK_ULONG = 0,
     ulIVSizeInBits: CK_ULONG = 0,
@@ -619,39 +667,39 @@ pub const CK_TLS12_KEY_MAT_PARAMS = extern struct {
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
     pReturnedKeyMaterial: [*c]CK_SSL3_KEY_MAT_OUT = null,
     prfHashMechanism: CK_MECHANISM_TYPE = 0,
-};
-pub const CK_TLS_KDF_PARAMS = extern struct {
+});
+pub const CK_TLS_KDF_PARAMS = Align(struct {
     prfMechanism: CK_MECHANISM_TYPE = 0,
     pLabel: [*c]CK_BYTE = null,
     ulLabelLength: CK_ULONG = 0,
     RandomInfo: CK_SSL3_RANDOM_DATA = @import("std").mem.zeroes(CK_SSL3_RANDOM_DATA),
     pContextData: [*c]CK_BYTE = null,
     ulContextDataLength: CK_ULONG = 0,
-};
-pub const CK_TLS_MAC_PARAMS = extern struct {
+});
+pub const CK_TLS_MAC_PARAMS = Align(struct {
     prfHashMechanism: CK_MECHANISM_TYPE = 0,
     ulMacLength: CK_ULONG = 0,
     ulServerOrClient: CK_ULONG = 0,
-};
-pub const CK_GOSTR3410_DERIVE_PARAMS = extern struct {
+});
+pub const CK_GOSTR3410_DERIVE_PARAMS = Align(struct {
     kdf: CK_EC_KDF_TYPE = 0,
     pPublicData: [*c]CK_BYTE = null,
     ulPublicDataLen: CK_ULONG = 0,
     pUKM: [*c]CK_BYTE = null,
     ulUKMLen: CK_ULONG = 0,
-};
-pub const CK_GOSTR3410_KEY_WRAP_PARAMS = extern struct {
+});
+pub const CK_GOSTR3410_KEY_WRAP_PARAMS = Align(struct {
     pWrapOID: [*c]CK_BYTE = null,
     ulWrapOIDLen: CK_ULONG = 0,
     pUKM: [*c]CK_BYTE = null,
     ulUKMLen: CK_ULONG = 0,
     hKey: CK_OBJECT_HANDLE = 0,
-};
-pub const CK_SEED_CBC_ENCRYPT_DATA_PARAMS = extern struct {
+});
+pub const CK_SEED_CBC_ENCRYPT_DATA_PARAMS = Align(struct {
     iv: [16]CK_BYTE = @import("std").mem.zeroes([16]CK_BYTE),
     pData: [*c]CK_BYTE = null,
     length: CK_ULONG = 0,
-};
+});
 
 pub extern fn C_Initialize(pInitArgs: CK_VOID_PTR) CK_RV;
 pub extern fn C_Finalize(pReserved: CK_VOID_PTR) CK_RV;
