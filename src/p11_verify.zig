@@ -16,7 +16,7 @@ pub export fn C_VerifyInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     if (mechanism == null)
@@ -81,7 +81,7 @@ pub export fn C_Verify(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     defer current_session.resetOperation();
@@ -164,7 +164,7 @@ pub export fn C_VerifyFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     defer current_session.resetOperation();
