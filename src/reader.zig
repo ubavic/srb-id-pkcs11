@@ -42,7 +42,7 @@ pub const ReaderState = struct {
 
         const card = smart_card_client.connect(self.name.ptr, .SHARED, .ANY) catch |err| {
             switch (err) {
-                pcsc.Err.NoSmartCard => {
+                pcsc.Err.NoSmartCard, pcsc.Err.RemovedCard => {
                     self.card_present = false;
                     return;
                 },
