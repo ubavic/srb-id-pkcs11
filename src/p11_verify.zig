@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const consts = @import("consts.zig");
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
@@ -39,13 +38,14 @@ pub export fn C_VerifyInit(
         else => return pkcs.CKR_KEY_HANDLE_INVALID,
     }
 
-    const private_key_handle = consts.getPrivateKeyFormPublicKey(key) catch |err|
-        return pkcs_error.toRV(err);
+    const public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
+        found_object.public_key.public_exponent,
+        found_object.public_key.modulus,
+    ) catch return pkcs.CKR_GENERAL_ERROR;
 
     const verify_operation = operation.Verify.init(
         mechanism.?.mechanism,
-        found_object.public_key.modulus.len,
-        private_key_handle,
+        public_key,
     ) catch |err|
         return pkcs_error.toRV(err);
 
@@ -91,24 +91,8 @@ pub export fn C_Verify(
     current_operation.update(current_session.allocator, data.?[0..data_len]) catch
         return pkcs.CKR_HOST_MEMORY;
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
+    current_operation.verify(current_session.allocator, signature.?[0..signature_len]) catch |err|
         return pkcs_error.toRV(err);
-    defer current_session.allocator.free(sign_request);
-
-    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
-        return pkcs_error.toRV(err);
-
-    const computed_signature = current_session.card.sign(
-        current_session.allocator,
-        key_id,
-        current_operation.sign_type != .DigestAndSign,
-        sign_request,
-    ) catch |err|
-        return pkcs_error.toRV(err);
-    defer current_session.allocator.free(computed_signature);
-
-    if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
-        return pkcs.CKR_SIGNATURE_INVALID;
 
     return pkcs.CKR_OK;
 }
@@ -165,24 +149,8 @@ pub export fn C_VerifyFinal(
     if (signature_len != operation.signature_size)
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
+    current_operation.verify(current_session.allocator, signature.?[0..signature_len]) catch |err|
         return pkcs_error.toRV(err);
-    defer current_session.allocator.free(sign_request);
-
-    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
-        return pkcs_error.toRV(err);
-
-    const computed_signature = current_session.card.sign(
-        current_session.allocator,
-        key_id,
-        current_operation.sign_type != .DigestAndSign,
-        sign_request,
-    ) catch |err|
-        return pkcs_error.toRV(err);
-    defer current_session.allocator.free(computed_signature);
-
-    if (!std.mem.eql(u8, computed_signature, signature.?[0..signature_len]))
-        return pkcs.CKR_SIGNATURE_INVALID;
 
     return pkcs.CKR_OK;
 }
