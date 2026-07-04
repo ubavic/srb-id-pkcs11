@@ -25,7 +25,7 @@ pub fn loadObjects(
         else => return PkcsError.GeneralError,
     }
 
-    const public_key_components = std.crypto.Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
+    const public_key_components = Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
         return PkcsError.GeneralError;
 
     const cert_id = try clone(allocator, id);
