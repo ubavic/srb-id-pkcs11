@@ -62,6 +62,27 @@ pub const Sign = struct {
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
+    pub fn init(mechanism: pkcs.CK_MECHANISM_TYPE, key_size: usize, private_key: c_ulong) PkcsError!Sign {
+        const sign_type = try signTypeFromMechanism(mechanism);
+        const hash_mechanism = try hasher.fromSignMechanism(mechanism);
+
+        var hash: ?hasher.Hasher = null;
+        var msg_buffer: ?std.ArrayList(u8) = null;
+        if (hash_mechanism != null) {
+            hash = hasher.createAndInit(hash_mechanism.?) catch
+                return PkcsError.HostMemory;
+        } else msg_buffer = std.ArrayList(u8).empty;
+
+        return Sign{
+            .private_key = private_key,
+            .key_size = key_size,
+            .sign_type = sign_type,
+            .hasher = hash,
+            .msg_buffer = msg_buffer,
+            .multipart_operation = false,
+        };
+    }
+
     pub fn update(self: *Sign, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
         switch (self.sign_type) {
             .DigestAndSign => self.hasher.?.update(data),
@@ -95,6 +116,27 @@ pub const Verify = struct {
     multipart_operation: bool,
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
+
+    pub fn init(mechanism: pkcs.CK_MECHANISM_TYPE, key_size: usize, private_key: c_ulong) PkcsError!Verify {
+        const sign_type = try signTypeFromMechanism(mechanism);
+        const hash_mechanism = try hasher.fromSignMechanism(mechanism);
+
+        var hash: ?hasher.Hasher = null;
+        var msg_buffer: ?std.ArrayList(u8) = null;
+        if (hash_mechanism != null) {
+            hash = hasher.createAndInit(hash_mechanism.?) catch
+                return PkcsError.HostMemory;
+        } else msg_buffer = std.ArrayList(u8).empty;
+
+        return Verify{
+            .hasher = hash,
+            .key_size = key_size,
+            .sign_type = sign_type,
+            .multipart_operation = false,
+            .private_key = private_key,
+            .msg_buffer = msg_buffer,
+        };
+    }
 
     pub fn update(self: *Verify, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
         switch (self.sign_type) {
@@ -656,4 +698,175 @@ test "pkcs1 padded request with valid length" {
     try std.testing.expectEqual(null, msg_buffer);
 
     std.testing.allocator.free(result);
+}
+
+test "sign and verify" {
+    const TestKey = struct {
+        modulus: []u8,
+        public_exponent: []u8,
+        private_exponent: []u8,
+
+        fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+            allocator.free(self.modulus);
+            allocator.free(self.public_exponent);
+            allocator.free(self.private_exponent);
+        }
+    };
+
+    const TestHelper = struct {
+        fn buildSignedBlock(sign_request: []const u8, plain_sign: bool) [signature_size]u8 {
+            var block: [signature_size]u8 = [_]u8{0x00} ** signature_size;
+
+            if (plain_sign) {
+                std.debug.assert(sign_request.len == signature_size);
+                @memcpy(&block, sign_request);
+                return block;
+            }
+
+            const data_start = signature_size - sign_request.len;
+            block[1] = 0x01;
+            @memset(block[2 .. data_start - 1], 0xff);
+            @memcpy(block[data_start..], sign_request);
+
+            return block;
+        }
+
+        fn decodePem(allocator: std.mem.Allocator, pem: []const u8) ![]u8 {
+            var base64 = std.ArrayList(u8).empty;
+            defer base64.deinit(allocator);
+            var lines = std.mem.tokenizeScalar(u8, pem, '\n');
+            while (lines.next()) |line| {
+                const trimmed = std.mem.trim(u8, line, " \r\t");
+                if (trimmed.len == 0 or std.mem.startsWith(u8, trimmed, "-----"))
+                    continue;
+                try base64.appendSlice(allocator, trimmed);
+            }
+            const decoder = std.base64.standard.Decoder;
+            const len = try decoder.calcSizeForSlice(base64.items);
+            const der = try allocator.alloc(u8, len);
+            errdefer allocator.free(der);
+            try decoder.decode(der, base64.items);
+            return der;
+        }
+
+        fn rsaOp(modulus: []const u8, exponent: []const u8, input: []const u8) ![signature_size]u8 {
+            const Modulus = std.crypto.ff.Modulus(4096);
+
+            const n = try Modulus.fromBytes(modulus, .big);
+            const m = try Modulus.Fe.fromBytes(n, input, .big);
+            const result = try n.powWithEncodedExponent(m, exponent, .big);
+
+            var out: [signature_size]u8 = undefined;
+            try result.toBytes(&out, .big);
+
+            return out;
+        }
+
+        fn trimLeadingZeros(bytes: []const u8) []const u8 {
+            var i: usize = 0;
+            while (i < bytes.len and bytes[i] == 0x00)
+                i += 1;
+            return bytes[i..];
+        }
+
+        fn loadTestRsaKey(allocator: std.mem.Allocator, tio: std.Io) !TestKey {
+            const pem = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, "testdata/test.key", allocator, .unlimited);
+            defer allocator.free(pem);
+            const der = try decodePem(allocator, pem);
+            defer allocator.free(der);
+            const Element = std.crypto.Certificate.der.Element;
+
+            const private_key_info = try Element.parse(der, 0);
+            const pki_version = try Element.parse(der, private_key_info.slice.start);
+            const algorithm = try Element.parse(der, pki_version.slice.end);
+            const private_key_octet = try Element.parse(der, algorithm.slice.end);
+
+            const rsa_private_key = try Element.parse(der, private_key_octet.slice.start);
+            const rsa_version = try Element.parse(der, rsa_private_key.slice.start);
+            const modulus_elem = try Element.parse(der, rsa_version.slice.end);
+            const public_exponent_elem = try Element.parse(der, modulus_elem.slice.end);
+            const private_exponent_elem = try Element.parse(der, public_exponent_elem.slice.end);
+
+            const modulus = try allocator.dupe(u8, trimLeadingZeros(der[modulus_elem.slice.start..modulus_elem.slice.end]));
+            errdefer allocator.free(modulus);
+            const public_exponent = try allocator.dupe(u8, trimLeadingZeros(der[public_exponent_elem.slice.start..public_exponent_elem.slice.end]));
+            errdefer allocator.free(public_exponent);
+            const private_exponent = try allocator.dupe(u8, trimLeadingZeros(der[private_exponent_elem.slice.start..private_exponent_elem.slice.end]));
+            errdefer allocator.free(private_exponent);
+
+            return TestKey{
+                .modulus = modulus,
+                .public_exponent = public_exponent,
+                .private_exponent = private_exponent,
+            };
+        }
+    };
+
+    const ta = std.testing.allocator;
+    const tio = std.testing.io;
+
+    var key = try TestHelper.loadTestRsaKey(ta, tio);
+    defer key.deinit(ta);
+
+    const mechanisms = [_]pkcs.CK_MECHANISM_TYPE{
+        pkcs.CKM_RSA_X_509,
+        pkcs.CKM_RSA_PKCS,
+        pkcs.CKM_MD5_RSA_PKCS,
+        pkcs.CKM_SHA1_RSA_PKCS,
+        pkcs.CKM_SHA256_RSA_PKCS,
+        pkcs.CKM_SHA384_RSA_PKCS,
+        pkcs.CKM_SHA512_RSA_PKCS,
+        pkcs.CKM_RIPEMD160_RSA_PKCS,
+    };
+
+    const data = &[_][]const u8{
+        &[_]u8{},
+        &[_]u8{0x00},
+        &[_]u8{ 0x01, 0x02, 0x03 },
+        &([_]u8{0xAB} ** 245),
+        &([_]u8{0x00} ++ [_]u8{0x01} ** (signature_size - 1)),
+    };
+
+    for (data) |d| {
+        for (mechanisms) |m| {
+            if (m == pkcs.CKM_RSA_X_509 and d.len != signature_size)
+                continue;
+
+            if (m != pkcs.CKM_RSA_X_509 and d.len != 245)
+                continue;
+
+            var sign_operation = try Sign.init(m, key.modulus.len, 1);
+            defer sign_operation.deinit(ta);
+
+            try sign_operation.update(ta, d);
+
+            const sign_request = try sign_operation.createSignRequest(ta);
+            defer ta.free(sign_request);
+
+            const plain_sign = sign_operation.sign_type != .DigestAndSign;
+            const block = TestHelper.buildSignedBlock(sign_request, plain_sign);
+
+            const signature = try TestHelper.rsaOp(key.modulus, key.private_exponent, &block);
+
+            const recovered = try TestHelper.rsaOp(key.modulus, key.public_exponent, &signature);
+            try std.testing.expectEqualSlices(u8, &block, &recovered);
+
+            var verify_operation = try Verify.init(m, key.modulus.len, 1);
+            defer verify_operation.deinit(ta);
+
+            try verify_operation.update(ta, d);
+
+            const verify_request = try verify_operation.createSignRequest(ta);
+            defer ta.free(verify_request);
+
+            const verify_block = TestHelper.buildSignedBlock(verify_request, plain_sign);
+            const recomputed = try TestHelper.rsaOp(key.modulus, key.private_exponent, &verify_block);
+
+            try std.testing.expectEqualSlices(u8, &signature, &recomputed);
+
+            var tampered = signature;
+            tampered[0] ^= 0xff;
+            try std.testing.expect(!std.mem.eql(u8, &recomputed, &tampered));
+        }
+    }
 }

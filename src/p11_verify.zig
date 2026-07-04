@@ -25,21 +25,6 @@ pub export fn C_VerifyInit(
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    const sign_type = operation.signTypeFromMechanism(mechanism.?.mechanism) catch |err|
-        return pkcs_error.toRV(err);
-
-    const hash_mechanism = hasher.fromSignMechanism(mechanism.?.mechanism) catch |err|
-        return pkcs_error.toRV(err);
-
-    var hash: ?hasher.Hasher = null;
-    var msg_buffer: ?std.ArrayList(u8) = null;
-    if (hash_mechanism != null) {
-        hash = hasher.createAndInit(hash_mechanism.?) catch
-            return pkcs.CKR_HOST_MEMORY;
-    } else {
-        msg_buffer = std.ArrayList(u8).empty;
-    }
-
     const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
@@ -57,15 +42,15 @@ pub export fn C_VerifyInit(
     const private_key_handle = consts.getPrivateKeyFormPublicKey(key) catch |err|
         return pkcs_error.toRV(err);
 
+    const verify_operation = operation.Verify.init(
+        mechanism.?.mechanism,
+        found_object.public_key.modulus.len,
+        private_key_handle,
+    ) catch |err|
+        return pkcs_error.toRV(err);
+
     current_session.operation = operation.Operation{
-        .verify = operation.Verify{
-            .hasher = hash,
-            .key_size = found_object.public_key.modulus.len,
-            .sign_type = sign_type,
-            .multipart_operation = false,
-            .private_key = private_key_handle,
-            .msg_buffer = msg_buffer,
-        },
+        .verify = verify_operation,
     };
 
     return pkcs.CKR_OK;
