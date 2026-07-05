@@ -309,7 +309,7 @@ pub const Card = struct {
         key_id: u8,
         decrypt_request: []u8,
     ) PkcsError![]u8 {
-        if (decrypt_request.len != 256)
+        if (decrypt_request.len >= 256)
             return PkcsError.GeneralError;
 
         const body = [_]u8{ 0x80, 0x01, 0x00, 0x84, 0x02, 0x60, key_id };

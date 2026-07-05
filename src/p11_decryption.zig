@@ -107,6 +107,10 @@ pub export fn C_Decrypt(
 
     const decrypt_request = current_operation.createDecryptRequest(current_session.allocator) catch |err|
         return pkcs_error.toRV(err);
+    defer current_session.allocator.free(decrypt_request);
+
+    if (decrypt_request.len != current_operation.key_size)
+        return pkcs.CKR_ENCRYPTED_DATA_LEN_RANGE;
 
     const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
         return pkcs_error.toRV(err);
@@ -206,6 +210,10 @@ pub export fn C_DecryptFinal(
 
     const decrypt_request = current_operation.createDecryptRequest(current_session.allocator) catch |err|
         return pkcs_error.toRV(err);
+    defer current_session.allocator.free(decrypt_request);
+
+    if (decrypt_request.len != current_operation.key_size)
+        return pkcs.CKR_ENCRYPTED_DATA_LEN_RANGE;
 
     const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
         return pkcs_error.toRV(err);

@@ -120,6 +120,7 @@ pub export fn C_Encrypt(
 
     const computed_encrypted_data = current_operation.encrypt(current_session.allocator, state.io) catch |err|
         return pkcs_error.toRV(err);
+    defer current_session.allocator.free(computed_encrypted_data);
 
     if (computed_encrypted_data.len > encrypted_data_len.?.*)
         return pkcs.CKR_GENERAL_ERROR;
@@ -211,6 +212,7 @@ pub export fn C_EncryptFinal(
 
     const computed_encrypted_data = current_operation.encrypt(current_session.allocator, state.io) catch |err|
         return pkcs_error.toRV(err);
+    defer current_session.allocator.free(computed_encrypted_data);
 
     if (computed_encrypted_data.len > last_encrypted_part_len.?.*)
         return pkcs.CKR_GENERAL_ERROR;

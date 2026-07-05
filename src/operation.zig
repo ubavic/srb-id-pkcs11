@@ -314,12 +314,12 @@ pub const Decrypt = struct {
         for (data, 0..) |b, i| {
             start_index += 1;
 
-            if (b == 0 and i > 0)
+            if (b == 0x00 and i > 0)
                 break;
         }
 
         if (start_index >= data.len)
-            return PkcsError.GeneralError;
+            return PkcsError.EncryptedDataInvalid;
 
         return data[start_index..];
     }
@@ -683,7 +683,7 @@ test "strip pad padded malformed" {
 
     for (test_cases) |tc| {
         const result = decrypt.stripPad(tc);
-        try std.testing.expectError(PkcsError.GeneralError, result);
+        try std.testing.expectError(PkcsError.EncryptedDataInvalid, result);
     }
 }
 

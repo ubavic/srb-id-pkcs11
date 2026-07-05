@@ -33,6 +33,8 @@ pub const PkcsError = error{
     UserNotLoggedIn,
     CryptokiNotInitialized,
     DataLenRange,
+    EncryptedDataInvalid,
+    EncryptedDataLenRange,
 };
 
 pub fn toRV(err: PkcsError) pkcs.CK_RV {
@@ -68,6 +70,8 @@ pub fn toRV(err: PkcsError) pkcs.CK_RV {
         PkcsError.UserNotLoggedIn => pkcs.CKR_USER_NOT_LOGGED_IN,
         PkcsError.CryptokiNotInitialized => pkcs.CKR_CRYPTOKI_NOT_INITIALIZED,
         PkcsError.DataLenRange => pkcs.CKR_DATA_LEN_RANGE,
+        PkcsError.EncryptedDataInvalid => pkcs.CKR_ENCRYPTED_DATA_INVALID,
+        PkcsError.EncryptedDataLenRange => pkcs.CKR_ENCRYPTED_DATA_LEN_RANGE,
     };
 }
 
