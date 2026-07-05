@@ -221,8 +221,7 @@ pub const Card = struct {
         if (!validatePin(old_pin))
             return PkcsError.PinIncorrect;
 
-        if (!validatePin(new_pin))
-            return PkcsError.PinIncorrect;
+        try validateNewPin(new_pin);
 
         try self.verifyPin(allocator, old_pin);
 
@@ -390,6 +389,16 @@ fn validatePin(pin: []const u8) bool {
     return true;
 }
 
+fn validateNewPin(pin: []const u8) PkcsError!void {
+    if (pin.len < 4 or pin.len > 8)
+        return PkcsError.PinLenRange;
+
+    for (pin) |p| {
+        if (p < '0' or p > '9')
+            return PkcsError.PinInvalid;
+    }
+}
+
 fn parseTokenInfo(data: []const u8) CardsTokenInfo {
     var token_info = CardsTokenInfo{};
 
@@ -428,7 +437,7 @@ test "Pad pin" {
     }
 }
 
-test "Validate pin" {
+test "validate pin" {
     const test_cases = [_]struct {
         pin: []const u8,
         expected: bool,
@@ -445,9 +454,26 @@ test "Validate pin" {
         .{ .pin = "01234567", .expected = true },
     };
 
-    for (test_cases) |tc| {
+    for (test_cases) |tc|
         try std.testing.expect(validatePin(tc.pin) == tc.expected);
-    }
+}
+
+test "validate new pin" {
+    const test_cases = [_]struct {
+        pin: []const u8,
+        expected: PkcsError,
+    }{
+        .{ .pin = "", .expected = PkcsError.PinLenRange },
+        .{ .pin = "1", .expected = PkcsError.PinLenRange },
+        .{ .pin = "123456789", .expected = PkcsError.PinLenRange },
+        .{ .pin = "123A", .expected = PkcsError.PinInvalid },
+        .{ .pin = "abcd", .expected = PkcsError.PinInvalid },
+        .{ .pin = "01w1", .expected = PkcsError.PinInvalid },
+        .{ .pin = "#+()", .expected = PkcsError.PinInvalid },
+    };
+
+    for (test_cases) |tc|
+        try std.testing.expectError(tc.expected, validateNewPin(tc.pin));
 }
 
 test "Response OK" {
