@@ -51,15 +51,18 @@ pub const Session = struct {
     }
 
     pub fn assertOperation(self: *Session, kind: operation.Type) PkcsError!void {
-        return switch (self.operation) {
-            .none => if (kind == operation.Type.None) {} else PkcsError.OperationNotInitialized,
-            .digest => if (kind == operation.Type.Digest) {} else PkcsError.OperationActive,
-            .sign => if (kind == operation.Type.Sign) {} else PkcsError.OperationActive,
-            .verify => if (kind == operation.Type.Verify) {} else PkcsError.OperationActive,
-            .encrypt => if (kind == operation.Type.Encrypt) {} else PkcsError.OperationActive,
-            .decrypt => if (kind == operation.Type.Decrypt) {} else PkcsError.OperationActive,
-            .search => if (kind == operation.Type.Search) {} else PkcsError.OperationActive,
+        const active: operation.Type = switch (self.operation) {
+            .none => .None,
+            .digest => .Digest,
+            .sign => .Sign,
+            .verify => .Verify,
+            .encrypt => .Encrypt,
+            .decrypt => .Decrypt,
+            .search => .Search,
         };
+
+        if (active != kind)
+            return PkcsError.OperationNotInitialized;
     }
 
     pub fn slot(self: *Session) void {
