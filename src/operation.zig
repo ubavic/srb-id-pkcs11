@@ -14,9 +14,6 @@ const sha384_prefix: [19]u8 = [_]u8{ 0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0
 const sha512_prefix: [19]u8 = [_]u8{ 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40 };
 const ripemd160_prefix: [15]u8 = [_]u8{ 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B, 0x24, 0x03, 0x02, 0x01, 0x05, 0x00, 0x04, 0x14 };
 
-pub const signature_size: usize = 256;
-pub const encrypted_data_size: usize = 256;
-
 pub const SignType = enum {
     RawRsa,
     Pkcs1Pad,
@@ -101,6 +98,10 @@ pub const Sign = struct {
         };
     }
 
+    pub fn keySizeBytes(self: *Sign) usize {
+        return self.key_size;
+    }
+
     pub fn deinit(self: *Sign, allocator: std.mem.Allocator) void {
         self.hasher = null;
 
@@ -150,8 +151,7 @@ pub const Verify = struct {
         const sign_request = try self.createVerifyBlock(allocator);
         defer allocator.free(sign_request);
 
-        const max_modulus_bits = 4096;
-        const Modulus = std.crypto.ff.Modulus(max_modulus_bits);
+        const Modulus = std.crypto.ff.Modulus(4096);
         const Fe = Modulus.Fe;
 
         const sig_fe = Fe.fromBytes(self.public_key.n, signature, .big) catch
@@ -160,15 +160,18 @@ pub const Verify = struct {
         const recovered = self.public_key.n.powPublic(sig_fe, self.public_key.e) catch
             return PkcsError.SignatureInvalid;
 
-        var recovered_bytes: [256]u8 = undefined;
-        recovered.toBytes(&recovered_bytes, .big) catch
+        const recovered_bytes = allocator.alloc(u8, self.keySizeBytes()) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(recovered_bytes);
+
+        recovered.toBytes(recovered_bytes, .big) catch
             return PkcsError.GeneralError;
 
-        if (sign_request.len != 256)
+        if (sign_request.len != self.keySizeBytes())
             return PkcsError.GeneralError;
 
         var mismatch: u16 = 0;
-        for (recovered_bytes, sign_request[0..256]) |a, b|
+        for (recovered_bytes, sign_request[0..]) |a, b|
             mismatch |= a ^ b;
 
         if (mismatch != 0)
@@ -181,6 +184,10 @@ pub const Verify = struct {
             .Pkcs1Pad => createPkcs1PaddedSignRequest(&self.msg_buffer, allocator, self.public_key.n.bits() / 8),
             .DigestAndSign => createPkcs1PaddedHashRequest(&self.hasher.?, allocator, self.public_key.n.bits() / 8),
         };
+    }
+
+    pub fn keySizeBytes(self: *Verify) usize {
+        return self.public_key.n.bits() / 8;
     }
 
     pub fn deinit(self: *Verify, allocator: std.mem.Allocator) void {
@@ -206,14 +213,18 @@ pub const Encrypt = struct {
         return &[_]u8{};
     }
 
-    fn pad(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![256]u8 {
-        var buf: [256]u8 = [1]u8{0x00} ** encrypted_data_size;
+    fn pad(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![]u8 {
+        var buf = allocator.alloc(u8, self.keySizeBytes()) catch
+            return PkcsError.HostMemory;
+        errdefer allocator.free(buf);
+
+        @memset(buf, 0x00);
 
         if (self.raw) {
-            if (self.msg_buffer.items.len != encrypted_data_size)
+            if (self.msg_buffer.items.len != self.keySizeBytes())
                 return PkcsError.DataLenRange;
         } else {
-            if (self.msg_buffer.items.len > encrypted_data_size - 11)
+            if (self.msg_buffer.items.len > self.keySizeBytes() - 11)
                 return PkcsError.DataLenRange;
         }
 
@@ -224,7 +235,7 @@ pub const Encrypt = struct {
 
         if (!self.raw) {
             const rand: std.Random.IoSource = .{ .io = io };
-            const difference: usize = encrypted_data_size - msg.len - 3;
+            const difference: usize = self.keySizeBytes() - msg.len - 3;
 
             buf[1] = 0x02;
 
@@ -233,20 +244,20 @@ pub const Encrypt = struct {
             }
         }
 
-        @memcpy(buf[(encrypted_data_size - msg.len)..], msg);
+        @memcpy(buf[(self.keySizeBytes() - msg.len)..], msg);
 
         return buf;
     }
 
-    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![256]u8 {
+    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![]u8 {
         const rsa_public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(self.exponent, self.modulus) catch
             return PkcsError.GeneralError;
 
-        const max_modulus_bits = 4096;
-        const Modulus = std.crypto.ff.Modulus(max_modulus_bits);
+        const Modulus = std.crypto.ff.Modulus(4096);
         const Fe = Modulus.Fe;
 
         const buffer = try self.pad(allocator, io);
+        defer allocator.free(buffer);
 
         const m = Fe.fromBytes(rsa_public_key.n, buffer[0..], .big) catch
             return PkcsError.GeneralError;
@@ -254,11 +265,18 @@ pub const Encrypt = struct {
         const e = rsa_public_key.n.powPublic(m, rsa_public_key.e) catch
             return PkcsError.GeneralError;
 
-        var result: [256]u8 = undefined;
-        e.toBytes(&result, .big) catch
+        const result = allocator.alloc(u8, self.keySizeBytes()) catch
+            return PkcsError.HostMemory;
+        errdefer allocator.free(result);
+
+        e.toBytes(result, .big) catch
             return PkcsError.HostMemory;
 
         return result;
+    }
+
+    pub fn keySizeBytes(self: *Encrypt) usize {
+        return self.modulus.len;
     }
 
     pub fn deinit(self: *Encrypt, allocator: std.mem.Allocator) void {
@@ -271,6 +289,7 @@ pub const Encrypt = struct {
 pub const Decrypt = struct {
     multipart_operation: bool,
     private_key: pkcs.CK_OBJECT_HANDLE,
+    key_size: usize,
     msg_buffer: std.ArrayList(u8),
     raw: bool,
 
@@ -303,6 +322,10 @@ pub const Decrypt = struct {
             return PkcsError.GeneralError;
 
         return data[start_index..];
+    }
+
+    pub fn keySizeBytes(self: *Decrypt) usize {
+        return self.key_size;
     }
 
     pub fn deinit(self: *Decrypt, allocator: std.mem.Allocator) void {
@@ -585,6 +608,7 @@ test "sha256" {
 test "strip pad raw" {
     const decrypt = Decrypt{
         .private_key = 0,
+        .key_size = 256,
         .multipart_operation = false,
         .msg_buffer = std.ArrayList(u8).empty,
         .raw = true,
@@ -607,6 +631,7 @@ test "strip pad raw" {
 test "strip pad padded" {
     const decrypt = Decrypt{
         .private_key = 0,
+        .key_size = 256,
         .multipart_operation = false,
         .msg_buffer = std.ArrayList(u8).empty,
         .raw = false,
@@ -645,6 +670,7 @@ test "strip pad padded malformed" {
         .private_key = 0,
         .multipart_operation = false,
         .msg_buffer = std.ArrayList(u8).empty,
+        .key_size = 256,
         .raw = false,
     };
 
@@ -667,6 +693,7 @@ test "pad and strip" {
         .multipart_operation = false,
         .msg_buffer = std.ArrayList(u8).empty,
         .raw = false,
+        .key_size = 256,
     };
 
     const test_cases = [_][]const u8{
@@ -682,18 +709,19 @@ test "pad and strip" {
         var encrypt = Encrypt{
             .public_key = 0,
             .multipart_operation = false,
-            .modulus = &[_]u8{ 0x01, 0x02, 0x00 },
-            .exponent = &[_]u8{ 0x01, 0x02, 0x00 },
+            .modulus = &([_]u8{0x01} ** 256),
+            .exponent = &([_]u8{0x01} ** 256),
             .msg_buffer = std.ArrayList(u8).empty,
             .raw = false,
         };
+        defer encrypt.msg_buffer.deinit(std.testing.allocator);
 
         _ = try encrypt.update(std.testing.allocator, tc);
 
         const padded = try encrypt.pad(std.testing.allocator, io);
-        defer encrypt.msg_buffer.deinit(std.testing.allocator);
+        defer std.testing.allocator.free(padded);
 
-        const result = try decrypt.stripPad(&padded);
+        const result = try decrypt.stripPad(padded);
 
         try std.testing.expectEqualSlices(u8, tc, result);
     }
@@ -751,20 +779,95 @@ test "pkcs1 padded request with valid length" {
     std.testing.allocator.free(result);
 }
 
-test "sign and verify" {
-    const TestKey = struct {
-        modulus: []u8,
-        public_exponent: []u8,
-        private_exponent: []u8,
+const TestKey = struct {
+    modulus: []u8,
+    public_exponent: []u8,
+    private_exponent: []u8,
 
-        fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
-            allocator.free(self.modulus);
-            allocator.free(self.public_exponent);
-            allocator.free(self.private_exponent);
+    fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        allocator.free(self.modulus);
+        allocator.free(self.public_exponent);
+        allocator.free(self.private_exponent);
+    }
+};
+
+fn TestHelper(signature_size: usize) type {
+    return struct {
+        const Self = @This();
+
+        key: TestKey,
+
+        pub fn loadRsaKey(allocator: std.mem.Allocator, io: std.Io, filename: []const u8) !@This() {
+            const pem = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), io, filename, allocator, .unlimited);
+            defer allocator.free(pem);
+            const der = try decodePem(allocator, pem);
+            defer allocator.free(der);
+            const Element = std.crypto.Certificate.der.Element;
+
+            const private_key_info = try Element.parse(der, 0);
+            const pki_version = try Element.parse(der, private_key_info.slice.start);
+            const algorithm = try Element.parse(der, pki_version.slice.end);
+            const private_key_octet = try Element.parse(der, algorithm.slice.end);
+
+            const rsa_private_key = try Element.parse(der, private_key_octet.slice.start);
+            const rsa_version = try Element.parse(der, rsa_private_key.slice.start);
+            const modulus_elem = try Element.parse(der, rsa_version.slice.end);
+            const public_exponent_elem = try Element.parse(der, modulus_elem.slice.end);
+            const private_exponent_elem = try Element.parse(der, public_exponent_elem.slice.end);
+
+            const modulus = try allocator.dupe(u8, trimLeadingZeros(der[modulus_elem.slice.start..modulus_elem.slice.end]));
+            errdefer allocator.free(modulus);
+            const public_exponent = try allocator.dupe(u8, trimLeadingZeros(der[public_exponent_elem.slice.start..public_exponent_elem.slice.end]));
+            errdefer allocator.free(public_exponent);
+            const private_exponent = try allocator.dupe(u8, trimLeadingZeros(der[private_exponent_elem.slice.start..private_exponent_elem.slice.end]));
+            errdefer allocator.free(private_exponent);
+
+            return Self{
+                .key = TestKey{
+                    .modulus = modulus,
+                    .public_exponent = public_exponent,
+                    .private_exponent = private_exponent,
+                },
+            };
         }
-    };
 
-    const TestHelper = struct {
+        pub fn testKernel(self: Self, m: pkcs.CK_MECHANISM_TYPE, ta: std.mem.Allocator, d: []const u8) !void {
+            if (m == pkcs.CKM_RSA_X_509 and d.len != signature_size)
+                return;
+
+            if (m != pkcs.CKM_RSA_X_509 and d.len != signature_size - 11)
+                return;
+
+            const public_key = try std.crypto.Certificate.rsa.PublicKey.fromBytes(self.key.public_exponent, self.key.modulus);
+
+            var sign_operation = try Sign.init(m, self.key.modulus.len, 1);
+            defer sign_operation.deinit(ta);
+
+            try sign_operation.update(ta, d);
+
+            const sign_request = try sign_operation.createSignRequest(ta);
+            defer ta.free(sign_request);
+
+            const plain_sign = sign_operation.sign_type != .DigestAndSign;
+            const block = buildSignedBlock(sign_request, plain_sign);
+
+            const signature = try rsaOp(self.key.modulus, self.key.private_exponent, &block);
+
+            var verify_operation = try Verify.init(m, public_key);
+            defer verify_operation.deinit(ta);
+            try verify_operation.update(ta, d);
+
+            try verify_operation.verify(ta, &signature);
+
+            var verify_operation_tampered = try Verify.init(m, public_key);
+            defer verify_operation_tampered.deinit(ta);
+            try verify_operation_tampered.update(ta, d);
+
+            var tampered = signature;
+            tampered[0] ^= 0xff;
+            try std.testing.expectError(PkcsError.SignatureInvalid, verify_operation_tampered.verify(ta, &tampered));
+        }
+
         fn buildSignedBlock(sign_request: []const u8, plain_sign: bool) [signature_size]u8 {
             var block: [signature_size]u8 = [_]u8{0x00} ** signature_size;
 
@@ -801,7 +904,7 @@ test "sign and verify" {
         }
 
         fn rsaOp(modulus: []const u8, exponent: []const u8, input: []const u8) ![signature_size]u8 {
-            const Modulus = std.crypto.ff.Modulus(4096);
+            const Modulus = std.crypto.ff.Modulus(signature_size * 8);
 
             const n = try Modulus.fromBytes(modulus, .big);
             const m = try Modulus.Fe.fromBytes(n, input, .big);
@@ -819,47 +922,12 @@ test "sign and verify" {
                 i += 1;
             return bytes[i..];
         }
-
-        fn loadTestRsaKey(allocator: std.mem.Allocator, tio: std.Io) !TestKey {
-            const pem = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, "testdata/test.key", allocator, .unlimited);
-            defer allocator.free(pem);
-            const der = try decodePem(allocator, pem);
-            defer allocator.free(der);
-            const Element = std.crypto.Certificate.der.Element;
-
-            const private_key_info = try Element.parse(der, 0);
-            const pki_version = try Element.parse(der, private_key_info.slice.start);
-            const algorithm = try Element.parse(der, pki_version.slice.end);
-            const private_key_octet = try Element.parse(der, algorithm.slice.end);
-
-            const rsa_private_key = try Element.parse(der, private_key_octet.slice.start);
-            const rsa_version = try Element.parse(der, rsa_private_key.slice.start);
-            const modulus_elem = try Element.parse(der, rsa_version.slice.end);
-            const public_exponent_elem = try Element.parse(der, modulus_elem.slice.end);
-            const private_exponent_elem = try Element.parse(der, public_exponent_elem.slice.end);
-
-            const modulus = try allocator.dupe(u8, trimLeadingZeros(der[modulus_elem.slice.start..modulus_elem.slice.end]));
-            errdefer allocator.free(modulus);
-            const public_exponent = try allocator.dupe(u8, trimLeadingZeros(der[public_exponent_elem.slice.start..public_exponent_elem.slice.end]));
-            errdefer allocator.free(public_exponent);
-            const private_exponent = try allocator.dupe(u8, trimLeadingZeros(der[private_exponent_elem.slice.start..private_exponent_elem.slice.end]));
-            errdefer allocator.free(private_exponent);
-
-            return TestKey{
-                .modulus = modulus,
-                .public_exponent = public_exponent,
-                .private_exponent = private_exponent,
-            };
-        }
     };
+}
 
+test "sign and verify" {
     const ta = std.testing.allocator;
     const tio = std.testing.io;
-
-    var key = try TestHelper.loadTestRsaKey(ta, tio);
-    defer key.deinit(ta);
-
-    const public_key = try std.crypto.Certificate.rsa.PublicKey.fromBytes(key.public_exponent, key.modulus);
 
     const mechanisms = [_]pkcs.CK_MECHANISM_TYPE{
         pkcs.CKM_RSA_X_509,
@@ -872,48 +940,33 @@ test "sign and verify" {
         pkcs.CKM_RIPEMD160_RSA_PKCS,
     };
 
-    const data = &[_][]const u8{
+    const data_1024 = &[_][]const u8{
         &[_]u8{},
         &[_]u8{0x00},
         &[_]u8{ 0x01, 0x02, 0x03 },
-        &([_]u8{0xAB} ** 245),
-        &([_]u8{0x00} ++ [_]u8{0x01} ** (signature_size - 1)),
+        &([_]u8{0xAB} ** (128 - 11)),
+        &([_]u8{0x00} ++ [_]u8{0x01} ** (128 - 1)),
     };
 
-    for (data) |d| {
-        for (mechanisms) |m| {
-            if (m == pkcs.CKM_RSA_X_509 and d.len != signature_size)
-                continue;
+    var test_helper_1024 = try TestHelper(128).loadRsaKey(ta, tio, "testdata/1024.key");
+    defer test_helper_1024.key.deinit(ta);
 
-            if (m != pkcs.CKM_RSA_X_509 and d.len != 245)
-                continue;
+    for (data_1024) |d|
+        for (mechanisms) |m|
+            try test_helper_1024.testKernel(m, ta, d);
 
-            var sign_operation = try Sign.init(m, key.modulus.len, 1);
-            defer sign_operation.deinit(ta);
+    const data_2048 = &[_][]const u8{
+        &[_]u8{},
+        &[_]u8{0x00},
+        &[_]u8{ 0x01, 0x02, 0x03 },
+        &([_]u8{0xAB} ** (256 - 11)),
+        &([_]u8{0x00} ++ [_]u8{0x01} ** (256 - 1)),
+    };
 
-            try sign_operation.update(ta, d);
+    var test_helper_2048 = try TestHelper(256).loadRsaKey(ta, tio, "testdata/2048.key");
+    defer test_helper_2048.key.deinit(ta);
 
-            const sign_request = try sign_operation.createSignRequest(ta);
-            defer ta.free(sign_request);
-
-            const plain_sign = sign_operation.sign_type != .DigestAndSign;
-            const block = TestHelper.buildSignedBlock(sign_request, plain_sign);
-
-            const signature = try TestHelper.rsaOp(key.modulus, key.private_exponent, &block);
-
-            var verify_operation = try Verify.init(m, public_key);
-            defer verify_operation.deinit(ta);
-            try verify_operation.update(ta, d);
-
-            try verify_operation.verify(ta, &signature);
-
-            var verify_operation_tampered = try Verify.init(m, public_key);
-            defer verify_operation_tampered.deinit(ta);
-            try verify_operation_tampered.update(ta, d);
-
-            var tampered = signature;
-            tampered[0] ^= 0xff;
-            try std.testing.expectError(PkcsError.SignatureInvalid, verify_operation_tampered.verify(ta, &tampered));
-        }
-    }
+    for (data_2048) |d|
+        for (mechanisms) |m|
+            try test_helper_2048.testKernel(m, ta, d);
 }

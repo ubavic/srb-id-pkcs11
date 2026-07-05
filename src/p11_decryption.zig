@@ -49,6 +49,7 @@ pub export fn C_DecryptInit(
     current_session.operation = operation.Operation{
         .decrypt = operation.Decrypt{
             .private_key = key,
+            .key_size = found_object.private_key.modulus.len,
             .multipart_operation = false,
             .msg_buffer = std.ArrayList(u8).empty,
             .raw = raw,
@@ -86,7 +87,8 @@ pub export fn C_Decrypt(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_data_size = operation.encrypted_data_size;
+    const required_data_size = current_operation.keySizeBytes();
+
     if (data == null) {
         data_len.?.* = required_data_size;
         return pkcs.CKR_OK;
@@ -190,7 +192,7 @@ pub export fn C_DecryptFinal(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_data_size = operation.encrypted_data_size;
+    const required_data_size = current_operation.keySizeBytes();
 
     if (last_part == null) {
         last_part_len.?.* = required_data_size;

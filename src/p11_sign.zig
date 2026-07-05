@@ -81,7 +81,7 @@ pub export fn C_Sign(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_signature_size = operation.signature_size;
+    const required_signature_size = current_operation.keySizeBytes();
     if (signature == null) {
         signature_len.?.* = required_signature_size;
         return pkcs.CKR_OK;
@@ -172,7 +172,7 @@ pub export fn C_SignFinal(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_signature_size = operation.signature_size;
+    const required_signature_size = current_operation.keySizeBytes();
     if (signature == null) {
         signature_len.?.* = required_signature_size;
         return pkcs.CKR_OK;

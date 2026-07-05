@@ -20,7 +20,11 @@ zig-pkg/
 *.key
 *.pem
 *.der
+*.modulus
+*.serial
+*.tmp
 
 zig
 
-!testdata/test.der
+!testdata/*.key
+!testdata/*.der

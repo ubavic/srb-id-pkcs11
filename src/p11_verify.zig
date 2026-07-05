@@ -85,7 +85,7 @@ pub export fn C_Verify(
     if (current_operation.multipart_operation)
         return pkcs.CKR_FUNCTION_CANCELED;
 
-    if (signature_len != operation.signature_size)
+    if (signature_len != current_operation.keySizeBytes())
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
     current_operation.update(current_session.allocator, data.?[0..data_len]) catch
@@ -146,7 +146,7 @@ pub export fn C_VerifyFinal(
     if (signature == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (signature_len != operation.signature_size)
+    if (signature_len != current_operation.keySizeBytes())
         return pkcs.CKR_SIGNATURE_LEN_RANGE;
 
     current_operation.verify(current_session.allocator, signature.?[0..signature_len]) catch |err|

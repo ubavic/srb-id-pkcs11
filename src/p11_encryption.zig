@@ -100,7 +100,8 @@ pub export fn C_Encrypt(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_encrypted_data_size = operation.encrypted_data_size;
+    const required_encrypted_data_size = current_operation.keySizeBytes();
+
     if (encrypted_data == null) {
         encrypted_data_len.?.* = required_encrypted_data_size;
         return pkcs.CKR_OK;
@@ -196,7 +197,8 @@ pub export fn C_EncryptFinal(
         return pkcs.CKR_ARGUMENTS_BAD;
     }
 
-    const required_encrypted_data_size = operation.encrypted_data_size;
+    const required_encrypted_data_size = current_operation.keySizeBytes();
+
     if (last_encrypted_part == null) {
         last_encrypted_part_len.?.* = required_encrypted_data_size;
         return pkcs.CKR_OK;
