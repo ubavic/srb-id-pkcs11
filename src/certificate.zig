@@ -20,10 +20,8 @@ pub fn loadObjects(
     const parsed = Certificate.parse(cert) catch
         return PkcsError.GeneralError;
 
-    switch (parsed.pub_key_algo) {
-        .rsaEncryption => {},
-        else => return PkcsError.GeneralError,
-    }
+    if (parsed.pub_key_algo != .rsaEncryption)
+        return PkcsError.GeneralError;
 
     const public_key_components = Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
         return PkcsError.GeneralError;
