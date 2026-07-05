@@ -16,7 +16,7 @@ pub export fn C_EncryptInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     if (mechanism == null)
@@ -82,7 +82,7 @@ pub export fn C_Encrypt(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     current_session.assertOperation(operation.Type.Encrypt) catch |err|
@@ -140,7 +140,7 @@ pub export fn C_EncryptUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     current_session.assertOperation(operation.Type.Encrypt) catch |err|
@@ -184,7 +184,7 @@ pub export fn C_EncryptFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     current_session.assertOperation(operation.Type.Encrypt) catch |err|

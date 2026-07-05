@@ -105,7 +105,7 @@ pub export fn C_VerifyUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
+    const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
     current_session.assertOperation(operation.Type.Verify) catch |err|
