@@ -276,7 +276,7 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
         return PkcsError.FunctionFailed;
     defer lock.unlock(state.io);
 
-    var err: ?PkcsError = null;
+    var errored = false;
 
     var sessions_to_close = std.ArrayList(pkcs.CK_SESSION_HANDLE).initCapacity(allocator, sessions.count()) catch
         return PkcsError.HostMemory;
@@ -287,9 +287,8 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
         if (entry.value_ptr.reader_id != slot_id)
             continue;
 
-        entry.value_ptr.closeSession(allocator) catch |e| {
-            err = e;
-            continue;
+        entry.value_ptr.closeSession(allocator) catch {
+            errored = true;
         };
 
         sessions_to_close.append(allocator, entry.key_ptr.*) catch
@@ -299,8 +298,8 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
     for (sessions_to_close.items) |key|
         _ = sessions.remove(key);
 
-    if (err != null)
-        return err.?;
+    if (errored)
+        return PkcsError.GeneralError;
 }
 
 pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sessions: *c_ulong) PkcsError!void {

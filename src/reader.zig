@@ -130,7 +130,9 @@ pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Cl
         if (!reader_state_entry.value_ptr.active)
             continue;
 
-        try reader_state_entry.value_ptr.*.refreshCardPresent(allocator, smart_card_client);
+        reader_state_entry.value_ptr.*.refreshCardPresent(allocator, smart_card_client) catch {
+            reader_state_entry.value_ptr.*.card_present = false;
+        };
     }
 }
 

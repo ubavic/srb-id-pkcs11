@@ -111,6 +111,12 @@ pub export fn C_GetTokenInfo(
     reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
         return pkcs_error.toRV(err);
 
+    if (!reader_state.card_present)
+        return pkcs.CKR_TOKEN_NOT_PRESENT;
+
+    if (!reader_state.recognized)
+        return pkcs.CKR_TOKEN_NOT_RECOGNIZED;
+
     @memcpy(&token_info.?.label, &reader_state.token_label);
     @memcpy(&token_info.?.serialNumber, &reader_state.token_serial_number);
 
