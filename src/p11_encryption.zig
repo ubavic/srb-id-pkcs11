@@ -60,7 +60,6 @@ pub export fn C_EncryptInit(
 
     current_session.operation = operation.Operation{
         .encrypt = operation.Encrypt{
-            .public_key = key,
             .multipart_operation = false,
             .msg_buffer = std.ArrayList(u8).empty,
             .raw = raw,

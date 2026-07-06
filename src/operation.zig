@@ -200,7 +200,6 @@ pub const Verify = struct {
 
 pub const Encrypt = struct {
     multipart_operation: bool,
-    public_key: pkcs.CK_OBJECT_HANDLE,
     modulus: []const u8,
     exponent: []const u8,
     msg_buffer: std.ArrayList(u8),
@@ -707,7 +706,6 @@ test "pad and strip" {
 
     for (test_cases) |tc| {
         var encrypt = Encrypt{
-            .public_key = 0,
             .multipart_operation = false,
             .modulus = &([_]u8{0x01} ** 256),
             .exponent = &([_]u8{0x01} ** 256),
