@@ -57,7 +57,7 @@ pub const Hasher = union(enum) {
     }
 };
 
-pub fn createAndInit(hasherType: HasherType) PkcsError!Hasher {
+pub fn createAndInit(hasherType: HasherType) Hasher {
     return switch (hasherType) {
         HasherType.md5 => Hasher{ .md5 = std.crypto.hash.Md5.init(.{}) },
         HasherType.sha1 => Hasher{ .sha1 = std.crypto.hash.Sha1.init(.{}) },

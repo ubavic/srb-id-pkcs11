@@ -28,27 +28,23 @@ pub export fn C_SignInit(
     const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    switch (found_object.*) {
-        .private_key => {
-            // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-            //     return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+    if (found_object.* != .private_key)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
-            if (found_object.private_key.sign != pkcs.CK_TRUE)
-                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-        },
-        else => return pkcs.CKR_KEY_HANDLE_INVALID,
-    }
+    // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+    //     return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+    if (found_object.private_key.sign != pkcs.CK_TRUE)
+        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
 
     const sign_operation = operation.Sign.init(
-        mechanism.?.mechanism,
+        mechanism,
         found_object.private_key.modulus.len,
         key,
     ) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.operation = operation.Operation{
-        .sign = sign_operation,
-    };
+    current_session.operation = .{ .sign = sign_operation };
 
     return pkcs.CKR_OK;
 }

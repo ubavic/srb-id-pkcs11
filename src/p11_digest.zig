@@ -17,24 +17,13 @@ pub export fn C_DigestInit(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
-
-    const hash_mechanism = hasher.fromDigestMechanism(mechanism.?.mechanism) catch |err|
-        return pkcs_error.toRV(err);
-
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
-    const hash = hasher.createAndInit(hash_mechanism) catch
-        return pkcs.CKR_HOST_MEMORY;
+    const digest_operation = operation.Digest.init(mechanism) catch |err|
+        return pkcs_error.toRV(err);
 
-    current_session.operation = operation.Operation{
-        .digest = operation.Digest{
-            .hasher = hash,
-            .multipart_operation = false,
-        },
-    };
+    current_session.operation = .{ .digest = digest_operation };
 
     return pkcs.CKR_OK;
 }

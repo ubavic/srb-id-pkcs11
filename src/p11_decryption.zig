@@ -18,43 +18,26 @@ pub export fn C_DecryptInit(
     const current_session = session.getSession(session_handle, true) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
-
-    var raw: bool = undefined;
-
-    switch (mechanism.?.mechanism) {
-        pkcs.CKM_RSA_PKCS => raw = false,
-        pkcs.CKM_RSA_X_509 => raw = true,
-        else => return pkcs.CKR_MECHANISM_INVALID,
-    }
-
-    if (mechanism.?.ulParameterLen != 0)
-        return pkcs.CKR_MECHANISM_PARAM_INVALID;
-
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
     const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    switch (found_object.*) {
-        .private_key => {
-            if (found_object.private_key.decrypt != pkcs.CK_TRUE)
-                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-        },
-        else => return pkcs.CKR_KEY_HANDLE_INVALID,
-    }
+    if (found_object.* != .private_key)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    current_session.operation = operation.Operation{
-        .decrypt = operation.Decrypt{
-            .private_key = key,
-            .key_size = found_object.private_key.modulus.len,
-            .multipart_operation = false,
-            .msg_buffer = std.ArrayList(u8).empty,
-            .raw = raw,
-        },
-    };
+    if (found_object.private_key.decrypt != pkcs.CK_TRUE)
+        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+
+    const decrypt_operation = operation.Decrypt.init(
+        mechanism,
+        key,
+        found_object.private_key.modulus.len,
+    ) catch |err|
+        return pkcs_error.toRV(err);
+
+    current_session.operation = .{ .decrypt = decrypt_operation };
 
     return pkcs.CKR_OK;
 }

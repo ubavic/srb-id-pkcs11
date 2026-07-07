@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const hasher = @import("hasher.zig");
+const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
 
 const pkcs_error = @import("pkcs_error.zig");
@@ -20,8 +21,11 @@ pub const SignType = enum {
     DigestAndSign,
 };
 
-pub fn signTypeFromMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!SignType {
-    return switch (mechanism) {
+pub fn signTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) PkcsError!SignType {
+    if (mechanism == null)
+        return PkcsError.ArgumentsBad;
+
+    return switch (mechanism.?.*.mechanism) {
         pkcs.CKM_RSA_X_509 => .RawRsa,
         pkcs.CKM_RSA_PKCS => .Pkcs1Pad,
         pkcs.CKM_MD5_RSA_PKCS => .DigestAndSign,
@@ -32,6 +36,19 @@ pub fn signTypeFromMechanism(mechanism: pkcs.CK_MECHANISM_TYPE) PkcsError!SignTy
         pkcs.CKM_RIPEMD160_RSA_PKCS => .DigestAndSign,
         else => return PkcsError.MechanismInvalid,
     };
+}
+
+pub fn encryptTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) PkcsError!bool {
+    if (mechanism == null)
+        return PkcsError.ArgumentsBad;
+
+    if (mechanism.?.mechanism != pkcs.CKM_RSA_PKCS and mechanism.?.mechanism != pkcs.CKM_RSA_X_509)
+        return PkcsError.MechanismInvalid;
+
+    if (mechanism.?.ulParameterLen != 0)
+        return PkcsError.MechanismParamInvalid;
+
+    return mechanism.?.mechanism == pkcs.CKM_RSA_X_509;
 }
 
 pub const Type = enum {
@@ -49,6 +66,19 @@ pub const None = struct {};
 pub const Digest = struct {
     hasher: hasher.Hasher,
     multipart_operation: bool,
+
+    pub fn init(mechanism: ?*pkcs.CK_MECHANISM) PkcsError!Digest {
+        if (mechanism == null)
+            return PkcsError.ArgumentsBad;
+
+        const hash_mechanism = try hasher.fromDigestMechanism(mechanism.?.mechanism);
+        const hash = hasher.createAndInit(hash_mechanism);
+
+        return .{
+            .hasher = hash,
+            .multipart_operation = false,
+        };
+    }
 };
 
 pub const Sign = struct {
@@ -59,18 +89,17 @@ pub const Sign = struct {
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
-    pub fn init(mechanism: pkcs.CK_MECHANISM_TYPE, key_size: usize, private_key: c_ulong) PkcsError!Sign {
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, key_size: usize, private_key: c_ulong) PkcsError!Sign {
         const sign_type = try signTypeFromMechanism(mechanism);
-        const hash_mechanism = try hasher.fromSignMechanism(mechanism);
+        const hash_mechanism = try hasher.fromSignMechanism(mechanism.?.*.mechanism);
 
         var hash: ?hasher.Hasher = null;
         var msg_buffer: ?std.ArrayList(u8) = null;
         if (hash_mechanism != null) {
-            hash = hasher.createAndInit(hash_mechanism.?) catch
-                return PkcsError.HostMemory;
+            hash = hasher.createAndInit(hash_mechanism.?);
         } else msg_buffer = std.ArrayList(u8).empty;
 
-        return Sign{
+        return .{
             .private_key = private_key,
             .key_size = key_size,
             .sign_type = sign_type,
@@ -117,16 +146,16 @@ pub const Verify = struct {
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
-    pub fn init(mechanism: pkcs.CK_MECHANISM_TYPE, public_key: std.crypto.Certificate.rsa.PublicKey) PkcsError!Verify {
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, public_key: std.crypto.Certificate.rsa.PublicKey) PkcsError!Verify {
         const sign_type = try signTypeFromMechanism(mechanism);
-        const hash_mechanism = try hasher.fromSignMechanism(mechanism);
+        const hash_mechanism = try hasher.fromSignMechanism(mechanism.?.*.mechanism);
 
         var hash: ?hasher.Hasher = null;
         var msg_buffer: ?std.ArrayList(u8) = null;
-        if (hash_mechanism != null) {
-            hash = hasher.createAndInit(hash_mechanism.?) catch
-                return PkcsError.HostMemory;
-        } else msg_buffer = std.ArrayList(u8).empty;
+        if (hash_mechanism != null)
+            hash = hasher.createAndInit(hash_mechanism.?)
+        else
+            msg_buffer = std.ArrayList(u8).empty;
 
         return Verify{
             .public_key = public_key,
@@ -199,11 +228,21 @@ pub const Verify = struct {
 };
 
 pub const Encrypt = struct {
+    public_key: std.crypto.Certificate.rsa.PublicKey,
     multipart_operation: bool,
-    modulus: []const u8,
-    exponent: []const u8,
     msg_buffer: std.ArrayList(u8),
     raw: bool,
+
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, public_key: std.crypto.Certificate.rsa.PublicKey) PkcsError!Encrypt {
+        const raw = try encryptTypeFromMechanism(mechanism);
+
+        return .{
+            .multipart_operation = false,
+            .msg_buffer = std.ArrayList(u8).empty,
+            .raw = raw,
+            .public_key = public_key,
+        };
+    }
 
     pub fn update(self: *Encrypt, allocator: std.mem.Allocator, data: []const u8) PkcsError![]u8 {
         self.msg_buffer.appendSlice(allocator, data) catch
@@ -249,19 +288,16 @@ pub const Encrypt = struct {
     }
 
     pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![]u8 {
-        const rsa_public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(self.exponent, self.modulus) catch
-            return PkcsError.GeneralError;
-
         const Modulus = std.crypto.ff.Modulus(4096);
         const Fe = Modulus.Fe;
 
         const buffer = try self.pad(allocator, io);
         defer allocator.free(buffer);
 
-        const m = Fe.fromBytes(rsa_public_key.n, buffer[0..], .big) catch
+        const m = Fe.fromBytes(self.public_key.n, buffer[0..], .big) catch
             return PkcsError.GeneralError;
 
-        const e = rsa_public_key.n.powPublic(m, rsa_public_key.e) catch
+        const e = self.public_key.n.powPublic(m, self.public_key.e) catch
             return PkcsError.GeneralError;
 
         const result = allocator.alloc(u8, self.keySizeBytes()) catch
@@ -275,13 +311,11 @@ pub const Encrypt = struct {
     }
 
     pub fn keySizeBytes(self: *Encrypt) usize {
-        return self.modulus.len;
+        return self.public_key.n.bits() / 8;
     }
 
     pub fn deinit(self: *Encrypt, allocator: std.mem.Allocator) void {
         self.msg_buffer.deinit(allocator);
-        allocator.free(self.modulus);
-        allocator.free(self.exponent);
     }
 };
 
@@ -291,6 +325,18 @@ pub const Decrypt = struct {
     key_size: usize,
     msg_buffer: std.ArrayList(u8),
     raw: bool,
+
+    pub fn init(mechanism: ?*pkcs.CK_MECHANISM, private_key: pkcs.CK_OBJECT_HANDLE, key_size: usize) PkcsError!Decrypt {
+        const raw = try encryptTypeFromMechanism(mechanism);
+
+        return .{
+            .private_key = private_key,
+            .key_size = key_size,
+            .multipart_operation = false,
+            .msg_buffer = std.ArrayList(u8).empty,
+            .raw = raw,
+        };
+    }
 
     pub fn update(self: *Decrypt, allocator: std.mem.Allocator, data: []const u8) PkcsError![]u8 {
         self.msg_buffer.appendSlice(allocator, data) catch
@@ -455,7 +501,7 @@ test "sha1" {
     const expected_sign_request = [_]u8{ 0x30, 0x21, 0x30, 0x9, 0x6, 0x5, 0x2b, 0xe, 0x3, 0x2, 0x1a, 0x5, 0x0, 0x4, 0x14, 0x71, 0x10, 0xed, 0xa4, 0xd0, 0x9e, 0x6, 0x2a, 0xa5, 0xe4, 0xa3, 0x90, 0xb0, 0xa5, 0x72, 0xac, 0xd, 0x2c, 0x2, 0x20 };
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(hasher.HasherType.sha1);
+    const hash = hasher.createAndInit(hasher.HasherType.sha1);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -483,7 +529,7 @@ test "2 step sha1" {
     const data1 = [_]u8{ 0x31, 0x32 };
     const data2 = [_]u8{ 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(hasher.HasherType.sha1);
+    const hash = hasher.createAndInit(hasher.HasherType.sha1);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -510,7 +556,7 @@ test "2 step sha1" {
 test "deinit sha1 sign" {
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(hasher.HasherType.sha1);
+    const hash = hasher.createAndInit(hasher.HasherType.sha1);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -554,7 +600,7 @@ test "sha512" {
     };
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(hasher.HasherType.sha512);
+    const hash = hasher.createAndInit(hasher.HasherType.sha512);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -581,7 +627,7 @@ test "sha256" {
     const expected_sign_request = [_]u8{ 0x30, 0x31, 0x30, 0xd, 0x6, 0x9, 0x60, 0x86, 0x48, 0x1, 0x65, 0x3, 0x4, 0x2, 0x1, 0x5, 0x0, 0x4, 0x20, 0x3, 0xac, 0x67, 0x42, 0x16, 0xf3, 0xe1, 0x5c, 0x76, 0x1e, 0xe1, 0xa5, 0xe2, 0x55, 0xf0, 0x67, 0x95, 0x36, 0x23, 0xc8, 0xb3, 0x88, 0xb4, 0x45, 0x9e, 0x13, 0xf9, 0x78, 0xd7, 0xc8, 0x46, 0xf4 };
     const data = [_]u8{ 0x31, 0x32, 0x33, 0x34 };
 
-    const hash = try hasher.createAndInit(hasher.HasherType.sha256);
+    const hash = hasher.createAndInit(hasher.HasherType.sha256);
 
     var sign_operation = Sign{
         .hasher = hash,
@@ -704,14 +750,15 @@ test "pad and strip" {
 
     const io = std.testing.io;
 
+    const public_key = try std.crypto.Certificate.rsa.PublicKey.fromBytes(
+        &([_]u8{0x01} ** 4),
+        &([_]u8{0x01} ** 257),
+    );
+
     for (test_cases) |tc| {
-        var encrypt = Encrypt{
-            .multipart_operation = false,
-            .modulus = &([_]u8{0x01} ** 256),
-            .exponent = &([_]u8{0x01} ** 256),
-            .msg_buffer = std.ArrayList(u8).empty,
-            .raw = false,
-        };
+        const mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_RSA_PKCS };
+
+        var encrypt = try Encrypt.init(&mechanism, public_key);
         defer encrypt.msg_buffer.deinit(std.testing.allocator);
 
         _ = try encrypt.update(std.testing.allocator, tc);
@@ -838,7 +885,9 @@ fn TestHelper(signature_size: usize) type {
 
             const public_key = try std.crypto.Certificate.rsa.PublicKey.fromBytes(self.key.public_exponent, self.key.modulus);
 
-            var sign_operation = try Sign.init(m, self.key.modulus.len, 1);
+            const mechanism = pkcs.CK_MECHANISM{ .mechanism = m };
+
+            var sign_operation = try Sign.init(&mechanism, self.key.modulus.len, 1);
             defer sign_operation.deinit(ta);
 
             try sign_operation.update(ta, d);
@@ -851,13 +900,13 @@ fn TestHelper(signature_size: usize) type {
 
             const signature = try rsaOp(self.key.modulus, self.key.private_exponent, &block);
 
-            var verify_operation = try Verify.init(m, public_key);
+            var verify_operation = try Verify.init(&mechanism, public_key);
             defer verify_operation.deinit(ta);
             try verify_operation.update(ta, d);
 
             try verify_operation.verify(ta, &signature);
 
-            var verify_operation_tampered = try Verify.init(m, public_key);
+            var verify_operation_tampered = try Verify.init(&mechanism, public_key);
             defer verify_operation_tampered.deinit(ta);
             try verify_operation_tampered.update(ta, d);
 

@@ -19,54 +19,27 @@ pub export fn C_EncryptInit(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
-
-    var raw = false;
-
-    switch (mechanism.?.mechanism) {
-        pkcs.CKM_RSA_PKCS => {},
-        pkcs.CKM_RSA_X_509 => raw = true,
-        else => return pkcs.CKR_MECHANISM_INVALID,
-    }
-
-    if (mechanism.?.ulParameterLen != 0)
-        return pkcs.CKR_MECHANISM_PARAM_INVALID;
-
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
-
-    var public_key: *object.PublicKeyObject = undefined;
 
     const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    switch (found_object.*) {
-        .public_key => {
-            if (found_object.public_key.encrypt != pkcs.CK_TRUE)
-                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+    if (found_object.* != .public_key)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
-            public_key = &found_object.*.public_key;
-        },
-        else => return pkcs.CKR_KEY_HANDLE_INVALID,
-    }
+    if (found_object.public_key.encrypt != pkcs.CK_TRUE)
+        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
 
-    const modulus = current_session.allocator.dupe(u8, public_key.*.modulus) catch
-        return pkcs.CKR_HOST_MEMORY;
-    errdefer current_session.allocator.free(modulus);
+    const public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
+        found_object.public_key.public_exponent,
+        found_object.public_key.modulus,
+    ) catch return pkcs.CKR_GENERAL_ERROR;
 
-    const exponent = current_session.allocator.dupe(u8, public_key.*.public_exponent) catch
-        return pkcs.CKR_HOST_MEMORY;
+    const encrypt_operation = operation.Encrypt.init(mechanism, public_key) catch |err|
+        return pkcs_error.toRV(err);
 
-    current_session.operation = operation.Operation{
-        .encrypt = operation.Encrypt{
-            .multipart_operation = false,
-            .msg_buffer = std.ArrayList(u8).empty,
-            .raw = raw,
-            .modulus = modulus,
-            .exponent = exponent,
-        },
-    };
+    current_session.operation = .{ .encrypt = encrypt_operation };
 
     return pkcs.CKR_OK;
 }

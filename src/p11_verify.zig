@@ -18,40 +18,30 @@ pub export fn C_VerifyInit(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    if (mechanism == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
-
     current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
     const found_object = current_session.getObject(key) catch
         return pkcs.CKR_KEY_HANDLE_INVALID;
 
-    switch (found_object.*) {
-        .public_key => {
-            // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
-            //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+    if (found_object.* != .public_key)
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
-            if (found_object.public_key.verify != pkcs.CK_TRUE)
-                return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
-        },
-        else => return pkcs.CKR_KEY_HANDLE_INVALID,
-    }
+    // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
+    //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
+
+    if (found_object.public_key.verify != pkcs.CK_TRUE)
+        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
 
     const public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
         found_object.public_key.public_exponent,
         found_object.public_key.modulus,
     ) catch return pkcs.CKR_GENERAL_ERROR;
 
-    const verify_operation = operation.Verify.init(
-        mechanism.?.mechanism,
-        public_key,
-    ) catch |err|
+    const verify_operation = operation.Verify.init(mechanism, public_key) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.operation = operation.Operation{
-        .verify = verify_operation,
-    };
+    current_session.operation = .{ .verify = verify_operation };
 
     return pkcs.CKR_OK;
 }
