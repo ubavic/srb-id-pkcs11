@@ -75,7 +75,7 @@ pub export fn C_Encrypt(
     const required_encrypted_data_size = current_operation.keySizeBytes();
 
     if (encrypted_data == null) {
-        encrypted_data_len.?.* = required_encrypted_data_size;
+        encrypted_data_len.?.* = @intCast(required_encrypted_data_size);
         return pkcs.CKR_OK;
     }
 
@@ -173,7 +173,7 @@ pub export fn C_EncryptFinal(
     const required_encrypted_data_size = current_operation.keySizeBytes();
 
     if (last_encrypted_part == null) {
-        last_encrypted_part_len.?.* = required_encrypted_data_size;
+        last_encrypted_part_len.?.* = @intCast(required_encrypted_data_size);
         return pkcs.CKR_OK;
     }
 

@@ -73,7 +73,7 @@ pub export fn C_Decrypt(
     const required_data_size = current_operation.keySizeBytes();
 
     if (data == null) {
-        data_len.?.* = required_data_size;
+        data_len.?.* = @intCast(required_data_size);
         return pkcs.CKR_OK;
     }
 
@@ -182,7 +182,7 @@ pub export fn C_DecryptFinal(
     const required_data_size = current_operation.keySizeBytes();
 
     if (last_part == null) {
-        last_part_len.?.* = required_data_size;
+        last_part_len.?.* = @intCast(required_data_size);
         return pkcs.CKR_OK;
     }
 

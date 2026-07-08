@@ -79,7 +79,7 @@ pub export fn C_Sign(
 
     const required_signature_size = current_operation.keySizeBytes();
     if (signature == null) {
-        signature_len.?.* = required_signature_size;
+        signature_len.?.* = @intCast(required_signature_size);
         return pkcs.CKR_OK;
     }
 
@@ -170,7 +170,7 @@ pub export fn C_SignFinal(
 
     const required_signature_size = current_operation.keySizeBytes();
     if (signature == null) {
-        signature_len.?.* = required_signature_size;
+        signature_len.?.* = @intCast(required_signature_size);
         return pkcs.CKR_OK;
     }
 
