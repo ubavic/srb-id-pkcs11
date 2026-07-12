@@ -158,7 +158,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: [buildLinux, buildMacArm, buildMacIntel, buildWindows]
+    permissions:
+      contents: write
+      models: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v8
       - name: Move files
         run: |
@@ -166,6 +173,40 @@ jobs:
           mv macos-arm-build-artifact/* .
           mv macos-intel-build-artifact/* .
           mv windows-build-artifact/* .
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "$PREV_TAG".."${{ github.ref_name }}" --pretty=format:"- %s" | head -50)
+          else
+            COMMITS=$(git log --pretty=format:"- %s" | head -50)
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg commits "$COMMITS" \
+            --arg version "${{ github.ref_name }}" \
+            '{
+              model: "gpt-4o-mini",
+              messages: [{
+                role: "user",
+                content: ("Write release notes for version " + $version + " based ONLY on the commit messages below. Only include changes that affect end users of the library (new features, bug fixes, behavior changes). Skip anything related to CI, workflows, release scripts, tooling, or internal repository maintenance. Do not invent anything. Group into Features and Fixes. If nothing user-facing remains, write: \"No user-facing changes.\". Output plain markdown.\n\nCommits:\n" + $commits)
+              }],
+              max_tokens: 512
+            }')
+
+          RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "https://models.inference.ai.azure.com/chat/completions")
+
+          NOTES=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "No release notes generated."')
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
       - name: Release
         uses: softprops/action-gh-release@v3
         with:
@@ -174,3 +215,8 @@ jobs:
             ./*.dylib
             ./*.dll
           tag_name: ${{github.ref_name}}
+      - name: Update release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit ${{ github.ref_name }} --notes "${{ steps.notes.outputs.notes }}" --repo ${{ github.repository }}
