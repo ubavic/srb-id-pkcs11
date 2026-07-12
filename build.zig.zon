@@ -1,6 +1,6 @@
 .{
     .name = .srb_id_pkcs11,
-    .version = "0.4.3",
+    .version = "0.5.0",
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .pcsc = .{
