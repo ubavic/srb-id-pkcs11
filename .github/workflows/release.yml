@@ -9,6 +9,7 @@ env:
   LIB_NAME: "libsrb-id-pkcs11"
   ZIG_VERSION: "0.16.0"
   VERSION_FILE: "src/version.zig"
+  RELEASE_MODE: "ReleaseSafe"
 
 jobs:
   check-version:
@@ -74,7 +75,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSmall -Dcpu=baseline
+          zig build -Doptimize=${{ env.RELEASE_MODE }} -Dcpu=baseline
           mkdir artifact
           cp zig-out/lib/*.so.*.*.* artifact/.
       - name: Upload library
@@ -95,7 +96,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSmall -Dcpu=baseline
+          zig build -Doptimize=${{ env.RELEASE_MODE }} -Dcpu=baseline
           mkdir artifact
           cp zig-out/bin/srb-id-pkcs11.dll artifact/srb-id-pkcs11.${{needs.test.outputs.version}}.dll
       - name: Upload library
@@ -120,7 +121,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSmall -Dcpu=baseline
+          zig build -Doptimize=${{ env.RELEASE_MODE }} -Dcpu=baseline
           mkdir artifact
           cp zig-out/lib/$LIB_NAME.*.*.*.dylib artifact/$LIB_NAME.arm.${{needs.test.outputs.version}}.dylib
       - name: Upload library
@@ -145,7 +146,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Build
         run: |
-          zig build -Doptimize=ReleaseSmall -Dcpu=baseline
+          zig build -Doptimize=${{ env.RELEASE_MODE }} -Dcpu=baseline
           mkdir artifact
           cp zig-out/lib/$LIB_NAME.*.*.*.dylib artifact/$LIB_NAME.x64.${{needs.test.outputs.version}}.dylib
       - name: Upload library
