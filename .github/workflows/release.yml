@@ -11,7 +11,7 @@ env:
   VERSION_FILE: "src/version.zig"
 
 jobs:
-  test:
+  check-version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.setversion.outputs.version }}
@@ -30,10 +30,26 @@ jobs:
           fi
 
           echo "version=$zon_version" >> $GITHUB_OUTPUT
+
+  test:
+    needs: [check-version]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
       - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update
           sudo apt install -y build-essential pkg-config libpcsclite-dev
+      - name: Install macOS deps
+        if: matrix.os == 'macos-15-intel' ||  matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install pcsc-lite
       - name: Install zig
         uses: mlugg/setup-zig@v2
         with:
@@ -77,9 +93,6 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: ${{ env.ZIG_VERSION }}
-      - name: Test
-        run: |
-          zig build test
       - name: Build
         run: |
           zig build -Doptimize=ReleaseSmall -Dcpu=baseline
