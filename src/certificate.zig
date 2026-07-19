@@ -6,24 +6,19 @@ const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const PkcsError = pkcs_error.PkcsError;
 
-pub fn loadObjects(
+pub fn parseCertificate(
     allocator: std.mem.Allocator,
+    certificate_handle: c_ulong,
     buffer: []const u8,
-    certificate_handle: pkcs.CK_OBJECT_HANDLE,
-    private_key_handle: pkcs.CK_OBJECT_HANDLE,
-    public_key_handle: pkcs.CK_OBJECT_HANDLE,
     id: []const u8,
-    alow_encrypt: bool,
-) PkcsError![3]object.Object {
+    file_name: [2]u8,
+) PkcsError!object.Object {
     const cert = Certificate{ .buffer = buffer, .index = 0 };
 
     const parsed = Certificate.parse(cert) catch
         return PkcsError.GeneralError;
 
     if (parsed.pub_key_algo != .rsaEncryption)
-        return PkcsError.GeneralError;
-
-    const public_key_components = Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
         return PkcsError.GeneralError;
 
     const cert_id = try clone(allocator, id);
@@ -57,6 +52,7 @@ pub fn loadObjects(
     errdefer allocator.free(label);
 
     const certificate_object: object.CertificateObject = object.CertificateObject{
+        .file_name = file_name,
         .handle = certificate_handle,
         .class = pkcs.CKO_CERTIFICATE,
         .token = pkcs.CK_TRUE,
@@ -81,6 +77,19 @@ pub fn loadObjects(
         .hash_of_subject_public_key = public_key_hash,
         .name_hash_algorithm = name_hash_algorithm,
     };
+
+    return .{ .certificate = certificate_object };
+}
+
+pub fn parseKeys(
+    allocator: std.mem.Allocator,
+    id: []const u8,
+    private_key_handle: pkcs.CK_OBJECT_HANDLE,
+    public_key_handle: pkcs.CK_OBJECT_HANDLE,
+    alow_encrypt: bool,
+) PkcsError![2]object.Object {
+    const public_key_components = Certificate.rsa.PublicKey.parseDer(&[]u8{0x00}) catch //TODO FIXME
+        return PkcsError.GeneralError;
 
     const priv_id = try clone(allocator, id);
     errdefer allocator.free(priv_id);
@@ -184,11 +193,10 @@ pub fn loadObjects(
         .public_exponent = pub_public_exponent,
     };
 
-    const object2 = object.Object{ .private_key = private_key_object };
-    const object1 = object.Object{ .certificate = certificate_object };
-    const object3 = object.Object{ .public_key = public_key_object };
-
-    return [3]object.Object{ object1, object2, object3 };
+    return .{
+        object.Object{ .private_key = private_key_object },
+        object.Object{ .public_key = public_key_object },
+    };
 }
 
 fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T {
@@ -258,7 +266,7 @@ pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificat
     return decompressed_certificate;
 }
 
-test "parse objects" {
+test "parse certificate" {
     const ta = std.testing.allocator;
     const tio = std.testing.io;
 
@@ -339,39 +347,21 @@ test "parse objects" {
 
     const id = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const label: []const u8 = "Test Cert";
-    const empty_slice = [_]u8{};
+    const file_name = [2]u8{ 0x01, 0x02 };
 
-    for (test_data) |td| {
+    for (test_data, 0..) |td, i| {
         const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, td.file_name, ta, .unlimited);
         defer ta.free(der);
 
-        var objects = try loadObjects(ta, der, 1, 2, 3, &id, false);
-        defer {
-            for (&objects) |*o|
-                o.deinit(ta);
-        }
+        var certificate_object = try parseCertificate(ta, 0x8000 + i, der, &id, file_name);
+        defer certificate_object.deinit(ta);
 
-        for (&objects) |*o| {
-            switch (o.*) {
-                .certificate => |c| {
-                    try std.testing.expectEqual(1, c.handle);
-                    try std.testing.expectEqualSlices(u8, td.serial_number, c.serial_number);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
-                    try std.testing.expectEqualSlices(u8, label, c.label);
-                },
-                .private_key => |c| {
-                    try std.testing.expectEqual(2, c.handle);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
-                    try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
-                    try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
-                },
-                .public_key => |c| {
-                    try std.testing.expectEqual(3, c.handle);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
-                    try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
-                    try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
-                },
-            }
-        }
+        const c = certificate_object.certificate;
+
+        try std.testing.expectEqual(0x8000 + i, c.handle);
+        try std.testing.expectEqualSlices(u8, td.serial_number, c.serial_number);
+        try std.testing.expectEqualSlices(u8, &id, c.id);
+        try std.testing.expectEqualSlices(u8, label, c.label);
+        try std.testing.expectEqualSlices(u8, &file_name, &c.file_name);
     }
 }

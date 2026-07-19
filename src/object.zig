@@ -2,6 +2,7 @@ const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
+const InfoFile = @import("smart-card-file.zig").InfoFile;
 const PkcsError = pkcs_error.PkcsError;
 
 const CKT_NETSCAPE_TRUSTED_DELEGATOR: pkcs.CK_ATTRIBUTE_TYPE = 0xce534352;
@@ -24,6 +25,14 @@ pub const Object = union(enum) {
             .certificate => |o| o.class,
             .private_key => |o| o.class,
             .public_key => |o| o.class,
+        };
+    }
+
+    pub fn fileName(self: *const Object) [2]u8 {
+        return switch (self.*) {
+            .certificate => |o| o.file_name,
+            .private_key => |o| o.file_name,
+            .public_key => |o| o.file_name,
         };
     }
 
@@ -65,6 +74,7 @@ pub const Object = union(enum) {
 };
 
 pub const CertificateObject = struct {
+    file_name: [2]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -154,6 +164,8 @@ pub const CertificateObject = struct {
 };
 
 pub const PrivateKeyObject = struct {
+    file_name: [2]u8,
+    key_id: u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -251,6 +263,7 @@ pub const PrivateKeyObject = struct {
 };
 
 pub const PublicKeyObject = struct {
+    file_name: [2]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
