@@ -1,0 +1,36 @@
+name: "Test pull request"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  ZIG_VERSION: "0.16.0"
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential pkg-config libpcsclite-dev
+      - name: Install macOS deps
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install pcsc-lite
+      - name: Install zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - name: Test
+        run: |
+          zig build test
