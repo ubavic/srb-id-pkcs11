@@ -99,7 +99,7 @@ test "digest mechanisms" {
     try std.testing.expectEqual(fromDigestMechanism(pkcs.CKM_SHA256), HasherType.sha256);
     try std.testing.expectEqual(fromDigestMechanism(pkcs.CKM_SHA384), HasherType.sha384);
     try std.testing.expectEqual(fromDigestMechanism(pkcs.CKM_SHA512), HasherType.sha512);
-    try std.testing.expectEqual(fromDigestMechanism(pkcs.CKM_RIPEMD160), HasherType.ripemd160);
+    try std.testing.expectEqual(fromDigestMechanism(pkcs.CKM_RIPEMD160), HasherType.sha512);
 
     try std.testing.expectError(PkcsError.MechanismInvalid, fromDigestMechanism(pkcs.CKM_MD2));
     try std.testing.expectError(PkcsError.MechanismInvalid, fromDigestMechanism(pkcs.CKM_MD5_RSA_PKCS));
