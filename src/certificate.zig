@@ -1,29 +1,24 @@
 const std = @import("std");
-const Certificate = std.crypto.Certificate;
 
+const file = @import("file.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const PkcsError = pkcs_error.PkcsError;
 
-pub fn loadObjects(
+pub fn parseCertificate(
     allocator: std.mem.Allocator,
+    certificate_handle: c_ulong,
     buffer: []const u8,
-    certificate_handle: pkcs.CK_OBJECT_HANDLE,
-    private_key_handle: pkcs.CK_OBJECT_HANDLE,
-    public_key_handle: pkcs.CK_OBJECT_HANDLE,
     id: []const u8,
-    alow_encrypt: bool,
-) PkcsError![3]object.Object {
-    const cert = Certificate{ .buffer = buffer, .index = 0 };
+    file_name: [2]u8,
+) PkcsError!object.Object {
+    const cert = std.crypto.Certificate{ .buffer = buffer, .index = 0 };
 
-    const parsed = Certificate.parse(cert) catch
+    const parsed = std.crypto.Certificate.parse(cert) catch
         return PkcsError.GeneralError;
 
     if (parsed.pub_key_algo != .rsaEncryption)
-        return PkcsError.GeneralError;
-
-    const public_key_components = Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
         return PkcsError.GeneralError;
 
     const cert_id = try clone(allocator, id);
@@ -57,6 +52,7 @@ pub fn loadObjects(
     errdefer allocator.free(label);
 
     const certificate_object: object.CertificateObject = object.CertificateObject{
+        .file_name = file_name,
         .handle = certificate_handle,
         .class = pkcs.CKO_CERTIFICATE,
         .token = pkcs.CK_TRUE,
@@ -82,15 +78,26 @@ pub fn loadObjects(
         .name_hash_algorithm = name_hash_algorithm,
     };
 
+    return .{ .certificate = certificate_object };
+}
+
+pub fn parseKeys(
+    allocator: std.mem.Allocator,
+    id: []const u8,
+    key_pair: file.KeyPair,
+    private_key_handle: pkcs.CK_OBJECT_HANDLE,
+    public_key_handle: pkcs.CK_OBJECT_HANDLE,
+    alow_encrypt: bool,
+) PkcsError![2]object.Object {
     const priv_id = try clone(allocator, id);
     errdefer allocator.free(priv_id);
     const private_key_label = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_label);
     const private_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_subject);
-    const private_key_modulus = try clone(allocator, public_key_components.modulus);
+    const private_key_modulus = try clone(allocator, key_pair.modulus[0..key_pair.modulus_len]);
     errdefer allocator.free(private_key_modulus);
-    const priv_key_public_exponent = try clone(allocator, public_key_components.exponent);
+    const priv_key_public_exponent = try clone(allocator, key_pair.exponent[0..key_pair.exponent_len]);
     errdefer allocator.free(priv_key_public_exponent);
 
     // invalid on original token
@@ -141,9 +148,9 @@ pub fn loadObjects(
     errdefer allocator.free(public_key_label);
     const public_key_subject = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_subject);
-    const public_key_modulus = try clone(allocator, public_key_components.modulus);
+    const public_key_modulus = try clone(allocator, key_pair.modulus[0..key_pair.modulus_len]);
     errdefer allocator.free(public_key_modulus);
-    const pub_public_exponent = try clone(allocator, public_key_components.exponent);
+    const pub_public_exponent = try clone(allocator, key_pair.exponent[0..key_pair.exponent_len]);
     errdefer allocator.free(pub_public_exponent);
 
     // invalid on original token
@@ -184,11 +191,10 @@ pub fn loadObjects(
         .public_exponent = pub_public_exponent,
     };
 
-    const object2 = object.Object{ .private_key = private_key_object };
-    const object1 = object.Object{ .certificate = certificate_object };
-    const object3 = object.Object{ .public_key = public_key_object };
-
-    return [3]object.Object{ object1, object2, object3 };
+    return .{
+        object.Object{ .private_key = private_key_object },
+        object.Object{ .public_key = public_key_object },
+    };
 }
 
 fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T {
@@ -201,12 +207,12 @@ fn clone(allocator: std.mem.Allocator, src: []const u8) PkcsError![]u8 {
         return PkcsError.HostMemory;
 }
 
-fn extractSerialNumber(cert_bytes: []const u8) Certificate.der.Element.ParseError![]const u8 {
-    const certificate = try Certificate.der.Element.parse(cert_bytes, 0);
-    const tbs_certificate = try Certificate.der.Element.parse(cert_bytes, certificate.slice.start);
-    const version_elem = try Certificate.der.Element.parse(cert_bytes, tbs_certificate.slice.start);
+fn extractSerialNumber(cert_bytes: []const u8) std.crypto.Certificate.der.Element.ParseError![]const u8 {
+    const certificate = try std.crypto.Certificate.der.Element.parse(cert_bytes, 0);
+    const tbs_certificate = try std.crypto.Certificate.der.Element.parse(cert_bytes, certificate.slice.start);
+    const version_elem = try std.crypto.Certificate.der.Element.parse(cert_bytes, tbs_certificate.slice.start);
     const serial_number = if (@as(u8, @bitCast(version_elem.identifier)) == 0xa0)
-        try Certificate.der.Element.parse(cert_bytes, version_elem.slice.end)
+        try std.crypto.Certificate.der.Element.parse(cert_bytes, version_elem.slice.end)
     else
         version_elem;
 
@@ -258,7 +264,7 @@ pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificat
     return decompressed_certificate;
 }
 
-test "parse objects" {
+test "parse certificate" {
     const ta = std.testing.allocator;
     const tio = std.testing.io;
 
@@ -339,39 +345,21 @@ test "parse objects" {
 
     const id = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
     const label: []const u8 = "Test Cert";
-    const empty_slice = [_]u8{};
+    const file_name = [2]u8{ 0x01, 0x02 };
 
-    for (test_data) |td| {
+    for (test_data, 0..) |td, i| {
         const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, td.file_name, ta, .unlimited);
         defer ta.free(der);
 
-        var objects = try loadObjects(ta, der, 1, 2, 3, &id, false);
-        defer {
-            for (&objects) |*o|
-                o.deinit(ta);
-        }
+        var obj = try parseCertificate(ta, 0x8000 + i, der, &id, file_name);
+        defer obj.deinit(ta);
 
-        for (&objects) |*o| {
-            switch (o.*) {
-                .certificate => |c| {
-                    try std.testing.expectEqual(1, c.handle);
-                    try std.testing.expectEqualSlices(u8, td.serial_number, c.serial_number);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
-                    try std.testing.expectEqualSlices(u8, label, c.label);
-                },
-                .private_key => |c| {
-                    try std.testing.expectEqual(2, c.handle);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
-                    try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
-                    try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
-                },
-                .public_key => |c| {
-                    try std.testing.expectEqual(3, c.handle);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
-                    try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
-                    try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
-                },
-            }
-        }
+        const certificate_object = obj.certificate;
+
+        try std.testing.expectEqual(0x8000 + i, certificate_object.handle);
+        try std.testing.expectEqualSlices(u8, td.serial_number, certificate_object.serial_number);
+        try std.testing.expectEqualSlices(u8, &id, certificate_object.id);
+        try std.testing.expectEqualSlices(u8, label, certificate_object.label);
+        try std.testing.expectEqualSlices(u8, &file_name, &certificate_object.file_name);
     }
 }

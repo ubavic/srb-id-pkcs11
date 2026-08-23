@@ -27,6 +27,14 @@ pub const Object = union(enum) {
         };
     }
 
+    pub fn fileName(self: *const Object) [2]u8 {
+        return switch (self.*) {
+            .certificate => |o| o.file_name,
+            .private_key => |o| o.file_name,
+            .public_key => |o| o.file_name,
+        };
+    }
+
     pub fn getAttribute(self: *const Object, allocator: std.mem.Allocator, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!Attribute {
         const value = try switch (self.*) {
             .certificate => |o| o.getAttributeValue(allocator, attribute_type),
@@ -65,6 +73,7 @@ pub const Object = union(enum) {
 };
 
 pub const CertificateObject = struct {
+    file_name: [2]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -154,6 +163,8 @@ pub const CertificateObject = struct {
 };
 
 pub const PrivateKeyObject = struct {
+    file_name: [2]u8,
+    key_id: u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -251,6 +262,7 @@ pub const PrivateKeyObject = struct {
 };
 
 pub const PublicKeyObject = struct {
+    file_name: [2]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
