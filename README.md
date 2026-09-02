@@ -18,7 +18,7 @@ Functions intended for security officers (`CKU_SO`) are not planned for implemen
 
 ## Usage
 
-This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few examples of how this is done. You can also look at [e-documents howto](https://ubavic.rs/e-documents/?usage=read-id&os=linux) (on serbian) for step by step instructions.
+This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few examples of how this is done. You can also look at [e-documents howto](https://e-documents.ubavic.rs) (on serbian) for step by step instructions.
 
 ### On Linux
 
