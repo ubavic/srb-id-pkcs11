@@ -6,6 +6,76 @@ const pkcs_error = @import("pkcs_error.zig");
 
 const PkcsError = pkcs_error.PkcsError;
 
+// Two-level protection for card access:
+//
+// 1. A process-wide lock (`card_ops_busy`) serializes every PC/SC
+//    interaction made by this module. libpcsclite serializes all calls of
+//    one process behind a single internal mutex, and pcscd parks
+//    SCardConnect while any connection holds a transaction. If one thread
+//    sits inside a transaction while another thread issues SCardConnect,
+//    the connect blocks holding libpcsclite's mutex and the transaction
+//    holder can no longer transmit: instant deadlock. The lock makes that
+//    overlap impossible.
+//
+// 2. A PC/SC transaction per operation gives exclusive card access across
+//    processes, so a multi-APDU sequence (file selection followed by
+//    chunked reads, key selection followed by signing) is never
+//    interleaved with another client's traffic. Interleaving corrupts the
+//    card's logical state and can kill the T=1 link on flaky readers.
+var card_ops_busy: std.atomic.Value(bool) = std.atomic.Value(bool).init(false);
+
+pub fn lockCardOps() void {
+    while (card_ops_busy.swap(true, .acquire))
+        std.Thread.yield() catch {};
+}
+
+pub fn unlockCardOps() void {
+    card_ops_busy.store(false, .release);
+}
+
+// Optional diagnostics, enabled by setting SRB_ID_DEBUG in the environment:
+// writes card status words to stderr so a browser launched with stderr
+// redirected to a file reveals exactly which APDU the card rejects.
+// Never logs PINs or request payloads.
+fn debugSw(tag: []const u8, rsp: []const u8) void {
+    if (std.c.getenv("SRB_ID_DEBUG") == null) return;
+    var buf: [128]u8 = undefined;
+    const sw1: u8 = if (rsp.len >= 2) rsp[rsp.len - 2] else 0;
+    const sw2: u8 = if (rsp.len >= 2) rsp[rsp.len - 1] else 0;
+    const msg = std.fmt.bufPrint(&buf, "[srb-id] {s}: len={d} SW={x:0>2}{x:0>2}\n", .{ tag, rsp.len, sw1, sw2 }) catch return;
+    _ = std.c.write(2, msg.ptr, msg.len);
+}
+
+fn debugMsg(tag: []const u8) void {
+    if (std.c.getenv("SRB_ID_DEBUG") == null) return;
+    var buf: [128]u8 = undefined;
+    const msg = std.fmt.bufPrint(&buf, "[srb-id] {s}\n", .{tag}) catch return;
+    _ = std.c.write(2, msg.ptr, msg.len);
+}
+
+const OpGuard = struct {
+    transaction: ?pcsc.Card.Transaction,
+    locked: bool,
+
+    fn release(self: OpGuard) void {
+        if (self.transaction) |t|
+            t.end(.LEAVE) catch {};
+        if (self.locked)
+            unlockCardOps();
+    }
+};
+
+// Full guard: in-process lock plus cross-process transaction.
+fn beginOp(card: pcsc.Card) OpGuard {
+    lockCardOps();
+    return .{ .transaction = card.transaction() catch null, .locked = true };
+}
+
+// Transaction-only guard for callers that already hold the card-ops lock.
+fn beginTx(card: pcsc.Card) OpGuard {
+    return .{ .transaction = card.transaction() catch null, .locked = false };
+}
+
 pub const CardsTokenInfo = struct {
     token_label: [32]u8 = [_]u8{0x20} ** 32,
     token_serial_number: [16]u8 = [_]u8{0x20} ** 16,
@@ -43,6 +113,28 @@ pub const Card = struct {
             return PkcsError.DeviceError;
     }
 
+    // A session's connection can go stale while it sits idle: when any
+    // client resets the card, PC/SC fails the next use of every other
+    // handle with RESET_CARD (or UNPOWERED_CARD) until that handle is
+    // reconnected. Reconnect, reselect the applet (the reset cleared the
+    // card's selection state), and let the caller retry.
+    fn recoverConnection(self: *const Card, allocator: std.mem.Allocator) bool {
+        debugMsg("stale handle: reconnecting");
+        @constCast(&self.smart_card).reconnect(.SHARED, .LEAVE) catch
+            return false;
+
+        const aid = [_]u8{ 0xA0, 0x00, 0x00, 0x00, 0x63, 0x50, 0x4B, 0x43, 0x53, 0x2D, 0x31, 0x35 };
+        const data_unit = apdu.build(allocator, 0x00, 0xA4, 0x04, 0x00, &aid, 0) catch
+            return true;
+        defer allocator.free(data_unit);
+
+        var buf: [pcsc.max_buffer_len]u8 = undefined;
+        _ = self.smart_card.transmit(data_unit, &buf) catch
+            return false;
+
+        return true;
+    }
+
     // Allocates result buffer
     fn transmit(
         self: *const Card,
@@ -50,8 +142,18 @@ pub const Card = struct {
         data_unit: []u8,
     ) PkcsError![]u8 {
         var buf: [pcsc.max_buffer_len]u8 = undefined;
-        const response = self.smart_card.transmit(data_unit, &buf) catch |err|
-            return pkcs_error.formPCSC(err);
+        const response = self.smart_card.transmit(data_unit, &buf) catch |err| blk: {
+            switch (err) {
+                pcsc.Err.ResetCard, pcsc.Err.UnpoweredCard => {
+                    if (!self.recoverConnection(allocator))
+                        return pkcs_error.formPCSC(err);
+
+                    break :blk self.smart_card.transmit(data_unit, &buf) catch |retry_err|
+                        return pkcs_error.formPCSC(retry_err);
+                },
+                else => return pkcs_error.formPCSC(err),
+            }
+        };
 
         const out = allocator.alloc(u8, response.len) catch
             return PkcsError.HostMemory;
@@ -99,6 +201,9 @@ pub const Card = struct {
         allocator: std.mem.Allocator,
         file_name: []const u8,
     ) PkcsError![]u8 {
+        const guard = beginOp(self.smart_card);
+        defer guard.release();
+
         try self.selectFile(allocator, file_name, 0x00, 0x00, 0);
 
         const head_data = try self.read(allocator, 0, 2);
@@ -139,7 +244,11 @@ pub const Card = struct {
         self: *Card,
         allocator: std.mem.Allocator,
     ) PkcsError!CardsTokenInfo {
-        try initCrypto(self, allocator);
+        // Caller (reader refresh) already holds the card-ops lock.
+        const guard = beginTx(self.smart_card);
+        defer guard.release();
+
+        try initCryptoUnlocked(self, allocator);
 
         const file_name = [_]u8{ 0x70, 0xf3 };
         try self.selectFile(allocator, &file_name, 0, 0, 0);
@@ -154,11 +263,25 @@ pub const Card = struct {
     pub fn disconnect(
         self: *Card,
     ) PkcsError!void {
+        lockCardOps();
+        defer unlockCardOps();
+
         self.smart_card.disconnect(.LEAVE) catch |err|
             return pkcs_error.formPCSC(err);
     }
 
+    // Caller must hold the card-ops lock (see `connect`).
     pub fn initCrypto(
+        self: *const Card,
+        allocator: std.mem.Allocator,
+    ) PkcsError!void {
+        const guard = beginTx(self.smart_card);
+        defer guard.release();
+
+        try self.initCryptoUnlocked(allocator);
+    }
+
+    fn initCryptoUnlocked(
         self: *const Card,
         allocator: std.mem.Allocator,
     ) PkcsError!void {
@@ -171,6 +294,9 @@ pub const Card = struct {
         allocator: std.mem.Allocator,
         length: u8,
     ) PkcsError![]u8 {
+        const guard = beginOp(self.smart_card);
+        defer guard.release();
+
         const data_unit = apdu.build(allocator, 0xB0, 0x83, 0x00, 0x00, null, length) catch
             return PkcsError.HostMemory;
 
@@ -187,6 +313,13 @@ pub const Card = struct {
     }
 
     pub fn verifyPin(self: *const Card, allocator: std.mem.Allocator, pin: []const u8) PkcsError!void {
+        const guard = beginOp(self.smart_card);
+        defer guard.release();
+
+        try self.verifyPinUnlocked(allocator, pin);
+    }
+
+    fn verifyPinUnlocked(self: *const Card, allocator: std.mem.Allocator, pin: []const u8) PkcsError!void {
         if (!validatePin(pin))
             return PkcsError.PinIncorrect;
 
@@ -201,6 +334,8 @@ pub const Card = struct {
         const response = try self.transmit(allocator, data_unit);
         defer allocator.free(response);
         defer std.crypto.secureZero(u8, response);
+
+        debugSw("pin-verify", response);
 
         if (responseIs(response, [_]u8{ 0x63, 0xC0 }))
             return PkcsError.PinLocked;
@@ -223,7 +358,10 @@ pub const Card = struct {
 
         try validateNewPin(new_pin);
 
-        try self.verifyPin(allocator, old_pin);
+        const guard = beginOp(self.smart_card);
+        defer guard.release();
+
+        try self.verifyPinUnlocked(allocator, old_pin);
 
         var data: [16]u8 = [_]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         defer std.crypto.secureZero(u8, &data);
@@ -257,6 +395,9 @@ pub const Card = struct {
         plain_sign: bool,
         sign_request: []u8,
     ) PkcsError![]u8 {
+        const guard = beginOp(self.smart_card);
+        defer guard.release();
+
         const algorithm_id: u8 = if (plain_sign) 0 else 2;
 
         const body = [_]u8{ 0x80, 0x01, algorithm_id, 0x84, 0x02, 0x60, key_id };
@@ -267,6 +408,8 @@ pub const Card = struct {
 
         const select_key_response = try self.transmit(allocator, select_key_data_unit);
         defer allocator.free(select_key_response);
+
+        debugSw("sign-mse", select_key_response);
 
         if (!responseOK(select_key_response))
             return PkcsError.GeneralError;
@@ -288,6 +431,8 @@ pub const Card = struct {
         defer allocator.free(sign_request_response);
         defer std.crypto.secureZero(u8, sign_request_response);
 
+        debugSw("sign-pso", sign_request_response);
+
         if (!responseOK(sign_request_response))
             return PkcsError.GeneralError;
 
@@ -308,6 +453,9 @@ pub const Card = struct {
         key_id: u8,
         decrypt_request: []u8,
     ) PkcsError![]u8 {
+        const guard = beginOp(self.smart_card);
+        defer guard.release();
+
         if (decrypt_request.len >= 256)
             return PkcsError.GeneralError;
 
@@ -346,10 +494,15 @@ pub fn connect(
     smart_card_client: *pcsc.Client,
     reader_name: [*:0]const u8,
 ) PkcsError!Card {
+    lockCardOps();
+    defer unlockCardOps();
+
     const smart_handle = smart_card_client.connect(reader_name, .SHARED, .ANY) catch |err|
         return pkcs_error.formPCSC(err);
 
     const card = Card{ .smart_card = smart_handle };
+
+    errdefer card.smart_card.disconnect(.LEAVE) catch {};
 
     try card.initCrypto(allocator);
 

@@ -37,6 +37,12 @@ pub const ReaderState = struct {
         allocator: std.mem.Allocator,
         smart_card_client: *pcsc.Client,
     ) PkcsError!void {
+        // Holds the card-ops lock for the whole connect..disconnect span so
+        // this SCardConnect can never overlap a transaction held by another
+        // thread of this process (which deadlocks inside libpcsclite).
+        smart_card.lockCardOps();
+        defer smart_card.unlockCardOps();
+
         @memset(&self.*.token_label, 0x20);
         @memset(&self.*.token_serial_number, 0x20);
 
