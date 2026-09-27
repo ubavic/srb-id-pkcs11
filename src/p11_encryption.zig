@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const consts = @import("consts.zig");
 const operation = @import("operation.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
