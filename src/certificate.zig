@@ -1,6 +1,7 @@
 const std = @import("std");
 const Certificate = std.crypto.Certificate;
 
+const consts = @import("consts.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
@@ -14,6 +15,7 @@ pub fn loadObjects(
     public_key_handle: pkcs.CK_OBJECT_HANDLE,
     id: []const u8,
     alow_encrypt: bool,
+    cert_file_name: [2]u8,
 ) PkcsError![3]object.Object {
     const cert = Certificate{ .buffer = buffer, .index = 0 };
 
@@ -57,6 +59,7 @@ pub fn loadObjects(
     errdefer allocator.free(label);
 
     const certificate_object: object.CertificateObject = object.CertificateObject{
+        .file_name = cert_file_name,
         .handle = certificate_handle,
         .class = pkcs.CKO_CERTIFICATE,
         .token = pkcs.CK_TRUE,
@@ -102,6 +105,7 @@ pub fn loadObjects(
     errdefer allocator.free(unwrap_template);
 
     const private_key_object: object.PrivateKeyObject = object.PrivateKeyObject{
+        .file_name = consts.getCardIdFormPrivateKey(private_key_handle) catch unreachable,
         .handle = private_key_handle,
         .class = pkcs.CKO_PRIVATE_KEY,
         .token = pkcs.CK_TRUE,
@@ -155,6 +159,7 @@ pub fn loadObjects(
     errdefer allocator.free(wrap_template);
 
     const public_key_object: object.PublicKeyObject = object.PublicKeyObject{
+        .file_name = .{ 0, 0 }, // TODO
         .handle = public_key_handle,
         .class = pkcs.CKO_PUBLIC_KEY,
         .token = pkcs.CK_TRUE,
@@ -345,7 +350,16 @@ test "parse objects" {
         const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, td.file_name, ta, .unlimited);
         defer ta.free(der);
 
-        var objects = try loadObjects(ta, der, 1, 2, 3, &id, false);
+        var objects = try loadObjects(
+            ta,
+            der,
+            consts.AuthCert.certificate_handle,
+            consts.AuthCert.private_key_handle,
+            consts.AuthCert.public_key_handle,
+            &id,
+            false,
+            .{ 0, 0 },
+        );
         defer {
             for (&objects) |*o|
                 o.deinit(ta);
@@ -354,19 +368,19 @@ test "parse objects" {
         for (&objects) |*o| {
             switch (o.*) {
                 .certificate => |c| {
-                    try std.testing.expectEqual(1, c.handle);
+                    try std.testing.expectEqual(consts.AuthCert.certificate_handle, c.handle);
                     try std.testing.expectEqualSlices(u8, td.serial_number, c.serial_number);
                     try std.testing.expectEqualSlices(u8, &id, c.id);
                     try std.testing.expectEqualSlices(u8, label, c.label);
                 },
                 .private_key => |c| {
-                    try std.testing.expectEqual(2, c.handle);
+                    try std.testing.expectEqual(consts.AuthCert.private_key_handle, c.handle);
                     try std.testing.expectEqualSlices(u8, &id, c.id);
                     try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
                     try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
                 },
                 .public_key => |c| {
-                    try std.testing.expectEqual(3, c.handle);
+                    try std.testing.expectEqual(consts.AuthCert.public_key_handle, c.handle);
                     try std.testing.expectEqualSlices(u8, &id, c.id);
                     try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
                     try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);

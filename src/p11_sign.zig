@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const consts = @import("consts.zig");
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
@@ -98,12 +97,12 @@ pub export fn C_Sign(
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(sign_request);
 
-    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
-        return pkcs_error.toRV(err);
+    const key_object = current_session.getObject(current_operation.private_key) catch
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
     const computed_signature = current_session.card.sign(
         current_session.allocator,
-        key_id,
+        key_object.fileName(),
         current_operation.sign_type != .DigestAndSign,
         sign_request,
     ) catch |err|
@@ -183,12 +182,12 @@ pub export fn C_SignFinal(
         return pkcs_error.toRV(err);
     defer current_session.allocator.free(sign_request);
 
-    const key_id = consts.getCardIdFormPrivateKey(current_operation.private_key) catch |err|
-        return pkcs_error.toRV(err);
+    const key_object = current_session.getObject(current_operation.private_key) catch
+        return pkcs.CKR_KEY_HANDLE_INVALID;
 
     const computed_signature = current_session.card.sign(
         current_session.allocator,
-        key_id,
+        key_object.fileName(),
         current_operation.sign_type != .DigestAndSign,
         sign_request,
     ) catch |err|

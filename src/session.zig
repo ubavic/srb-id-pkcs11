@@ -155,6 +155,7 @@ pub const Session = struct {
                 ids[i].public_key_handle,
                 &ids[i].id,
                 i == 0,
+                file,
             ) catch
                 continue;
 
