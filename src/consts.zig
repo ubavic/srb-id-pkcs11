@@ -4,7 +4,7 @@ const PkcsError = @import("pkcs_error.zig").PkcsError;
 pub const ObjectConstants = struct {
     certificate_handle: pkcs.CK_OBJECT_HANDLE,
     private_key_handle: pkcs.CK_OBJECT_HANDLE,
-    private_key_card_id: u8,
+    private_key_card_id: [2]u8,
     public_key_handle: pkcs.CK_OBJECT_HANDLE,
     id: [20]u8,
 };
@@ -16,7 +16,7 @@ pub const ObjectConstants = struct {
 pub const AuthCert = ObjectConstants{
     .certificate_handle = 0x80000028,
     .private_key_handle = 0x80000010,
-    .private_key_card_id = 0x5,
+    .private_key_card_id = .{ 0x60, 0x5 },
     .public_key_handle = 0x80000008,
     .id = [_]u8{ 0x53, 0x6a, 0x49, 0x02, 0x16, 0x4c, 0xa7, 0xfe, 0xee, 0x30, 0x54, 0xaf, 0xb5, 0x70, 0xae, 0x61, 0x65, 0x1d, 0xc6, 0xc7 },
 };
@@ -24,7 +24,7 @@ pub const AuthCert = ObjectConstants{
 pub const SignCert = ObjectConstants{
     .certificate_handle = 0x80000030,
     .private_key_handle = 0x80000020,
-    .private_key_card_id = 0x19,
+    .private_key_card_id = .{ 0x60, 0x19 },
     .public_key_handle = 0x80000018,
     .id = [_]u8{ 0xea, 0xb9, 0x59, 0x49, 0x75, 0x76, 0xe3, 0x0f, 0xfd, 0xcd, 0x81, 0xb2, 0xaf, 0x0b, 0xd6, 0x6e, 0xad, 0x29, 0xb1, 0xa3 },
 };
@@ -39,7 +39,7 @@ pub fn getPrivateKeyFormPublicKey(public_key_handle: pkcs.CK_OBJECT_HANDLE) Pkcs
     return PkcsError.KeyHandleInvalid;
 }
 
-pub fn getCardIdFormPrivateKey(private_key_handle: pkcs.CK_OBJECT_HANDLE) PkcsError!u8 {
+pub fn getCardIdFormPrivateKey(private_key_handle: pkcs.CK_OBJECT_HANDLE) PkcsError![2]u8 {
     if (private_key_handle == AuthCert.private_key_handle)
         return AuthCert.private_key_card_id;
 

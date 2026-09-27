@@ -253,13 +253,13 @@ pub const Card = struct {
     pub fn sign(
         self: *const Card,
         allocator: std.mem.Allocator,
-        key_id: u8,
+        key_file_name: [2]u8,
         plain_sign: bool,
         sign_request: []u8,
     ) PkcsError![]u8 {
         const algorithm_id: u8 = if (plain_sign) 0 else 2;
 
-        const body = [_]u8{ 0x80, 0x01, algorithm_id, 0x84, 0x02, 0x60, key_id };
+        const body = [_]u8{ 0x80, 0x01, algorithm_id, 0x84, 0x02, key_file_name[0], key_file_name[1] };
 
         const select_key_data_unit = apdu.build(allocator, 0, 0x22, 0x41, 0xb6, body[0..body.len], 0) catch
             return PkcsError.HostMemory;
@@ -305,13 +305,13 @@ pub const Card = struct {
     pub fn decrypt(
         self: *const Card,
         allocator: std.mem.Allocator,
-        key_id: u8,
+        key_file_name: [2]u8,
         decrypt_request: []u8,
     ) PkcsError![]u8 {
         if (decrypt_request.len >= 256)
             return PkcsError.GeneralError;
 
-        const body = [_]u8{ 0x80, 0x01, 0x00, 0x84, 0x02, 0x60, key_id };
+        const body = [_]u8{ 0x80, 0x01, 0x00, 0x84, 0x02, key_file_name[0], key_file_name[1] };
 
         const select_key_data_unit = apdu.build(allocator, 0, 0x22, 0x41, 0xb6, body[0..body.len], 0) catch
             return PkcsError.HostMemory;
