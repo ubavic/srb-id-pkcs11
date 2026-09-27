@@ -140,7 +140,7 @@ pub const Session = struct {
         };
 
         for (files, 0..) |file, i| {
-            const certificate_file = self.card.readCertificateFile(allocator, file[0..]) catch
+            const certificate_file = self.card.readFile(allocator, file[0..]) catch
                 continue;
             defer allocator.free(certificate_file);
 

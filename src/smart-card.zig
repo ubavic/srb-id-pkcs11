@@ -21,7 +21,7 @@ pub const Card = struct {
         selection_method: u8,
         selection_option: u8,
         ne: u32,
-    ) PkcsError!void {
+    ) PkcsError!?u16 {
         const data_unit = apdu.build(
             allocator,
             0x00,
@@ -35,12 +35,19 @@ pub const Card = struct {
         defer allocator.free(data_unit);
         defer std.crypto.secureZero(u8, data_unit);
 
-        const response = try self.transmit(allocator, data_unit);
-        defer allocator.free(response);
-        defer std.crypto.secureZero(u8, response);
+        var buf: [24]u8 = undefined;
+        const response = self.smart_card.transmit(data_unit, &buf) catch |err|
+            return pkcs_error.formPCSC(err);
+
+        defer std.crypto.secureZero(u8, &buf);
 
         if (!responseOK(response))
             return PkcsError.DeviceError;
+
+        if (response.len < 8)
+            return null;
+
+        return std.mem.readInt(u16, response[2..4], .little);
     }
 
     // Allocates result buffer
@@ -94,21 +101,14 @@ pub const Card = struct {
         return result;
     }
 
-    pub fn readCertificateFile(
+    pub fn readFile(
         self: *Card,
         allocator: std.mem.Allocator,
         file_name: []const u8,
     ) PkcsError![]u8 {
-        try self.selectFile(allocator, file_name, 0x00, 0x00, 0);
-
-        const head_data = try self.read(allocator, 0, 2);
-        defer allocator.free(head_data);
-
-        if (head_data.len < 2)
-            return PkcsError.DeviceError;
-
         var offset: u16 = 0;
-        var length: u16 = std.mem.readInt(u16, @ptrCast(head_data), std.builtin.Endian.little) + 2;
+        var length = try self.selectFile(allocator, file_name, 0x00, 0x00, 0) orelse
+            return PkcsError.DeviceError;
 
         var list = std.ArrayList(u8).initCapacity(allocator, length) catch
             return PkcsError.HostMemory;
@@ -142,9 +142,12 @@ pub const Card = struct {
         try initCrypto(self, allocator);
 
         const file_name = [_]u8{ 0x70, 0xf3 };
-        try self.selectFile(allocator, &file_name, 0, 0, 0);
+        const size = try self.selectFile(allocator, &file_name, 0, 0, 0xff);
 
-        const data = try self.read(allocator, 0, 52);
+        if (size == null)
+            return PkcsError.GeneralError;
+
+        const data = try self.read(allocator, 0, size.?);
         defer allocator.free(data);
         defer std.crypto.secureZero(u8, data);
 
@@ -163,7 +166,7 @@ pub const Card = struct {
         allocator: std.mem.Allocator,
     ) PkcsError!void {
         const file_name = [_]u8{ 0xA0, 0x00, 0x00, 0x00, 0x63, 0x50, 0x4B, 0x43, 0x53, 0x2D, 0x31, 0x35 };
-        try self.selectFile(allocator, &file_name, 0x04, 0x00, 0);
+        _ = try self.selectFile(allocator, &file_name, 0x04, 0x00, 0);
     }
 
     pub fn readRandom(
