@@ -74,6 +74,7 @@ pub const Object = union(enum) {
 
 pub const CertificateObject = struct {
     file_name: [2]u8,
+    id: [20]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -90,7 +91,6 @@ pub const CertificateObject = struct {
     end_date: pkcs.CK_DATE,
     public_key_info: []u8,
     subject: []u8,
-    id: []u8,
     issuer: []u8,
     serial_number: []u8,
     value: []u8,
@@ -99,6 +99,8 @@ pub const CertificateObject = struct {
     name_hash_algorithm: pkcs.CK_MECHANISM_TYPE,
 
     pub fn deinit(self: *CertificateObject, allocator: std.mem.Allocator) void {
+        std.crypto.secureZero(u8, &self.id);
+
         std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
 
@@ -110,9 +112,6 @@ pub const CertificateObject = struct {
 
         std.crypto.secureZero(u8, self.subject);
         allocator.free(self.subject);
-
-        std.crypto.secureZero(u8, self.id);
-        allocator.free(self.id);
 
         std.crypto.secureZero(u8, self.issuer);
         allocator.free(self.issuer);
@@ -149,7 +148,7 @@ pub const CertificateObject = struct {
             pkcs.CKA_END_DATE => encodeDate(allocator, self.end_date),
             pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(allocator, self.public_key_info),
             pkcs.CKA_SUBJECT => encodeByteArray(allocator, self.subject),
-            pkcs.CKA_ID => encodeByteArray(allocator, self.id),
+            pkcs.CKA_ID => encodeByteArray(allocator, &self.id),
             pkcs.CKA_ISSUER => encodeByteArray(allocator, self.issuer),
             pkcs.CKA_SERIAL_NUMBER => encodeByteArray(allocator, self.serial_number),
             pkcs.CKA_VALUE => encodeByteArray(allocator, self.value),
@@ -164,6 +163,7 @@ pub const CertificateObject = struct {
 
 pub const PrivateKeyObject = struct {
     file_name: [2]u8,
+    id: [20]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -173,7 +173,6 @@ pub const PrivateKeyObject = struct {
     copyable: pkcs.CK_BBOOL,
     destroyable: pkcs.CK_BBOOL,
     key_type: pkcs.CK_KEY_TYPE,
-    id: []u8,
     start_date: pkcs.CK_DATE,
     end_date: pkcs.CK_DATE,
     derive: pkcs.CK_BBOOL,
@@ -197,11 +196,10 @@ pub const PrivateKeyObject = struct {
     public_exponent: []u8,
 
     pub fn deinit(self: *PrivateKeyObject, allocator: std.mem.Allocator) void {
+        std.crypto.secureZero(u8, &self.id);
+
         std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
-
-        std.crypto.secureZero(u8, self.id);
-        allocator.free(self.id);
 
         std.crypto.secureZero(c_ulong, self.allowed_mechanisms);
         allocator.free(self.allowed_mechanisms);
@@ -233,7 +231,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_COPYABLE => encodeBool(allocator, self.copyable),
             pkcs.CKA_DESTROYABLE => encodeBool(allocator, self.destroyable),
             pkcs.CKA_KEY_TYPE => encodeLong(allocator, self.key_type),
-            pkcs.CKA_ID => encodeByteArray(allocator, self.id),
+            pkcs.CKA_ID => encodeByteArray(allocator, &self.id),
             pkcs.CKA_START_DATE => encodeDate(allocator, self.start_date),
             pkcs.CKA_END_DATE => encodeDate(allocator, self.end_date),
             pkcs.CKA_DERIVE => encodeBool(allocator, self.derive),
@@ -262,6 +260,7 @@ pub const PrivateKeyObject = struct {
 
 pub const PublicKeyObject = struct {
     file_name: [2]u8,
+    id: [20]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
     token: pkcs.CK_BBOOL,
@@ -271,7 +270,6 @@ pub const PublicKeyObject = struct {
     copyable: pkcs.CK_BBOOL,
     destroyable: pkcs.CK_BBOOL,
     key_type: pkcs.CK_KEY_TYPE,
-    id: []u8,
     start_date: pkcs.CK_DATE,
     end_date: pkcs.CK_DATE,
     derive: pkcs.CK_BBOOL,
@@ -291,11 +289,10 @@ pub const PublicKeyObject = struct {
     public_exponent: []u8,
 
     pub fn deinit(self: *PublicKeyObject, allocator: std.mem.Allocator) void {
+        std.crypto.secureZero(u8, &self.id);
+
         std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
-
-        std.crypto.secureZero(u8, self.id);
-        allocator.free(self.id);
 
         std.crypto.secureZero(c_ulong, self.allowed_mechanisms);
         allocator.free(self.allowed_mechanisms);
@@ -329,7 +326,7 @@ pub const PublicKeyObject = struct {
             pkcs.CKA_COPYABLE => encodeBool(allocator, self.copyable),
             pkcs.CKA_DESTROYABLE => encodeBool(allocator, self.destroyable),
             pkcs.CKA_KEY_TYPE => encodeLong(allocator, self.key_type),
-            pkcs.CKA_ID => encodeByteArray(allocator, self.id),
+            pkcs.CKA_ID => encodeByteArray(allocator, &self.id),
             pkcs.CKA_START_DATE => encodeDate(allocator, self.start_date),
             pkcs.CKA_END_DATE => encodeDate(allocator, self.end_date),
             pkcs.CKA_DERIVE => encodeBool(allocator, self.derive),

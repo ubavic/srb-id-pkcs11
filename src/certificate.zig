@@ -13,7 +13,7 @@ pub fn loadObjects(
     certificate_handle: pkcs.CK_OBJECT_HANDLE,
     private_key_handle: pkcs.CK_OBJECT_HANDLE,
     public_key_handle: pkcs.CK_OBJECT_HANDLE,
-    id: []const u8,
+    id: [20]u8,
     alow_encrypt: bool,
     cert_file_name: [2]u8,
 ) PkcsError![3]object.Object {
@@ -28,8 +28,6 @@ pub fn loadObjects(
     const public_key_components = Certificate.rsa.PublicKey.parseDer(parsed.pubKey()) catch
         return PkcsError.GeneralError;
 
-    const cert_id = try clone(allocator, id);
-    errdefer allocator.free(cert_id);
     const certificate_value = try clone(allocator, buffer);
     errdefer allocator.free(certificate_value);
 
@@ -76,7 +74,7 @@ pub fn loadObjects(
         .end_date = pkcs.CK_DATE{},
         .public_key_info = public_key_info,
         .subject = subject,
-        .id = cert_id,
+        .id = id,
         .issuer = issuer,
         .serial_number = serial_number,
         .value = certificate_value,
@@ -85,8 +83,6 @@ pub fn loadObjects(
         .name_hash_algorithm = name_hash_algorithm,
     };
 
-    const priv_id = try clone(allocator, id);
-    errdefer allocator.free(priv_id);
     const private_key_label = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(private_key_label);
     const private_key_subject = try allocEmptySlice(u8, allocator);
@@ -115,7 +111,7 @@ pub fn loadObjects(
         .copyable = pkcs.CK_FALSE, // invalid on original token
         .destroyable = pkcs.CK_FALSE, // invalid on original token
         .key_type = pkcs.CKK_RSA,
-        .id = priv_id,
+        .id = id,
         .start_date = pkcs.CK_DATE{},
         .end_date = pkcs.CK_DATE{},
         .derive = pkcs.CK_FALSE,
@@ -139,8 +135,6 @@ pub fn loadObjects(
         .public_exponent = priv_key_public_exponent,
     };
 
-    const pub_id = try clone(allocator, id);
-    errdefer allocator.free(pub_id);
     const public_key_label = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(public_key_label);
     const public_key_subject = try allocEmptySlice(u8, allocator);
@@ -169,7 +163,7 @@ pub fn loadObjects(
         .copyable = pkcs.CK_FALSE, // invalid on original token
         .destroyable = pkcs.CK_FALSE, // invalid on original token
         .key_type = pkcs.CKK_RSA,
-        .id = pub_id,
+        .id = id,
         .start_date = pkcs.CK_DATE{},
         .end_date = pkcs.CK_DATE{},
         .derive = pkcs.CK_FALSE,
@@ -342,7 +336,7 @@ test "parse objects" {
         },
     };
 
-    const id = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 };
+    const id = [_]u8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     const label: []const u8 = "Test Cert";
     const empty_slice = [_]u8{};
 
@@ -356,7 +350,7 @@ test "parse objects" {
             consts.AuthCert.certificate_handle,
             consts.AuthCert.private_key_handle,
             consts.AuthCert.public_key_handle,
-            &id,
+            id,
             false,
             .{ 0, 0 },
         );
@@ -370,18 +364,18 @@ test "parse objects" {
                 .certificate => |c| {
                     try std.testing.expectEqual(consts.AuthCert.certificate_handle, c.handle);
                     try std.testing.expectEqualSlices(u8, td.serial_number, c.serial_number);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
+                    try std.testing.expectEqualSlices(u8, &id, &c.id);
                     try std.testing.expectEqualSlices(u8, label, c.label);
                 },
                 .private_key => |c| {
                     try std.testing.expectEqual(consts.AuthCert.private_key_handle, c.handle);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
+                    try std.testing.expectEqualSlices(u8, &id, &c.id);
                     try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
                     try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
                 },
                 .public_key => |c| {
                     try std.testing.expectEqual(consts.AuthCert.public_key_handle, c.handle);
-                    try std.testing.expectEqualSlices(u8, &id, c.id);
+                    try std.testing.expectEqualSlices(u8, &id, &c.id);
                     try std.testing.expectEqualSlices(u8, &empty_slice, c.label);
                     try std.testing.expectEqualSlices(u8, td.modulus, c.modulus);
                 },
