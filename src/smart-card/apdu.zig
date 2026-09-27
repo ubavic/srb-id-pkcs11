@@ -1,5 +1,4 @@
 const std = @import("std");
-const testing = std.testing;
 
 pub fn build(
     allocator: std.mem.Allocator,
@@ -93,6 +92,6 @@ test "build APDU" {
     for (test_cases) |tc| {
         const result = try build(std.testing.allocator, tc.parameters[0], tc.parameters[1], tc.parameters[2], tc.parameters[3], tc.data, tc.ne);
         defer std.testing.allocator.free(result);
-        try testing.expectEqualSlices(u8, tc.expected, result);
+        try std.testing.expectEqualSlices(u8, tc.expected, result);
     }
 }
