@@ -2,7 +2,7 @@ const std = @import("std");
 const pcsc = @import("pcsc");
 
 const apdu = @import("apdu.zig");
-const pkcs_error = @import("pkcs_error.zig");
+const pkcs_error = @import("../pkcs_error.zig");
 
 const PkcsError = pkcs_error.PkcsError;
 

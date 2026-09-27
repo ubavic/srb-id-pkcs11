@@ -7,8 +7,8 @@ const certificate = @import("certificate.zig");
 const hasher = @import("hasher.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
-const reader = @import("reader.zig");
-const smart_card = @import("smart-card.zig");
+const reader = @import("smart-card/reader.zig");
+const smart_card = @import("smart-card/card.zig");
 const state = @import("state.zig");
 
 const PkcsError = pkcs_error.PkcsError;
