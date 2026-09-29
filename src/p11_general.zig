@@ -99,7 +99,7 @@ export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
     info.?.libraryVersion.minor = version.minor;
 
     @memset(&info.?.libraryDescription, 0x20);
-    std.mem.copyForwards(u8, &info.?.libraryDescription, "Module for Serbian personal ID");
+    std.mem.copyForwards(u8, &info.?.libraryDescription, "Module for Serbian eID cards");
 
     @memset(&info.?.manufacturerID, 0x20);
     std.mem.copyForwards(u8, &info.?.manufacturerID, "Nikola Ubavic");
