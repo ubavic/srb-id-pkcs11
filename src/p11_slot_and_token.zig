@@ -120,6 +120,7 @@ pub export fn C_GetTokenInfo(
     @memcpy(&token_info.?.label, &reader_state.token_label);
     @memcpy(&token_info.?.serialNumber, &reader_state.token_serial_number);
 
+    //TODO: Following two values should not be hardcoded
     @memset(&token_info.?.manufacturerID, 0x20);
     std.mem.copyForwards(u8, &token_info.?.manufacturerID, "NetSeT Global Solutions");
 

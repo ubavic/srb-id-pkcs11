@@ -98,10 +98,10 @@ export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
     info.?.libraryVersion.major = version.major;
     info.?.libraryVersion.minor = version.minor;
 
-    @memset(&info.?.libraryDescription, 0);
+    @memset(&info.?.libraryDescription, 0x20);
     std.mem.copyForwards(u8, &info.?.libraryDescription, "Module for Serbian personal ID");
 
-    @memset(&info.?.manufacturerID, 0);
+    @memset(&info.?.manufacturerID, 0x20);
     std.mem.copyForwards(u8, &info.?.manufacturerID, "Nikola Ubavic");
 
     return pkcs.CKR_OK;
