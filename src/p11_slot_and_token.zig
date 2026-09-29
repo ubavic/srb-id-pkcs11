@@ -20,12 +20,13 @@ pub export fn C_GetSlotList(
     if (slot_count == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (slot_list == null) {
-        reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
-            return pkcs_error.toRV(err);
-    }
-
     const only_with_token = token_present == pkcs.CK_TRUE;
+
+    reader.lock.lockUncancelable(state.io);
+    defer reader.lock.unlock(state.io);
+
+    reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
+        return pkcs_error.toRV(err);
 
     var count: u32 = 0;
     var iter = reader.reader_states.iterator();
