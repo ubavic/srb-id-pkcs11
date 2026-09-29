@@ -41,7 +41,7 @@ pub const Card = struct {
 
         defer std.crypto.secureZero(u8, &buf);
 
-        if (!responseOK(response))
+        if (!apdu.statusOK(response))
             return PkcsError.DeviceError;
 
         if (response.len < 8)
@@ -181,7 +181,7 @@ pub const Card = struct {
 
         const response = try self.transmit(allocator, data_unit);
 
-        if (!responseOK(response)) {
+        if (!apdu.statusOK(response)) {
             defer allocator.free(response);
             return PkcsError.DeviceError;
         }
@@ -205,13 +205,13 @@ pub const Card = struct {
         defer allocator.free(response);
         defer std.crypto.secureZero(u8, response);
 
-        if (responseIs(response, [_]u8{ 0x63, 0xC0 }))
+        if (apdu.statusIs(response, .{ 0x63, 0xC0 }))
             return PkcsError.PinLocked;
 
-        if (responseIs(response, [_]u8{ 0x69, 0x83 }))
+        if (apdu.statusIs(response, .{ 0x69, 0x83 }))
             return PkcsError.PinLocked;
 
-        if (!responseOK(response))
+        if (!apdu.statusOK(response))
             return PkcsError.PinIncorrect;
     }
 
@@ -249,7 +249,7 @@ pub const Card = struct {
         defer allocator.free(response);
         defer std.crypto.secureZero(u8, response);
 
-        if (!responseOK(response))
+        if (!apdu.statusOK(response))
             return PkcsError.FunctionFailed;
     }
 
@@ -271,7 +271,7 @@ pub const Card = struct {
         const select_key_response = try self.transmit(allocator, select_key_data_unit);
         defer allocator.free(select_key_response);
 
-        if (!responseOK(select_key_response))
+        if (!apdu.statusOK(select_key_response))
             return PkcsError.GeneralError;
 
         var p2: u8 = 0x00;
@@ -291,7 +291,7 @@ pub const Card = struct {
         defer allocator.free(sign_request_response);
         defer std.crypto.secureZero(u8, sign_request_response);
 
-        if (!responseOK(sign_request_response))
+        if (!apdu.statusOK(sign_request_response))
             return PkcsError.GeneralError;
 
         if (sign_request_response.len <= 2)
@@ -332,7 +332,7 @@ pub const Card = struct {
         defer allocator.free(decrypt_request_response);
         defer std.crypto.secureZero(u8, decrypt_request_response);
 
-        if (!responseOK(decrypt_request_response))
+        if (!apdu.statusOK(decrypt_request_response))
             return PkcsError.GeneralError;
 
         const plain_message = allocator.alloc(u8, decrypt_request_response.len - 2) catch
@@ -357,17 +357,6 @@ pub fn connect(
     try card.initCrypto(allocator);
 
     return card;
-}
-
-fn responseIs(rsp: []const u8, expected: [2]u8) bool {
-    if (rsp.len < 2) return false;
-    const sw1 = rsp[rsp.len - 2];
-    const sw2 = rsp[rsp.len - 1];
-    return sw1 == expected[0] and sw2 == expected[1];
-}
-
-fn responseOK(rsp: []const u8) bool {
-    return responseIs(rsp, [_]u8{ 0x90, 0x00 });
 }
 
 fn padPin(pin: []const u8) PkcsError![8]u8 {
@@ -477,26 +466,6 @@ test "validate new pin" {
 
     for (test_cases) |tc|
         try std.testing.expectError(tc.expected, validateNewPin(tc.pin));
-}
-
-test "Response OK" {
-    const test_cases = [_]struct {
-        pin: []const u8,
-        expected: bool,
-    }{
-        .{ .pin = &.{}, .expected = false },
-        .{ .pin = &.{1}, .expected = false },
-        .{ .pin = &.{ 0, 0 }, .expected = false },
-        .{ .pin = &.{ 1, 2, 3 }, .expected = false },
-        .{ .pin = &.{ 0x90, 0x00, 0x00 }, .expected = false },
-        .{ .pin = &.{ 0x00, 0x00, 0x00, 0x90, 0x10 }, .expected = false },
-        .{ .pin = &.{ 0x90, 0x00 }, .expected = true },
-        .{ .pin = &.{ 0x00, 0x90, 0x00 }, .expected = true },
-    };
-
-    for (test_cases) |tc| {
-        try std.testing.expect(responseOK(tc.pin) == tc.expected);
-    }
 }
 
 test "Parse token info" {

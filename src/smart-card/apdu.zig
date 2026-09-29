@@ -95,3 +95,34 @@ test "build APDU" {
         try std.testing.expectEqualSlices(u8, tc.expected, result);
     }
 }
+
+pub fn statusIs(rsp: []const u8, expected: [2]u8) bool {
+    if (rsp.len < 2) return false;
+    const sw1 = rsp[rsp.len - 2];
+    const sw2 = rsp[rsp.len - 1];
+    return sw1 == expected[0] and sw2 == expected[1];
+}
+
+pub fn statusOK(rsp: []const u8) bool {
+    return statusIs(rsp, .{ 0x90, 0x00 });
+}
+
+test "Response OK" {
+    const test_cases = [_]struct {
+        pin: []const u8,
+        expected: bool,
+    }{
+        .{ .pin = &.{}, .expected = false },
+        .{ .pin = &.{1}, .expected = false },
+        .{ .pin = &.{ 0, 0 }, .expected = false },
+        .{ .pin = &.{ 1, 2, 3 }, .expected = false },
+        .{ .pin = &.{ 0x90, 0x00, 0x00 }, .expected = false },
+        .{ .pin = &.{ 0x00, 0x00, 0x00, 0x90, 0x10 }, .expected = false },
+        .{ .pin = &.{ 0x90, 0x00 }, .expected = true },
+        .{ .pin = &.{ 0x00, 0x90, 0x00 }, .expected = true },
+    };
+
+    for (test_cases) |tc| {
+        try std.testing.expect(statusOK(tc.pin) == tc.expected);
+    }
+}
