@@ -3,11 +3,13 @@ const std = @import("std");
 const PkcsError = @import("../pkcs_error.zig").PkcsError;
 
 pub fn pad(pin: []const u8) PkcsError![8]u8 {
-    var padded_pin: [8]u8 = [_]u8{ 0, 0, 0, 0, 0, 0, 0, 0 };
+    if (pin.len > 8)
+        return PkcsError.PinLenRange;
 
-    for (pin, 0..) |p, i| {
+    var padded_pin: [8]u8 = std.mem.zeroes([8]u8);
+
+    for (pin, 0..) |p, i|
         padded_pin[i] = p;
-    }
 
     return padded_pin;
 }
