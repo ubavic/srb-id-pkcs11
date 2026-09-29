@@ -12,19 +12,7 @@ pub fn pad(pin: []const u8) PkcsError![8]u8 {
     return padded_pin;
 }
 
-pub fn validate(pin: []const u8) bool {
-    if (pin.len < 4 or pin.len > 8)
-        return false;
-
-    for (pin) |p| {
-        if (p < '0' or p > '9')
-            return false;
-    }
-
-    return true;
-}
-
-pub fn validateNew(pin: []const u8) PkcsError!void {
+pub fn validate(pin: []const u8) PkcsError!void {
     if (pin.len < 4 or pin.len > 8)
         return PkcsError.PinLenRange;
 
@@ -51,27 +39,6 @@ test "Pad pin" {
     }
 }
 
-test "validate pin" {
-    const test_cases = [_]struct {
-        pin: []const u8,
-        expected: bool,
-    }{
-        .{ .pin = "", .expected = false },
-        .{ .pin = "1", .expected = false },
-        .{ .pin = "123456789", .expected = false },
-        .{ .pin = "123A", .expected = false },
-        .{ .pin = "abcd", .expected = false },
-        .{ .pin = "01w1", .expected = false },
-        .{ .pin = "#+()", .expected = false },
-        .{ .pin = "4321", .expected = true },
-        .{ .pin = "0000", .expected = true },
-        .{ .pin = "01234567", .expected = true },
-    };
-
-    for (test_cases) |tc|
-        try std.testing.expect(validate(tc.pin) == tc.expected);
-}
-
 test "validate new pin" {
     const test_cases = [_]struct {
         pin: []const u8,
@@ -87,5 +54,14 @@ test "validate new pin" {
     };
 
     for (test_cases) |tc|
-        try std.testing.expectError(tc.expected, validateNew(tc.pin));
+        try std.testing.expectError(tc.expected, validate(tc.pin));
+
+    const no_error_test_cases = [_][]const u8{
+        "4321",
+        "0000",
+        "01234567",
+    };
+
+    for (no_error_test_cases) |tc|
+        try validate(tc);
 }

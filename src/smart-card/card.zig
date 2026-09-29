@@ -192,7 +192,7 @@ pub const Card = struct {
     }
 
     pub fn verifyPin(self: *const Card, allocator: std.mem.Allocator, pin_to_verify: []const u8) PkcsError!void {
-        if (!pin.validate(pin_to_verify))
+        pin.validate(pin_to_verify) catch
             return PkcsError.PinIncorrect;
 
         var padded_pin = try pin.pad(pin_to_verify);
@@ -223,10 +223,8 @@ pub const Card = struct {
         old_pin: []const u8,
         new_pin: []const u8,
     ) PkcsError!void {
-        if (!pin.validate(old_pin))
-            return PkcsError.PinIncorrect;
-
-        try pin.validateNew(new_pin);
+        try pin.validate(old_pin);
+        try pin.validate(new_pin);
 
         try self.verifyPin(allocator, old_pin);
 
