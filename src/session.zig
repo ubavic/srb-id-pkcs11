@@ -1,6 +1,5 @@
 const std = @import("std");
 
-const consts = @import("consts.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
 const certificate = @import("certificate.zig");
@@ -9,6 +8,9 @@ const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("smart-card/reader.zig");
 const smart_card = @import("smart-card/card.zig");
+const Index = @import("smart-card/Index.zig");
+const PublicKeyFile = @import("smart-card/PublicKeyFile.zig");
+const MetaFile = @import("smart-card/MetaFile.zig");
 const state = @import("state.zig");
 
 const PkcsError = pkcs_error.PkcsError;
@@ -119,50 +121,76 @@ pub const Session = struct {
         return PkcsError.ObjectHandleInvalid;
     }
 
-    fn loadCertificates(
+    fn loadObjects(
         self: *Session,
         allocator: std.mem.Allocator,
     ) PkcsError!void {
-        var object_list = std.ArrayList(object.Object).initCapacity(allocator, 6) catch
+        const index_content = try self.card.readFile(allocator, &.{ 0x8F, 0xFF });
+        defer allocator.free(index_content);
+
+        var index = try Index.init(index_content);
+
+        var object_list = std.ArrayList(object.Object).initCapacity(allocator, index.length) catch
             return PkcsError.HostMemory;
         errdefer object_list.deinit(allocator);
 
-        const files: [2][2]u8 = [2][2]u8{
-            [_]u8{ 0x71, 0x02 },
-            [_]u8{ 0x71, 0x03 },
-        };
+        var handle: pkcs.CK_OBJECT_HANDLE = 0x80000000;
+        while (index.next()) |meta_file_name| {
+            const meta_file_content = try self.card.readFile(allocator, &meta_file_name);
+            defer allocator.free(meta_file_content);
 
-        // TODO determine handles of objects when only the auth cert is present on token
+            const meta_file = try MetaFile.parse(meta_file_content);
 
-        const ids = [_]consts.ObjectConstants{
-            consts.AuthCert,
-            consts.SignCert,
-        };
+            switch (meta_file.class) {
+                0x01 => {
+                    const compressed_certificate_content = try self.card.readFile(allocator, &meta_file.file_name);
+                    defer allocator.free(compressed_certificate_content);
 
-        for (files, 0..) |file, i| {
-            const certificate_file = self.card.readFile(allocator, file[0..]) catch
-                continue;
-            defer allocator.free(certificate_file);
+                    const certificate_data = try certificate.decompressCertificate(allocator, compressed_certificate_content);
+                    defer allocator.free(certificate_data);
 
-            const certificate_data = try certificate.decompressCertificate(allocator, certificate_file);
-            defer allocator.free(certificate_data);
+                    const cert_object = certificate.parseCertificate(
+                        allocator,
+                        handle,
+                        certificate_data,
+                        meta_file.id,
+                        meta_file.file_name,
+                    ) catch
+                        continue;
 
-            var cert_objects = certificate.loadObjects(
-                allocator,
-                certificate_data,
-                ids[i].certificate_handle,
-                ids[i].private_key_handle,
-                ids[i].public_key_handle,
-                ids[i].id,
-                i == 0,
-                file,
-            ) catch
-                continue;
+                    object_list.append(allocator, cert_object) catch
+                        return PkcsError.HostMemory;
 
-            object_list.appendSlice(allocator, &cert_objects) catch {
-                for (&cert_objects) |*o|
-                    o.deinit(allocator);
-            };
+                    handle += 8;
+                },
+                0x02 => {
+                    const pub_key_file_content: []const u8 = try self.card.readFile(allocator, &meta_file.file_name);
+                    defer allocator.free(pub_key_file_content);
+
+                    var pub_key_file = PublicKeyFile{
+                        .id = meta_file.id,
+                        .pub_key_file_name = meta_file.file_name,
+                    };
+                    pub_key_file.parse(pub_key_file_content) catch
+                        continue;
+
+                    const pub_key_object = try certificate.createPublicKeyObject(allocator, pub_key_file, handle);
+                    object_list.append(allocator, pub_key_object) catch
+                        return PkcsError.HostMemory;
+
+                    handle += 8;
+
+                    const private_key_object = try certificate.createPrivateKeyObject(allocator, pub_key_file, handle);
+                    object_list.append(allocator, private_key_object) catch
+                        return PkcsError.HostMemory;
+
+                    handle += 8;
+                },
+                0x03 => {
+                    // private key - we know all things needed from the pub key
+                },
+                else => unreachable,
+            }
         }
 
         self.objects = object_list.toOwnedSlice(allocator) catch
@@ -233,7 +261,7 @@ pub fn newSession(
         },
     };
 
-    try new_session.loadCertificates(allocator);
+    try new_session.loadObjects(allocator);
 
     sessions.put(session_id, new_session) catch
         return PkcsError.HostMemory;
