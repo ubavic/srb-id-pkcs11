@@ -33,7 +33,7 @@ pub const Card = struct {
         defer allocator.free(data_unit);
         defer std.crypto.secureZero(u8, data_unit);
 
-        var buf: [24]u8 = undefined;
+        var buf: [pcsc.max_buffer_len]u8 = undefined;
         const response = self.smart_card.transmit(data_unit, &buf) catch |err|
             return pkcs_error.formPCSC(err);
 
