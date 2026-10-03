@@ -88,7 +88,7 @@ pub const Card = struct {
         defer allocator.free(rsp);
         defer std.crypto.secureZero(u8, rsp);
 
-        if (rsp.len < 2)
+        if (!apdu.statusOK(rsp))
             return PkcsError.DeviceError;
 
         const rsp_len = rsp.len - 2;
