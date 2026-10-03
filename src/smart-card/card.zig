@@ -45,7 +45,7 @@ pub const Card = struct {
         if (response.len < 8)
             return null;
 
-        return std.mem.readInt(u16, response[2..4], .little);
+        return std.mem.readInt(u16, response[2..4], .big);
     }
 
     // Allocates result buffer
@@ -105,7 +105,7 @@ pub const Card = struct {
         file_name: []const u8,
     ) PkcsError![]u8 {
         var offset: u16 = 0;
-        var length = try self.selectFile(allocator, file_name, 0x00, 0x00, 0) orelse
+        var length = try self.selectFile(allocator, file_name, 0x00, 0x00, 0xff) orelse
             return PkcsError.DeviceError;
 
         var list = std.ArrayList(u8).initCapacity(allocator, length) catch
