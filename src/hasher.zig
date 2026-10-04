@@ -27,11 +27,14 @@ pub const Hasher = union(enum) {
 
     pub fn finalize(
         self: *Hasher,
-        allocator: std.mem.Allocator,
-    ) std.mem.Allocator.Error![]u8 {
+        buffer: []u8,
+    ) PkcsError![]u8 {
         const digest_length = self.digestLength();
 
-        const hash: []u8 = try allocator.alloc(u8, digest_length);
+        if (buffer.len < digest_length)
+            return PkcsError.GeneralError;
+
+        const hash: []u8 = buffer[0..digest_length];
 
         switch (self.*) {
             .md5 => |*o| o.final(@ptrCast(hash.ptr)),

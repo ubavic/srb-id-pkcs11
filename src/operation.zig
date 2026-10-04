@@ -445,33 +445,32 @@ fn createPkcs1PaddedSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.
 }
 
 fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) PkcsError![]u8 {
+    const digest_length = hash.digestLength();
+
     const prefix = getPrefixFromHasher(hash);
 
-    const payload = hash.finalize(allocator) catch
+    const request = allocator.alloc(u8, prefix.len + digest_length) catch
         return PkcsError.HostMemory;
-    defer allocator.free(payload);
-
-    var request = allocator.alloc(u8, prefix.len + payload.len) catch
-        return PkcsError.HostMemory;
+    errdefer allocator.free(request);
 
     @memcpy(request[0..prefix.len], prefix);
-    @memcpy(request[prefix.len..], payload);
+    _ = try hash.finalize(request[prefix.len..]);
 
     return request;
 }
 
 fn createPkcs1PaddedHashRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
-    const prefix = getPrefixFromHasher(hash);
-    const digest = hash.finalize(allocator) catch
-        return PkcsError.HostMemory;
-    defer allocator.free(digest);
+    const digest_length = hash.digestLength();
 
-    const digest_info_len = prefix.len + digest.len;
+    const prefix = getPrefixFromHasher(hash);
+
+    const digest_info_len = prefix.len + digest_length;
     if (digest_info_len > key_size - 11)
         return PkcsError.DataLenRange;
 
     const request = allocator.alloc(u8, key_size) catch
         return PkcsError.HostMemory;
+    errdefer allocator.free(request);
 
     @memset(request, 0xff);
     const data_start = key_size - digest_info_len;
@@ -479,7 +478,7 @@ fn createPkcs1PaddedHashRequest(hash: *hasher.Hasher, allocator: std.mem.Allocat
     request[1] = 0x01;
     request[data_start - 1] = 0x00;
     @memcpy(request[data_start..][0..prefix.len], prefix);
-    @memcpy(request[data_start + prefix.len ..][0..digest.len], digest);
+    _ = try hash.finalize(request[data_start + prefix.len ..]);
 
     return request;
 }

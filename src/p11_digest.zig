@@ -57,29 +57,28 @@ pub export fn C_Digest(
     }
 
     const required_digest_size = current_operation.hasher.digestLength();
+
     if (data_digest == null) {
         data_digest_len.?.* = @intCast(required_digest_size);
         return pkcs.CKR_OK;
     }
 
-    if (data == null) {
-        current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+    if (data_digest_len.?.* < required_digest_size) {
+        data_digest_len.?.* = @intCast(required_digest_size);
+        return pkcs.CKR_BUFFER_TOO_SMALL;
     }
 
-    if (data_digest_len.?.* < required_digest_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+    defer current_session.resetOperation();
+
+    if (data == null)
+        return pkcs.CKR_ARGUMENTS_BAD;
 
     current_operation.hasher.update(data.?[0..data_len]);
-    const computed_digest = current_operation.hasher.finalize(current_session.allocator) catch {
-        current_session.resetOperation();
-        return pkcs.CKR_HOST_MEMORY;
-    };
 
-    @memcpy(data_digest.?, computed_digest);
-    current_session.allocator.free(computed_digest);
+    _ = current_operation.hasher.finalize(data_digest.?[0..required_digest_size]) catch |err|
+        return pkcs_error.toRV(err);
 
-    current_session.resetOperation();
+    data_digest_len.?.* = @intCast(required_digest_size);
 
     return pkcs.CKR_OK;
 }
@@ -148,16 +147,17 @@ pub export fn C_DigestFinal(
         return pkcs.CKR_OK;
     }
 
-    if (data_digest_len.?.* < required_digest_size)
+    if (data_digest_len.?.* < required_digest_size) {
+        data_digest_len.?.* = @intCast(required_digest_size);
         return pkcs.CKR_BUFFER_TOO_SMALL;
+    }
 
     defer current_session.resetOperation();
 
-    const computed_digest = current_operation.hasher.finalize(current_session.allocator) catch
-        return pkcs.CKR_HOST_MEMORY;
+    _ = current_operation.hasher.finalize(data_digest.?[0..required_digest_size]) catch |err|
+        return pkcs_error.toRV(err);
 
-    @memcpy(data_digest.?, computed_digest);
-    current_session.allocator.free(computed_digest);
+    data_digest_len.?.* = @intCast(required_digest_size);
 
     return pkcs.CKR_OK;
 }
