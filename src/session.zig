@@ -2,7 +2,7 @@ const std = @import("std");
 
 const certificate = @import("certificate.zig");
 const hasher = @import("hasher.zig");
-const smart_card = @import("smart-card/card.zig");
+const Card = @import("smart-card/Card.zig");
 const Index = @import("smart-card/Index.zig");
 const MetaFile = @import("smart-card/MetaFile.zig");
 const object = @import("object.zig");
@@ -22,7 +22,7 @@ var lock = std.Io.RwLock.init;
 pub const Session = struct {
     allocator: std.mem.Allocator,
     id: pkcs.CK_SESSION_HANDLE,
-    card: smart_card.Card,
+    card: Card,
     reader_id: pkcs.CK_SLOT_ID,
     closed: bool = false,
     write_enabled: bool,
@@ -238,7 +238,7 @@ pub fn newSession(
     if (!reader_state.recognized)
         return PkcsError.TokenNotRecognized;
 
-    const card = try smart_card.connect(
+    const card = try Card.connect(
         allocator,
         &state.smart_card_client,
         reader_state.name,

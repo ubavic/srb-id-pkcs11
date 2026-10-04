@@ -2,9 +2,9 @@ const std = @import("std");
 const pcsc = @import("pcsc");
 
 const atr = @import("atr.zig");
+const Card = @import("Card.zig");
 const pkcs = @import("../pkcs.zig");
 const state = @import("../state.zig");
-const smart_card = @import("card.zig");
 const pkcs_error = @import("../pkcs_error.zig");
 
 const PkcsError = pkcs_error.PkcsError;
@@ -63,7 +63,7 @@ pub const ReaderState = struct {
         if (!self.recognized)
             return;
 
-        var idCard = smart_card.Card{ .smart_card = card };
+        var idCard = Card{ .smart_card = card };
         const token_info = idCard.readTokenInfo(allocator) catch {
             self.recognized = false;
             return;
