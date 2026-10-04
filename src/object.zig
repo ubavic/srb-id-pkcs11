@@ -1,8 +1,7 @@
 const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
-const PkcsError = pkcs_error.PkcsError;
+const PkcsError = @import("pkcs_error.zig").PkcsError;
 
 const CKT_NETSCAPE_TRUSTED_DELEGATOR: pkcs.CK_ATTRIBUTE_TYPE = 0xce534352;
 

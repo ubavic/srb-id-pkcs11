@@ -3,9 +3,7 @@ const std = @import("std");
 const hasher = @import("hasher.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
-
-const pkcs_error = @import("pkcs_error.zig");
-const PkcsError = pkcs_error.PkcsError;
+const PkcsError = @import("pkcs_error.zig").PkcsError;
 
 // rfc8017 - Section 9.2
 const md5_prefix: [18]u8 = [_]u8{ 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10 };
@@ -777,7 +775,7 @@ test "raw sign request with invalid length" {
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 50);
 
     const result = createRawSignRequest(&msg_buffer, std.testing.allocator, 128);
-    try std.testing.expectError(pkcs_error.PkcsError.DataLenRange, result);
+    try std.testing.expectError(PkcsError.DataLenRange, result);
 
     try std.testing.expectEqual(null, msg_buffer);
 }
@@ -803,7 +801,7 @@ test "pkcs1 padded sign request with invalid length" {
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 118);
 
     const result = createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, 128);
-    try std.testing.expectError(pkcs_error.PkcsError.DataLenRange, result);
+    try std.testing.expectError(PkcsError.DataLenRange, result);
 
     try std.testing.expectEqual(null, msg_buffer);
 }

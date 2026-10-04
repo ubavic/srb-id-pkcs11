@@ -1,10 +1,9 @@
 const std = @import("std");
 
-const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
-const PkcsError = pkcs_error.PkcsError;
+const PkcsError = @import("pkcs_error.zig").PkcsError;
+const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
 
 pub fn parseCertificate(
     allocator: std.mem.Allocator,
