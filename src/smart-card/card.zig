@@ -63,7 +63,8 @@ pub const Card = struct {
         length: u16,
     ) PkcsError![]u8 {
         const read_size = @min(length, 0xFF);
-        const adpu = apdu.build(
+
+        const data_unit = apdu.build(
             allocator,
             0x00,
             0xB0,
@@ -73,11 +74,12 @@ pub const Card = struct {
             read_size,
         ) catch
             return PkcsError.HostMemory;
+        defer allocator.free(data_unit);
 
         var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
         defer std.crypto.secureZero(u8, &response_buffer);
 
-        const rsp = try self.transmit(adpu, &response_buffer);
+        const rsp = try self.transmit(data_unit, &response_buffer);
 
         if (!apdu.statusOK(rsp))
             return PkcsError.DeviceError;
