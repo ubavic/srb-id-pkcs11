@@ -47,22 +47,13 @@ pub const Card = struct {
         return std.mem.readInt(u16, response[2..4], .big);
     }
 
-    // Allocates result buffer
     fn transmit(
         self: *const Card,
-        allocator: std.mem.Allocator,
         data_unit: []u8,
-    ) PkcsError![]u8 {
-        var buf: [pcsc.max_buffer_len]u8 = undefined;
-        const response = self.smart_card.transmit(data_unit, &buf) catch |err|
+        out: []u8,
+    ) PkcsError![]const u8 {
+        return self.smart_card.transmit(data_unit, out) catch |err|
             return pkcs_error.formPCSC(err);
-
-        const out = allocator.alloc(u8, response.len) catch
-            return PkcsError.HostMemory;
-
-        @memcpy(out, response[0..response.len]);
-
-        return out;
     }
 
     fn read(
@@ -83,9 +74,10 @@ pub const Card = struct {
         ) catch
             return PkcsError.HostMemory;
 
-        const rsp = try self.transmit(allocator, adpu);
-        defer allocator.free(rsp);
-        defer std.crypto.secureZero(u8, rsp);
+        var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
+        defer std.crypto.secureZero(u8, &response_buffer);
+
+        const rsp = try self.transmit(adpu, &response_buffer);
 
         if (!apdu.statusOK(rsp))
             return PkcsError.DeviceError;
@@ -170,18 +162,19 @@ pub const Card = struct {
         self: *const Card,
         allocator: std.mem.Allocator,
         length: u8,
-    ) PkcsError![]u8 {
+        out_buffer: []u8,
+    ) PkcsError![]const u8 {
+        if (out_buffer.len < length + 2)
+            return PkcsError.HostMemory;
+
         const data_unit = apdu.build(allocator, 0xB0, 0x83, 0x00, 0x00, null, length) catch
             return PkcsError.HostMemory;
 
         defer allocator.free(data_unit);
 
-        const response = try self.transmit(allocator, data_unit);
-
-        if (!apdu.statusOK(response)) {
-            defer allocator.free(response);
+        const response = try self.transmit(data_unit, out_buffer);
+        if (!apdu.statusOK(response))
             return PkcsError.DeviceError;
-        }
 
         return response;
     }
@@ -198,9 +191,10 @@ pub const Card = struct {
         defer allocator.free(data_unit);
         defer std.crypto.secureZero(u8, data_unit);
 
-        const response = try self.transmit(allocator, data_unit);
-        defer allocator.free(response);
-        defer std.crypto.secureZero(u8, response);
+        var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
+        defer std.crypto.secureZero(u8, &response_buffer);
+
+        const response = try self.transmit(data_unit, &response_buffer);
 
         if (apdu.statusIs(response, .{ 0x63, 0xC0 }))
             return PkcsError.PinLocked;
@@ -240,9 +234,10 @@ pub const Card = struct {
         defer allocator.free(data_unit);
         defer std.crypto.secureZero(u8, data_unit);
 
-        const response = try self.transmit(allocator, data_unit);
-        defer allocator.free(response);
-        defer std.crypto.secureZero(u8, response);
+        var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
+        defer std.crypto.secureZero(u8, &response_buffer);
+
+        const response = try self.transmit(data_unit, &response_buffer);
 
         if (!apdu.statusOK(response))
             return PkcsError.FunctionFailed;
@@ -255,6 +250,9 @@ pub const Card = struct {
         plain_sign: bool,
         sign_request: []u8,
     ) PkcsError![]u8 {
+        var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
+        defer std.crypto.secureZero(u8, &response_buffer);
+
         const algorithm_id: u8 = if (plain_sign) 0 else 2;
 
         const body = [_]u8{ 0x80, 0x01, algorithm_id, 0x84, 0x02, key_file_name[0], key_file_name[1] };
@@ -263,9 +261,7 @@ pub const Card = struct {
             return PkcsError.HostMemory;
         defer allocator.free(select_key_data_unit);
 
-        const select_key_response = try self.transmit(allocator, select_key_data_unit);
-        defer allocator.free(select_key_response);
-
+        const select_key_response = try self.transmit(select_key_data_unit, &response_buffer);
         if (!apdu.statusOK(select_key_response))
             return PkcsError.GeneralError;
 
@@ -282,10 +278,7 @@ pub const Card = struct {
         defer allocator.free(sign_request_data_unit);
         defer std.crypto.secureZero(u8, sign_request_data_unit);
 
-        const sign_request_response = try self.transmit(allocator, sign_request_data_unit);
-        defer allocator.free(sign_request_response);
-        defer std.crypto.secureZero(u8, sign_request_response);
-
+        const sign_request_response = try self.transmit(sign_request_data_unit, &response_buffer);
         if (!apdu.statusOK(sign_request_response))
             return PkcsError.GeneralError;
 
@@ -306,6 +299,9 @@ pub const Card = struct {
         key_file_name: [2]u8,
         decrypt_request: []u8,
     ) PkcsError![]u8 {
+        var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
+        defer std.crypto.secureZero(u8, &response_buffer);
+
         if (decrypt_request.len >= 256)
             return PkcsError.GeneralError;
 
@@ -315,18 +311,16 @@ pub const Card = struct {
             return PkcsError.HostMemory;
         defer allocator.free(select_key_data_unit);
 
-        const select_key_response = try self.transmit(allocator, select_key_data_unit);
-        defer allocator.free(select_key_response);
+        const select_key_response = try self.transmit(select_key_data_unit, &response_buffer);
+        if (!apdu.statusOK(select_key_response))
+            return PkcsError.GeneralError;
 
         const decrypt_request_data_unit = apdu.build(allocator, 0, 0x2a, 0x80, decrypt_request[0], decrypt_request[1..], 0x100) catch
             return PkcsError.HostMemory;
         defer allocator.free(decrypt_request_data_unit);
         defer std.crypto.secureZero(u8, decrypt_request_data_unit);
 
-        const decrypt_request_response = try self.transmit(allocator, decrypt_request_data_unit);
-        defer allocator.free(decrypt_request_response);
-        defer std.crypto.secureZero(u8, decrypt_request_response);
-
+        const decrypt_request_response = try self.transmit(decrypt_request_data_unit, &response_buffer);
         if (!apdu.statusOK(decrypt_request_response))
             return PkcsError.GeneralError;
 

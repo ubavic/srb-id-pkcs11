@@ -28,6 +28,11 @@ pub export fn C_GenerateRandom(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
+    const max_length: comptime_int = 128;
+
+    var response_buffer: [max_length + 2]u8 = undefined;
+    defer std.crypto.secureZero(u8, &response_buffer);
+
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
@@ -37,11 +42,10 @@ pub export fn C_GenerateRandom(
     var i: c_ulong = 0;
     var remaining_size = random_size;
     while (i < random_size) {
-        const segment_size: u8 = @min(128, remaining_size);
+        const segment_size: u8 = @min(max_length, remaining_size);
 
-        const segment = current_session.card.readRandom(current_session.allocator, segment_size) catch |err|
+        const segment = current_session.card.readRandom(current_session.allocator, segment_size, &response_buffer) catch |err|
             return pkcs_error.toRV(err);
-        defer current_session.allocator.free(segment);
 
         if (segment.len < segment_size + 2)
             return pkcs.CKR_DEVICE_ERROR;
