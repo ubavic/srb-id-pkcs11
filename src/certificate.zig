@@ -8,7 +8,7 @@ const PkcsError = pkcs_error.PkcsError;
 
 pub fn parseCertificate(
     allocator: std.mem.Allocator,
-    certificate_handle: c_ulong,
+    certificate_handle: pkcs.CK_OBJECT_HANDLE,
     buffer: []const u8,
     id: [20]u8,
     file_name: [2]u8,
@@ -349,7 +349,7 @@ test "parse certificate" {
         const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, td.file_name, ta, .unlimited);
         defer ta.free(der);
 
-        var obj = try parseCertificate(ta, 0x8000 + i, der, id, file_name);
+        var obj = try parseCertificate(ta, @intCast(0x8000 + i), der, id, file_name);
         defer obj.deinit(ta);
 
         const certificate_object = obj.certificate;
