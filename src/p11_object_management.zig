@@ -87,8 +87,26 @@ pub export fn C_GetAttributeValue(
         return pkcs_error.toRV(err);
 
     for (0..count) |i| {
-        // TODO: Do error paths free memory?
-        const object_attribute = selected_object.getAttribute(current_session.allocator, template.?[i].type) catch |err| {
+        const attribute_size = selected_object.getAttributeSize(template.?[i].type) catch {
+            template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
+            has_attribute_type_invalid = true;
+            continue;
+        };
+
+        if (template.?[i].pValue == null) {
+            template.?[i].ulValueLen = @intCast(attribute_size);
+            continue;
+        }
+
+        if (template.?[i].ulValueLen < attribute_size) {
+            has_small_buffer = true;
+            template.?[i].ulValueLen = @intCast(attribute_size);
+            continue;
+        }
+
+        const target_buffer: [*]u8 = @ptrCast(template.?[i].pValue.?);
+
+        const object_attribute = selected_object.getAttribute(target_buffer[0..attribute_size], template.?[i].type) catch |err| {
             switch (err) {
                 PkcsError.AttributeSensitive => {
                     has_attribute_sensitive = true;
@@ -102,23 +120,8 @@ pub export fn C_GetAttributeValue(
                 else => return pkcs_error.toRV(err),
             }
         };
-        defer object_attribute.deinit(current_session.allocator);
-
-        if (template.?[i].pValue == null) {
-            template.?[i].ulValueLen = @intCast(object_attribute.value.len);
-            continue;
-        }
-
-        const target_buffer: [*]u8 = @ptrCast(template.?[i].pValue.?);
-
-        if (template.?[i].ulValueLen < object_attribute.value.len) {
-            has_small_buffer = true;
-            template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
-            continue;
-        }
 
         template.?[i].ulValueLen = @intCast(object_attribute.value.len);
-        std.mem.copyForwards(u8, target_buffer[0..template.?[i].ulValueLen], object_attribute.value);
     }
 
     if (has_attribute_sensitive)
