@@ -166,20 +166,18 @@ pub export fn C_FindObjectsInit(
     if (template == null and count != 0)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    var search_template: []object.Attribute = undefined;
+    var search_template: []object.Attribute = &.{};
     if (count > 0) {
         search_template = object.parseAttributes(current_session.allocator, template.?[0..count]) catch |err|
             return pkcs_error.toRV(err);
-    } else search_template = &.{};
-    defer object.deinitSearchTemplate(current_session.allocator, search_template);
-
-    const found_objects = current_session.findObjects(search_template) catch |err|
-        return pkcs_error.toRV(err);
+    }
 
     current_session.operation = operation.Operation{
         .search = operation.Search{
             .index = 0,
-            .found_objects = found_objects,
+            .search_template = search_template,
+            .objects = current_session.objects,
+            .logged_in = current_session.loggedIn(),
         },
     };
 
@@ -209,23 +207,10 @@ pub export fn C_FindObjects(
     if (object_count == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    if (current_operation.found_objects.len < current_operation.index) {
-        object_count.?.* = 0;
-        return pkcs.CKR_OK;
-    }
+    const found_objects = current_operation.findNextObjects(current_session.allocator, object_handles.?[0..max_object_count]) catch |err|
+        return pkcs_error.toRV(err);
 
-    const remaining_objects: pkcs.CK_ULONG = @intCast(current_operation.found_objects.len - current_operation.index);
-    const objects_to_return = @min(remaining_objects, max_object_count);
-
-    object_count.?.* = objects_to_return;
-
-    std.mem.copyForwards(
-        pkcs.CK_OBJECT_HANDLE,
-        object_handles.?[0..max_object_count],
-        current_operation.found_objects[current_operation.index .. current_operation.index + objects_to_return],
-    );
-
-    current_operation.index += objects_to_return;
+    object_count.?.* = @intCast(found_objects);
 
     return pkcs.CKR_OK;
 }

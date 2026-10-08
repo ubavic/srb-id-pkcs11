@@ -76,37 +76,6 @@ pub const Session = struct {
         };
     }
 
-    pub fn findObjects(
-        self: *Session,
-        attributes: []object.Attribute,
-    ) PkcsError![]pkcs.CK_OBJECT_HANDLE {
-        var object_list = std.array_list.AlignedManaged(pkcs.CK_OBJECT_HANDLE, null).init(self.allocator);
-        defer object_list.deinit();
-
-        for (self.objects) |current_object| {
-            var matches = true;
-
-            if (current_object.private() and !self.loggedIn())
-                continue;
-
-            for (attributes) |attribute| {
-                const has_attribute_value = try current_object.hasAttributeValue(self.allocator, attribute);
-
-                if (!has_attribute_value) {
-                    matches = false;
-                    break;
-                }
-            }
-
-            if (matches)
-                object_list.append(current_object.handle()) catch
-                    return PkcsError.HostMemory;
-        }
-
-        return object_list.toOwnedSlice() catch
-            return PkcsError.HostMemory;
-    }
-
     pub fn getObject(self: *Session, object_handle: pkcs.CK_OBJECT_HANDLE) PkcsError!*object.Object {
         for (self.objects) |*current_object| {
             if (current_object.private() and !self.loggedIn())

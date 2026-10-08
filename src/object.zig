@@ -58,7 +58,13 @@ pub const Object = union(enum) {
     }
 
     pub fn hasAttributeValue(self: *const Object, allocator: std.mem.Allocator, attribute: Attribute) PkcsError!bool {
-        const attribute_size = try self.getAttributeSize(attribute.attribute_type);
+        const attribute_size = self.getAttributeSize(attribute.attribute_type) catch |err| switch (err) {
+            PkcsError.AttributeTypeInvalid => return false,
+            else => return err,
+        };
+
+        if (attribute_size != attribute.value.len)
+            return false;
 
         const buffer = allocator.alloc(u8, attribute_size) catch
             return PkcsError.HostMemory;

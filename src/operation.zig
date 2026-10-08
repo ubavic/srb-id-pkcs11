@@ -378,10 +378,47 @@ pub const Decrypt = struct {
 
 pub const Search = struct {
     index: usize,
-    found_objects: []pkcs.CK_OBJECT_HANDLE,
+    search_template: []object.Attribute,
+    objects: []object.Object,
+    logged_in: bool,
 
     pub fn deinit(self: *Search, allocator: std.mem.Allocator) void {
-        allocator.free(self.found_objects);
+        object.deinitSearchTemplate(allocator, self.search_template);
+    }
+
+    pub fn findNextObjects(
+        self: *Search,
+        allocator: std.mem.Allocator,
+        buffer: []pkcs.CK_OBJECT_HANDLE,
+    ) PkcsError!usize {
+        var i: usize = 0;
+
+        while (i < buffer.len and self.index < self.objects.len) {
+            const current_object = self.objects[self.index];
+
+            if (current_object.private() and !self.logged_in) {
+                self.index += 1;
+                continue;
+            }
+
+            var matches = true;
+            for (self.search_template) |attribute| {
+                if (!try current_object.hasAttributeValue(allocator, attribute)) {
+                    matches = false;
+                    break;
+                }
+            }
+
+            self.index += 1;
+
+            if (!matches)
+                continue;
+
+            buffer[i] = current_object.handle();
+            i += 1;
+        }
+
+        return i;
     }
 };
 
@@ -1013,4 +1050,426 @@ test "sign and verify" {
     for (data_2048) |d|
         for (mechanisms) |m|
             try test_helper_2048.testKernel(m, ta, d);
+}
+
+const search_test_class_certificate: pkcs.CK_OBJECT_CLASS = pkcs.CKO_CERTIFICATE;
+const search_test_class_public_key: pkcs.CK_OBJECT_CLASS = pkcs.CKO_PUBLIC_KEY;
+const search_test_class_private_key: pkcs.CK_OBJECT_CLASS = pkcs.CKO_PRIVATE_KEY;
+const search_test_true: pkcs.CK_BBOOL = pkcs.CK_TRUE;
+
+const search_test_id_a: [20]u8 = [_]u8{0x01} ** 20;
+const search_test_id_b: [20]u8 = [_]u8{0x02} ** 20;
+
+// Two public and two private keys: A (public + private) and B (public + private).
+const SearchTestObjects = struct {
+    const handle_public_a: pkcs.CK_OBJECT_HANDLE = 8;
+    const handle_private_a: pkcs.CK_OBJECT_HANDLE = 16;
+    const handle_public_b: pkcs.CK_OBJECT_HANDLE = 24;
+    const handle_private_b: pkcs.CK_OBJECT_HANDLE = 32;
+
+    objects: [4]object.Object,
+
+    fn init(allocator: std.mem.Allocator) !SearchTestObjects {
+        const certificate = @import("certificate.zig");
+        const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
+
+        const file_a = PublicKeyFile{
+            .id = search_test_id_a,
+            .pub_key_file_name = .{ 0x60, 0x04 },
+            .priv_key_file_name = .{ 0x60, 0x05 },
+            .modulus_len = 2,
+            .exponent_len = 2,
+        };
+
+        const file_b = PublicKeyFile{
+            .id = search_test_id_b,
+            .pub_key_file_name = .{ 0x60, 0x06 },
+            .priv_key_file_name = .{ 0x60, 0x07 },
+            .modulus_len = 2,
+            .exponent_len = 2,
+        };
+
+        var objects: [4]object.Object = undefined;
+        var created: usize = 0;
+        errdefer for (objects[0..created]) |*o|
+            o.deinit(allocator);
+
+        objects[0] = try certificate.createPublicKeyObject(allocator, file_a, handle_public_a);
+        created += 1;
+        objects[1] = try certificate.createPrivateKeyObject(allocator, file_a, handle_private_a);
+        created += 1;
+        objects[2] = try certificate.createPublicKeyObject(allocator, file_b, handle_public_b);
+        created += 1;
+        objects[3] = try certificate.createPrivateKeyObject(allocator, file_b, handle_private_b);
+        created += 1;
+
+        return .{ .objects = objects };
+    }
+
+    fn deinit(self: *SearchTestObjects, allocator: std.mem.Allocator) void {
+        for (&self.objects) |*o|
+            o.deinit(allocator);
+    }
+};
+
+fn searchTestAttribute(attribute_type: pkcs.CK_ATTRIBUTE_TYPE, value: []const u8) pkcs.CK_ATTRIBUTE {
+    return .{
+        .type = attribute_type,
+        .pValue = if (value.len == 0) null else @constCast(value.ptr),
+        .ulValueLen = @intCast(value.len),
+    };
+}
+
+fn searchTestClass(class: *const pkcs.CK_OBJECT_CLASS) pkcs.CK_ATTRIBUTE {
+    return searchTestAttribute(pkcs.CKA_CLASS, std.mem.asBytes(class));
+}
+
+fn newTestSearch(
+    allocator: std.mem.Allocator,
+    objects: []object.Object,
+    template: []pkcs.CK_ATTRIBUTE,
+    logged_in: bool,
+) !Search {
+    var search_template: []object.Attribute = &.{};
+    if (template.len > 0)
+        search_template = try object.parseAttributes(allocator, template);
+
+    return Search{
+        .index = 0,
+        .search_template = search_template,
+        .objects = objects,
+        .logged_in = logged_in,
+    };
+}
+
+test "search with empty template returns only public objects when logged out" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var search = try newTestSearch(ta, &objects.objects, &.{}, false);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqualSlices(
+        pkcs.CK_OBJECT_HANDLE,
+        &.{ SearchTestObjects.handle_public_a, SearchTestObjects.handle_public_b },
+        buffer[0..found],
+    );
+}
+
+test "search with empty template returns all objects when logged in" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var search = try newTestSearch(ta, &objects.objects, &.{}, true);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqualSlices(
+        pkcs.CK_OBJECT_HANDLE,
+        &.{
+            SearchTestObjects.handle_public_a,
+            SearchTestObjects.handle_private_a,
+            SearchTestObjects.handle_public_b,
+            SearchTestObjects.handle_private_b,
+        },
+        buffer[0..found],
+    );
+}
+
+test "search never returns private objects when logged out" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    // Every private object matches this template, and hiding them must not
+    // stall the search.
+    var template = [_]pkcs.CK_ATTRIBUTE{searchTestClass(&search_test_class_private_key)};
+
+    var search = try newTestSearch(ta, &objects.objects, &template, false);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqual(0, found);
+    try std.testing.expectEqual(objects.objects.len, search.index);
+}
+
+test "search by class" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    {
+        var template = [_]pkcs.CK_ATTRIBUTE{searchTestClass(&search_test_class_public_key)};
+
+        var search = try newTestSearch(ta, &objects.objects, &template, true);
+        defer search.deinit(ta);
+
+        var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+        const found = try search.findNextObjects(ta, &buffer);
+
+        try std.testing.expectEqualSlices(
+            pkcs.CK_OBJECT_HANDLE,
+            &.{ SearchTestObjects.handle_public_a, SearchTestObjects.handle_public_b },
+            buffer[0..found],
+        );
+    }
+
+    {
+        var template = [_]pkcs.CK_ATTRIBUTE{searchTestClass(&search_test_class_private_key)};
+
+        var search = try newTestSearch(ta, &objects.objects, &template, true);
+        defer search.deinit(ta);
+
+        var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+        const found = try search.findNextObjects(ta, &buffer);
+
+        try std.testing.expectEqualSlices(
+            pkcs.CK_OBJECT_HANDLE,
+            &.{ SearchTestObjects.handle_private_a, SearchTestObjects.handle_private_b },
+            buffer[0..found],
+        );
+    }
+}
+
+test "search with class that no object has" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var template = [_]pkcs.CK_ATTRIBUTE{searchTestClass(&search_test_class_certificate)};
+
+    var search = try newTestSearch(ta, &objects.objects, &template, true);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqual(0, found);
+}
+
+test "search matches every attribute in the template" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    {
+        var template = [_]pkcs.CK_ATTRIBUTE{
+            searchTestClass(&search_test_class_public_key),
+            searchTestAttribute(pkcs.CKA_ID, &search_test_id_b),
+        };
+
+        var search = try newTestSearch(ta, &objects.objects, &template, true);
+        defer search.deinit(ta);
+
+        var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+        const found = try search.findNextObjects(ta, &buffer);
+
+        try std.testing.expectEqualSlices(
+            pkcs.CK_OBJECT_HANDLE,
+            &.{SearchTestObjects.handle_public_b},
+            buffer[0..found],
+        );
+    }
+
+    {
+        // Same id, but the class contradicts it.
+        var template = [_]pkcs.CK_ATTRIBUTE{
+            searchTestClass(&search_test_class_certificate),
+            searchTestAttribute(pkcs.CKA_ID, &search_test_id_a),
+        };
+
+        var search = try newTestSearch(ta, &objects.objects, &template, true);
+        defer search.deinit(ta);
+
+        var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+        const found = try search.findNextObjects(ta, &buffer);
+
+        try std.testing.expectEqual(0, found);
+    }
+}
+
+test "search by id returns the public and private key of the pair" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var template = [_]pkcs.CK_ATTRIBUTE{searchTestAttribute(pkcs.CKA_ID, &search_test_id_a)};
+
+    var search = try newTestSearch(ta, &objects.objects, &template, true);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqualSlices(
+        pkcs.CK_OBJECT_HANDLE,
+        &.{ SearchTestObjects.handle_public_a, SearchTestObjects.handle_private_a },
+        buffer[0..found],
+    );
+}
+
+test "search with template value of a different length does not match" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    const id_a_prefix = search_test_id_a[0..3];
+    const id_a_too_long = search_test_id_a ++ [_]u8{0x01};
+
+    const values = [_][]const u8{ &.{}, id_a_prefix, &id_a_too_long };
+
+    for (values) |value| {
+        var template = [_]pkcs.CK_ATTRIBUTE{searchTestAttribute(pkcs.CKA_ID, value)};
+
+        var search = try newTestSearch(ta, &objects.objects, &template, true);
+        defer search.deinit(ta);
+
+        var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+        const found = try search.findNextObjects(ta, &buffer);
+
+        try std.testing.expectEqual(0, found);
+    }
+}
+
+test "search with attribute that only some objects have" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    // Public keys have no CKA_SIGN; they must just not match.
+    var template = [_]pkcs.CK_ATTRIBUTE{searchTestAttribute(pkcs.CKA_SIGN, std.mem.asBytes(&search_test_true))};
+
+    var search = try newTestSearch(ta, &objects.objects, &template, true);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqualSlices(
+        pkcs.CK_OBJECT_HANDLE,
+        &.{ SearchTestObjects.handle_private_a, SearchTestObjects.handle_private_b },
+        buffer[0..found],
+    );
+}
+
+test "search continues where the previous call stopped" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var search = try newTestSearch(ta, &objects.objects, &.{}, true);
+    defer search.deinit(ta);
+
+    var buffer: [3]pkcs.CK_OBJECT_HANDLE = undefined;
+
+    var found = try search.findNextObjects(ta, &buffer);
+    try std.testing.expectEqualSlices(
+        pkcs.CK_OBJECT_HANDLE,
+        &.{
+            SearchTestObjects.handle_public_a,
+            SearchTestObjects.handle_private_a,
+            SearchTestObjects.handle_public_b,
+        },
+        buffer[0..found],
+    );
+
+    found = try search.findNextObjects(ta, &buffer);
+    try std.testing.expectEqualSlices(
+        pkcs.CK_OBJECT_HANDLE,
+        &.{SearchTestObjects.handle_private_b},
+        buffer[0..found],
+    );
+
+    found = try search.findNextObjects(ta, &buffer);
+    try std.testing.expectEqual(0, found);
+}
+
+test "search with a one element buffer returns objects one at a time" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    // Non-matching and hidden objects between the matches are skipped
+    // instead of being returned as empty slots.
+    var template = [_]pkcs.CK_ATTRIBUTE{searchTestClass(&search_test_class_public_key)};
+
+    var search = try newTestSearch(ta, &objects.objects, &template, false);
+    defer search.deinit(ta);
+
+    var buffer: [1]pkcs.CK_OBJECT_HANDLE = undefined;
+
+    var found = try search.findNextObjects(ta, &buffer);
+    try std.testing.expectEqual(1, found);
+    try std.testing.expectEqual(SearchTestObjects.handle_public_a, buffer[0]);
+
+    found = try search.findNextObjects(ta, &buffer);
+    try std.testing.expectEqual(1, found);
+    try std.testing.expectEqual(SearchTestObjects.handle_public_b, buffer[0]);
+
+    found = try search.findNextObjects(ta, &buffer);
+    try std.testing.expectEqual(0, found);
+}
+
+test "search with empty buffer returns nothing and does not advance" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var search = try newTestSearch(ta, &objects.objects, &.{}, true);
+    defer search.deinit(ta);
+
+    var buffer: [0]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqual(0, found);
+    try std.testing.expectEqual(0, search.index);
+}
+
+test "finished search keeps returning nothing" {
+    const ta = std.testing.allocator;
+
+    var objects = try SearchTestObjects.init(ta);
+    defer objects.deinit(ta);
+
+    var search = try newTestSearch(ta, &objects.objects, &.{}, true);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+
+    try std.testing.expectEqual(4, try search.findNextObjects(ta, &buffer));
+    try std.testing.expectEqual(0, try search.findNextObjects(ta, &buffer));
+    try std.testing.expectEqual(0, try search.findNextObjects(ta, &buffer));
+}
+
+test "search over no objects" {
+    const ta = std.testing.allocator;
+
+    var search = try newTestSearch(ta, &.{}, &.{}, true);
+    defer search.deinit(ta);
+
+    var buffer: [8]pkcs.CK_OBJECT_HANDLE = undefined;
+    const found = try search.findNextObjects(ta, &buffer);
+
+    try std.testing.expectEqual(0, found);
 }
