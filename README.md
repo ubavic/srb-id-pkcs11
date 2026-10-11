@@ -1,12 +1,12 @@
 # PKCS#11 module for Serbian ID
 
-This is an open source [PKCS#11 v2.40](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html) module (middleware) for Serbian ID smart cards. It is designed for smart cards produced by Gemalto and aims to support the functionality required for authenticating and signing in to official state portals (like [eUprava](https://euprava.gov.rs/) or [ePorezi](https://eporezi.purs.gov.rs/user/login.html)).
+This is an open source [PKCS#11 v2.40](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html) module for Serbian eID smart cards and Privredna Komora Srbije smart cards. This software supports the functionality required for authenticating and signing in to official state portals (like [eUprava](https://euprava.gov.rs/) or [ePorezi](https://eporezi.purs.gov.rs/user/login.html)). PKCS#11 modules, like this one, are called *middleware* in some documentation.
 
-For reading document data from Serbian ID cards, check the [Baš Čelik](https://github.com/ubavic/bas-celik) software and it's [wiki](https://github.com/ubavic/bas-celik/wiki) (on Serbian).
+For reading document data from Serbian ID cards, check the [Baš Čelik](https://github.com/ubavic/bas-celik) software.
 
 ## Project status
 
-The module should support (almost) all use cases of MUP certificates for end users.
+The module should support all use cases of MUP certificates for end users.
 
 The module supports the `CKM_MD5`, `CKM_SHA_1`, `CKM_SHA256`, `CKM_SHA384`, `CKM_SHA512` and `CKM_RIPEMD160` digest algorithms (implemented in software, as it is in the original module).
 A random number generator is implemented on the token itself.
@@ -18,7 +18,7 @@ Functions intended for security officers (`CKU_SO`) are not planned for implemen
 
 ## Usage
 
-This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few examples of how this is done. You can also look at [e-documents howto](https://e-documents.ubavic.rs) (on serbian) for step by step instructions.
+This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few short examples of how this is done. You can also look at [e-documents howto](https://e-documents.ubavic.rs) (on serbian) for step by step instructions.
 
 ### On Linux
 
