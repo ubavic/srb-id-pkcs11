@@ -69,6 +69,10 @@ pub export fn C_GetSlotInfo(
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
+    // Refresh the reader map even if C_GetSlotList has not run yet.
+    reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
+        return pkcs_error.toRV(err);
+
     var reader_state = reader.reader_states.getPtr(slot_ID) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
 
@@ -105,6 +109,10 @@ pub export fn C_GetTokenInfo(
 
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
+
+    // Refresh the reader map even if C_GetSlotList has not run yet.
+    reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
+        return pkcs_error.toRV(err);
 
     var reader_state = reader.reader_states.getPtr(slot_id) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
