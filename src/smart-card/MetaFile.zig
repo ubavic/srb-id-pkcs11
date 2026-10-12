@@ -81,30 +81,30 @@ test "parse valid meta file" {
         expected: MetaFile,
     }{
         .{
-            .input = &([_]u8{ 0x01, 0xf1, 0xf2, 0x02, 0xd1, 0xd2, 0x14 } ++ [_]u8{0xff} ** 20),
+            .input = &([_]u8{ 0x01, 0xf1, 0xf2, 0x02, 0xd1, 0xd2, 0x14 } ++ @as([20]u8, @splat(0xff))),
             .expected = MetaFile{
                 .class = 0x01,
                 .file_name = .{ 0xf1, 0xf2 },
                 .label = &.{ 0xd1, 0xd2 },
-                .id = [_]u8{0xff} ** 20,
+                .id = @splat(0xff),
             },
         },
         .{
-            .input = &([_]u8{ 0x02, 0xa1, 0xa2, 0x00, 0x14 } ++ [_]u8{0xcc} ** 20),
+            .input = &([_]u8{ 0x02, 0xa1, 0xa2, 0x00, 0x14 } ++ @as([20]u8, @splat(0xcc))),
             .expected = MetaFile{
                 .class = 0x02,
                 .file_name = .{ 0xa1, 0xa2 },
                 .label = null,
-                .id = [_]u8{0xcc} ** 20,
+                .id = @splat(0xcc),
             },
         },
         .{
-            .input = &([_]u8{ 0x03, 0xa1, 0xa2, 0x03, 0x11, 0x12, 0x13, 0x14 } ++ [_]u8{0x22} ** 20 ++ [_]u8{ 0x21, 0x22 }),
+            .input = &([_]u8{ 0x03, 0xa1, 0xa2, 0x03, 0x11, 0x12, 0x13, 0x14 } ++ @as([20]u8, @splat(0x22)) ++ [_]u8{ 0x21, 0x22 }),
             .expected = MetaFile{
                 .class = 0x03,
                 .file_name = .{ 0xa1, 0xa2 },
                 .label = &.{ 0x11, 0x12, 0x13 },
-                .id = [_]u8{0x22} ** 20,
+                .id = @splat(0x22),
             },
         },
         .{

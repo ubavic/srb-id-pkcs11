@@ -74,7 +74,7 @@ pub const ReaderState = struct {
     }
 
     pub fn writeShortName(self: *const ReaderState) [64]u8 {
-        var buffer: [64]u8 = [_]u8{' '} ** 64;
+        var buffer: [64]u8 = @splat(' ');
 
         var open_index = std.mem.findScalar(u8, self.name, '[');
         var close_index = std.mem.findScalar(u8, self.name, ']');

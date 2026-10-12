@@ -2,8 +2,8 @@ const std = @import("std");
 
 const TokenInfo = @This();
 
-token_label: [32]u8 = [_]u8{0x20} ** 32,
-token_serial_number: [16]u8 = [_]u8{0x20} ** 16,
+token_label: [32]u8 = @splat(0x20),
+token_serial_number: [16]u8 = @splat(0x20),
 
 pub fn parse(data: []const u8) TokenInfo {
     var token_info = TokenInfo{};
@@ -40,14 +40,14 @@ test "parse token info" {
             .expected = TokenInfo{},
         },
         .{
-            .data = &([_]u8{0x10} ** 48),
+            .data = &@as([48]u8, @splat(0x10)),
             .expected = TokenInfo{},
         },
         .{
-            .data = &([_]u8{0x20} ** 49),
+            .data = &@as([49]u8, @splat(0x20)),
             .expected = TokenInfo{
-                .token_label = [_]u8{0x20} ** 32,
-                .token_serial_number = [_]u8{0x20} ** 16,
+                .token_label = @splat(0x20),
+                .token_serial_number = @splat(0x20),
             },
         },
         .{
