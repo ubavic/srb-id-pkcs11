@@ -417,7 +417,7 @@ test "RIPEMD160" {
 test "RIPEMD160 mililion" {
     var hasher = @This().init();
 
-    const data: [10]u8 = [_]u8{'a'} ** 10;
+    const data: [10]u8 = @splat('a');
     for (0..100000) |_|
         hasher.update(&data);
 

@@ -698,7 +698,7 @@ test "strip pad raw" {
         &[_]u8{0x00},
         &[_]u8{ 0x01, 0x02, 0x00 },
         &[_]u8{ 0x01, 0x02, 0x03, 0x00, 0x04, 0x05 },
-        &([_]u8{0x01} ** 256),
+        &@as([256]u8, @splat(0x01)),
     };
 
     for (test_cases) |tc| {
@@ -779,14 +779,14 @@ test "pad and strip" {
         &[_]u8{0x00},
         &[_]u8{ 0x01, 0x02, 0x00 },
         &[_]u8{ 0x01, 0x02, 0x03, 0x00, 0x04, 0x05 },
-        &([_]u8{0x01} ** 245),
+        &@as([245]u8, @splat(0x01)),
     };
 
     const io = std.testing.io;
 
     const public_key = try std.crypto.Certificate.rsa.PublicKey.fromBytes(
-        &([_]u8{0x01} ** 4),
-        &([_]u8{0x01} ** 257),
+        &@as([4]u8, @splat(0x01)),
+        &@as([257]u8, @splat(0x01)),
     );
 
     for (test_cases) |tc| {
@@ -824,7 +824,7 @@ test "raw sign request with valid length" {
 
     const result = try createRawSignRequest(&msg_buffer, std.testing.allocator, key_size);
 
-    const expected: [key_size]u8 = [_]u8{0x01} ** 128;
+    const expected: [key_size]u8 = @splat(0x01);
     try std.testing.expectEqualSlices(u8, &expected, result);
 
     try std.testing.expectEqual(null, msg_buffer);
@@ -850,7 +850,7 @@ test "pkcs1 padded request with valid length" {
 
     const result = try createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, key_size);
 
-    const expected: [key_size]u8 = [_]u8{ 0x00, 0x01 } ++ [_]u8{0xff} ** 8 ++ [_]u8{0x00} ++ [_]u8{0x01} ** 117;
+    const expected: [key_size]u8 = [_]u8{ 0x00, 0x01 } ++ @as([8]u8, @splat(0xff)) ++ [_]u8{0x00} ++ @as([117]u8, @splat(0x01));
     try std.testing.expectEqualSlices(u8, &expected, result);
 
     try std.testing.expectEqual(null, msg_buffer);
@@ -950,7 +950,7 @@ fn TestHelper(signature_size: usize) type {
         }
 
         fn buildSignedBlock(sign_request: []const u8, plain_sign: bool) [signature_size]u8 {
-            var block: [signature_size]u8 = [_]u8{0x00} ** signature_size;
+            var block: [signature_size]u8 = @splat(0x00);
 
             if (plain_sign) {
                 std.debug.assert(sign_request.len == signature_size);
@@ -1025,8 +1025,8 @@ test "sign and verify" {
         &[_]u8{},
         &[_]u8{0x00},
         &[_]u8{ 0x01, 0x02, 0x03 },
-        &([_]u8{0xAB} ** (128 - 11)),
-        &([_]u8{0x00} ++ [_]u8{0x01} ** (128 - 1)),
+        &@as([128 - 11]u8, @splat(0xAB)),
+        &([_]u8{0x00} ++ @as([128 - 1]u8, @splat(0x01))),
     };
 
     var test_helper_1024 = try TestHelper(128).loadRsaKey(ta, tio, "testdata/1024.key");
@@ -1040,8 +1040,8 @@ test "sign and verify" {
         &[_]u8{},
         &[_]u8{0x00},
         &[_]u8{ 0x01, 0x02, 0x03 },
-        &([_]u8{0xAB} ** (256 - 11)),
-        &([_]u8{0x00} ++ [_]u8{0x01} ** (256 - 1)),
+        &@as([256 - 11]u8, @splat(0xAB)),
+        &([_]u8{0x00} ++ @as([256 - 1]u8, @splat(0x01))),
     };
 
     var test_helper_2048 = try TestHelper(256).loadRsaKey(ta, tio, "testdata/2048.key");
@@ -1057,8 +1057,8 @@ const search_test_class_public_key: pkcs.CK_OBJECT_CLASS = pkcs.CKO_PUBLIC_KEY;
 const search_test_class_private_key: pkcs.CK_OBJECT_CLASS = pkcs.CKO_PRIVATE_KEY;
 const search_test_true: pkcs.CK_BBOOL = pkcs.CK_TRUE;
 
-const search_test_id_a: [20]u8 = [_]u8{0x01} ** 20;
-const search_test_id_b: [20]u8 = [_]u8{0x02} ** 20;
+const search_test_id_a: [20]u8 = @splat(0x01);
+const search_test_id_b: [20]u8 = @splat(0x02);
 
 // Two public and two private keys: A (public + private) and B (public + private).
 const SearchTestObjects = struct {
