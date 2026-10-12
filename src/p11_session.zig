@@ -23,6 +23,13 @@ pub export fn C_OpenSession(
     if (session_handle == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
+    // Discover readers before resolving the session slot. Release the
+    // reader lock before newSession performs card I/O.
+    reader.lock.lockUncancelable(state.io);
+    const refresh_result = reader.refreshStatuses(state.allocator, &state.smart_card_client);
+    reader.lock.unlock(state.io);
+    refresh_result catch |err| return pkcs_error.toRV(err);
+
     const write_enabled = (flags & pkcs.CKF_RW_SESSION) != 0;
 
     session_handle.?.* = session.newSession(state.allocator, slot_id, write_enabled) catch |err|
