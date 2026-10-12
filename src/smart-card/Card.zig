@@ -12,6 +12,7 @@ const PkcsError = pkcs_error.PkcsError;
 pub const Card = @This();
 
 smart_card: pcsc.Card,
+transaction: ?pcsc.Card.Transaction,
 
 fn selectFile(
     self: *const Card,
@@ -161,6 +162,25 @@ pub fn initCrypto(
     _ = try self.selectFile(allocator, &file_name, 0x04, 0);
 }
 
+pub fn startTransaction(
+    self: *Card,
+) PkcsError!void {
+    self.transaction = self.smart_card.transaction() catch {
+        self.transaction = null;
+        return PkcsError.GeneralError;
+    };
+}
+
+pub fn endTransaction(
+    self: *Card,
+) void {
+    if (self.transaction == null)
+        return;
+
+    defer self.transaction = null;
+    self.transaction.?.end(.LEAVE) catch {};
+}
+
 pub fn readRandom(
     self: *const Card,
     allocator: std.mem.Allocator,
@@ -247,12 +267,15 @@ pub fn setPin(
 }
 
 pub fn sign(
-    self: *const Card,
+    self: *Card,
     allocator: std.mem.Allocator,
     key_file_name: [2]u8,
     plain_sign: bool,
     sign_request: []u8,
 ) PkcsError![]u8 {
+    try self.startTransaction();
+    defer self.endTransaction();
+
     var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 
@@ -297,11 +320,14 @@ pub fn sign(
 }
 
 pub fn decrypt(
-    self: *const Card,
+    self: *Card,
     allocator: std.mem.Allocator,
     key_file_name: [2]u8,
     decrypt_request: []u8,
 ) PkcsError![]u8 {
+    try self.startTransaction();
+    defer self.endTransaction();
+
     var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 
@@ -343,7 +369,10 @@ pub fn connect(
     const smart_handle = smart_card_client.connect(reader_name, .SHARED, .ANY) catch |err|
         return pkcs_error.formPCSC(err);
 
-    const card = Card{ .smart_card = smart_handle };
+    const card = Card{
+        .smart_card = smart_handle,
+        .transaction = null,
+    };
 
     try card.initCrypto(allocator);
 

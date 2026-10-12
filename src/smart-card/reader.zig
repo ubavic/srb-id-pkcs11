@@ -63,7 +63,10 @@ pub const ReaderState = struct {
         if (!self.recognized)
             return;
 
-        var idCard = Card{ .smart_card = card };
+        var idCard = Card{
+            .smart_card = card,
+            .transaction = null,
+        };
         const token_info = idCard.readTokenInfo(allocator) catch {
             self.recognized = false;
             return;

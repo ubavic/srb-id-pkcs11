@@ -92,6 +92,9 @@ pub const Session = struct {
         self: *Session,
         allocator: std.mem.Allocator,
     ) PkcsError!void {
+        try self.card.startTransaction();
+        defer self.card.endTransaction();
+
         const index_content = try self.card.readFile(allocator, &.{ 0x8F, 0xFF });
         defer allocator.free(index_content);
 
