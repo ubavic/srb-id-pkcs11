@@ -39,7 +39,7 @@ pub export fn C_GenerateRandom(
     if (random_data == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    var i: c_ulong = 0;
+    var i: usize = 0;
     var remaining_size = random_size;
     while (i < random_size) {
         const segment_size: u8 = @min(max_length, remaining_size);

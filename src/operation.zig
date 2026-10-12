@@ -87,7 +87,7 @@ pub const Sign = struct {
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
-    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, key_size: usize, private_key: c_ulong) PkcsError!Sign {
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, key_size: usize, private_key: pkcs.CK_OBJECT_HANDLE) PkcsError!Sign {
         const sign_type = try signTypeFromMechanism(mechanism);
         const hash_mechanism = try hasher.fromSignMechanism(mechanism.?.*.mechanism);
 
