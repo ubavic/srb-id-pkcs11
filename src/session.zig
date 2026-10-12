@@ -304,7 +304,7 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
         return PkcsError.GeneralError;
 }
 
-pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *c_ulong, rw_sessions: *c_ulong) PkcsError!void {
+pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *usize, rw_sessions: *usize) PkcsError!void {
     lock.lockSharedUncancelable(state.io);
     defer lock.unlockShared(state.io);
 

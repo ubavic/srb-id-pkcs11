@@ -95,7 +95,7 @@ pub fn createPrivateKeyObject(
     // invalid on original token
     const priv_public_key_info = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(priv_public_key_info);
-    const private_allowed_mechanisms: []c_ulong = try allocEmptySlice(c_ulong, allocator);
+    const private_allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE = try allocEmptySlice(pkcs.CK_MECHANISM_TYPE, allocator);
     errdefer allocator.free(private_allowed_mechanisms);
     const unwrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
     errdefer allocator.free(unwrap_template);
@@ -155,7 +155,7 @@ pub fn createPublicKeyObject(
     // invalid on original token
     const pub_public_key_info = try allocEmptySlice(u8, allocator);
     errdefer allocator.free(pub_public_key_info);
-    const public_allowed_mechanisms: []c_ulong = try allocEmptySlice(c_ulong, allocator);
+    const public_allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE = try allocEmptySlice(pkcs.CK_MECHANISM_TYPE, allocator);
     errdefer allocator.free(public_allowed_mechanisms);
     const wrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
     errdefer allocator.free(wrap_template);

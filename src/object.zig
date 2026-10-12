@@ -250,7 +250,7 @@ pub const PrivateKeyObject = struct {
         std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
 
-        std.crypto.secureZero(c_ulong, self.allowed_mechanisms);
+        std.crypto.secureZero(pkcs.CK_MECHANISM_TYPE, self.allowed_mechanisms);
         allocator.free(self.allowed_mechanisms);
 
         std.crypto.secureZero(u8, self.subject);
@@ -379,7 +379,7 @@ pub const PublicKeyObject = struct {
         std.crypto.secureZero(u8, self.label);
         allocator.free(self.label);
 
-        std.crypto.secureZero(c_ulong, self.allowed_mechanisms);
+        std.crypto.secureZero(pkcs.CK_MECHANISM_TYPE, self.allowed_mechanisms);
         allocator.free(self.allowed_mechanisms);
 
         std.crypto.secureZero(u8, self.subject);

@@ -43,7 +43,7 @@ pub export fn C_GenerateRandom(
         return pkcs_error.toRV(err);
     defer current_session.card.endTransaction();
 
-    var i: c_ulong = 0;
+    var i: usize = 0;
     var remaining_size = random_size;
     while (i < random_size) {
         const segment_size: u8 = @min(max_length, remaining_size);
