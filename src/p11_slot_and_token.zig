@@ -80,7 +80,7 @@ pub export fn C_GetSlotInfo(
 
     slot_info.?.flags = pkcs.CKF_HW_SLOT | pkcs.CKF_REMOVABLE_DEVICE;
     if (reader_state.card_present)
-        slot_info.?.flags = slot_info.?.flags | pkcs.CKF_TOKEN_PRESENT;
+        slot_info.?.flags |= pkcs.CKF_TOKEN_PRESENT;
 
     slot_info.?.hardwareVersion.major = 0x01;
     slot_info.?.hardwareVersion.minor = 0x00;
