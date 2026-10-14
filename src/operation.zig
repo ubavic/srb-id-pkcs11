@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Attribute = @import("Attribute.zig");
 const hasher = @import("hasher.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
@@ -378,7 +379,7 @@ pub const Decrypt = struct {
 
 pub const Search = struct {
     index: usize,
-    search_template: []object.Attribute,
+    search_template: []Attribute,
     objects: []object.Object,
     logged_in: bool,
 
@@ -1130,9 +1131,9 @@ fn newTestSearch(
     template: []pkcs.CK_ATTRIBUTE,
     logged_in: bool,
 ) !Search {
-    var search_template: []object.Attribute = &.{};
+    var search_template: []Attribute = &.{};
     if (template.len > 0)
-        search_template = try object.parseAttributes(allocator, template);
+        search_template = try Attribute.parseAttributes(allocator, template);
 
     return Search{
         .index = 0,

@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const Attribute = @import("Attribute.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
@@ -166,9 +167,9 @@ pub export fn C_FindObjectsInit(
     if (template == null and count != 0)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    var search_template: []object.Attribute = &.{};
+    var search_template: []Attribute = &.{};
     if (count > 0) {
-        search_template = object.parseAttributes(current_session.allocator, template.?[0..count]) catch |err|
+        search_template = Attribute.parseAttributes(current_session.allocator, template.?[0..count]) catch |err|
             return pkcs_error.toRV(err);
     }
 
