@@ -188,8 +188,6 @@ export fn C_GetFunctionList(function_list: ?*?*pkcs.CK_FUNCTION_LIST) pkcs.CK_RV
 }
 
 test "init and finalize module" {
-    state.allocator = std.testing.allocator;
-
     const rv1 = C_Initialize(null);
     try std.testing.expectEqual(pkcs.CKR_OK, rv1);
 
