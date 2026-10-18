@@ -29,14 +29,14 @@ pub export fn C_GetSlotList(
         reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
             return pkcs_error.toRV(err);
 
-    var count: u32 = 0;
+    var count: usize = 0;
     var iter = reader.reader_states.iterator();
     while (iter.next()) |entry| {
         if (entry.value_ptr.*.active and (!only_with_token or entry.value_ptr.*.card_present))
             count += 1;
     }
 
-    defer slot_count.?.* = count;
+    defer slot_count.?.* = @intCast(count);
 
     if (slot_list == null)
         return pkcs.CKR_OK;
