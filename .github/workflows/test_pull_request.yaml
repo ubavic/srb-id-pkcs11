@@ -27,7 +27,7 @@ jobs:
           systemctl status pcscd pcscd.socket --no-pager || true
           sudo journalctl -u pcscd -n 50 --no-pager || true
           ls -la /run/pcscd/
-          sleep 10
+          sleep 20
           systemctl status pcscd pcscd.socket --no-pager || true
           sudo journalctl -u pcscd -n 50 --no-pager || true
       - name: Install macOS deps
