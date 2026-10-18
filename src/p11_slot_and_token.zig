@@ -25,8 +25,9 @@ pub export fn C_GetSlotList(
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
-    reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
-        return pkcs_error.toRV(err);
+    if (slot_list == null)
+        reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
+            return pkcs_error.toRV(err);
 
     var count: u32 = 0;
     var iter = reader.reader_states.iterator();
@@ -35,21 +36,23 @@ pub export fn C_GetSlotList(
             count += 1;
     }
 
-    if (slot_list != null) {
-        if (slot_count.?.* < count)
-            return pkcs.CKR_BUFFER_TOO_SMALL;
+    defer slot_count.?.* = count;
 
-        var i: usize = 0;
-        iter = reader.reader_states.iterator();
-        while (iter.next()) |entry| {
-            if (entry.value_ptr.*.active and (!only_with_token or entry.value_ptr.*.card_present)) {
-                slot_list.?[i] = entry.key_ptr.*;
-                i += 1;
-            }
+    if (slot_list == null)
+        return pkcs.CKR_OK;
+
+    if (slot_count.?.* < count)
+        return pkcs.CKR_BUFFER_TOO_SMALL;
+
+    var i: usize = 0;
+    iter = reader.reader_states.iterator();
+    while (iter.next()) |entry| {
+        if (entry.value_ptr.*.active and (!only_with_token or entry.value_ptr.*.card_present)) {
+            slot_list.?[i] = entry.key_ptr.*;
+            i += 1;
         }
     }
 
-    slot_count.?.* = count;
     return pkcs.CKR_OK;
 }
 
