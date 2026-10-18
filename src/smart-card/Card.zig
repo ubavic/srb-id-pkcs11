@@ -161,6 +161,20 @@ pub fn initCrypto(
     _ = try self.selectFile(allocator, &file_name, 0x04, 0);
 }
 
+pub fn startTransaction(
+    self: *const Card,
+) PkcsError!pcsc.Card.Transaction {
+    return self.smart_card.transaction() catch
+        return PkcsError.GeneralError;
+}
+
+pub fn endTransaction(
+    _: *const Card,
+    tx: pcsc.Card.Transaction,
+) void {
+    tx.end(.LEAVE) catch {};
+}
+
 pub fn readRandom(
     self: *const Card,
     allocator: std.mem.Allocator,
@@ -253,6 +267,9 @@ pub fn sign(
     plain_sign: bool,
     sign_request: []u8,
 ) PkcsError![]u8 {
+    const tx = try self.startTransaction();
+    defer self.endTransaction(tx);
+
     var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 
@@ -302,6 +319,9 @@ pub fn decrypt(
     key_file_name: [2]u8,
     decrypt_request: []u8,
 ) PkcsError![]u8 {
+    const tx = try self.startTransaction();
+    defer self.endTransaction(tx);
+
     var response_buffer: [pcsc.max_buffer_len]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 

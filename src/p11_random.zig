@@ -39,6 +39,10 @@ pub export fn C_GenerateRandom(
     if (random_data == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
+    const tx = current_session.card.startTransaction() catch |err|
+        return pkcs_error.toRV(err);
+    defer current_session.card.endTransaction(tx);
+
     var i: usize = 0;
     var remaining_size = random_size;
     while (i < random_size) {
