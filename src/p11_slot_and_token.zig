@@ -25,7 +25,7 @@ pub export fn C_GetSlotList(
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
-    if (slot_list == null)
+    if (slot_list == null or !reader.scanned)
         reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
             return pkcs_error.toRV(err);
 

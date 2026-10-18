@@ -11,6 +11,10 @@ const PkcsError = pkcs_error.PkcsError;
 
 var next_reader_id: pkcs.CK_SLOT_ID = 1;
 
+// Only is used to to enable that `C_GetSlotList` returns list
+// on the first call if it called with non NULL slot_list
+pub var scanned: bool = false;
+
 pub var reader_states: std.AutoHashMap(pkcs.CK_SLOT_ID, ReaderState) = undefined;
 
 var reader_names_buf: [pcsc.max_readers * pcsc.max_reader_name_len]u8 = undefined;
@@ -134,6 +138,8 @@ pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Cl
             reader_state_entry.value_ptr.*.card_present = false;
         };
     }
+
+    scanned = true;
 }
 
 fn addIfNotExists(allocator: std.mem.Allocator, reader_name: [*:0]const u8) std.mem.Allocator.Error!void {
@@ -220,6 +226,7 @@ pub fn deinit(allocator: std.mem.Allocator) void {
     }
 
     next_reader_id = 1;
+    scanned = false;
 
     reader_states.deinit();
 }
@@ -230,9 +237,12 @@ test "init and deinit readers" {
     try addIfNotExists(std.testing.allocator, "reader1");
     try addIfNotExists(std.testing.allocator, "reader2");
 
+    scanned = true;
+
     deinit(std.testing.allocator);
 
     try std.testing.expectEqual(1, next_reader_id);
+    try std.testing.expectEqual(false, scanned);
 }
 
 test "add if not exists" {
