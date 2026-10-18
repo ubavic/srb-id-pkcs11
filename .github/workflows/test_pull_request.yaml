@@ -21,7 +21,15 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update
-          sudo apt install -y build-essential pkg-config libpcsclite-dev
+          sudo apt install -y build-essential pkg-config libpcsclite-dev pcscd
+          sudo systemctl daemon-reload
+          sudo systemctl start pcscd
+          systemctl status pcscd pcscd.socket --no-pager || true
+          sudo journalctl -u pcscd -n 50 --no-pager || true
+          ls -la /run/pcscd/
+          sleep 10
+          systemctl status pcscd pcscd.socket --no-pager || true
+          sudo journalctl -u pcscd -n 50 --no-pager || true
       - name: Install macOS deps
         if: matrix.os == 'macos-latest'
         run: |
