@@ -51,8 +51,10 @@ export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
         }
     }
 
-    state.smart_card_client = pcsc.Client.init(.USER) catch
+    state.smart_card_client = pcsc.Client.init(.USER) catch |err| {
+        std.debug.print("The error value is: {}\n", .{err});
         return pkcs.CKR_FUNCTION_FAILED;
+    };
 
     reader.reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, reader.ReaderState).init(state.allocator);
     session.initSessions(state.allocator) catch |err|
