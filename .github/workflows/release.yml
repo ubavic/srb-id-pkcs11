@@ -46,7 +46,7 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential pkg-config libpcsclite-dev pcscd
           sudo systemctl daemon-reload
-          sudo systemctl start pcscd.socket
+          sudo systemctl start pcscd
       - name: Install macOS deps
         if: matrix.os == 'macos-15-intel' ||  matrix.os == 'macos-latest'
         run: |
