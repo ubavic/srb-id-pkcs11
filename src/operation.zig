@@ -1071,7 +1071,6 @@ const SearchTestObjects = struct {
     objects: [4]object.Object,
 
     fn init(allocator: std.mem.Allocator) !SearchTestObjects {
-        const certificate = @import("certificate.zig");
         const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
 
         const file_a = PublicKeyFile{
@@ -1095,13 +1094,20 @@ const SearchTestObjects = struct {
         errdefer for (objects[0..created]) |*o|
             o.deinit(allocator);
 
-        objects[0] = try certificate.createPublicKeyObject(allocator, file_a, handle_public_a);
+        const o0 = try object.PublicKeyObject.createPublicKeyObject(allocator, file_a, handle_public_a);
+        objects[0] = .{ .public_key = o0 };
         created += 1;
-        objects[1] = try certificate.createPrivateKeyObject(allocator, file_a, handle_private_a);
+
+        const o1 = try object.PrivateKeyObject.createPrivateKeyObject(allocator, file_a, handle_private_a);
+        objects[1] = .{ .private_key = o1 };
         created += 1;
-        objects[2] = try certificate.createPublicKeyObject(allocator, file_b, handle_public_b);
+
+        const o2 = try object.PublicKeyObject.createPublicKeyObject(allocator, file_b, handle_public_b);
+        objects[2] = .{ .public_key = o2 };
         created += 1;
-        objects[3] = try certificate.createPrivateKeyObject(allocator, file_b, handle_private_b);
+
+        const o3 = try object.PrivateKeyObject.createPrivateKeyObject(allocator, file_b, handle_private_b);
+        objects[3] = .{ .private_key = o3 };
         created += 1;
 
         return .{ .objects = objects };

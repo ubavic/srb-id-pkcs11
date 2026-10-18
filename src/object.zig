@@ -1,9 +1,9 @@
 const std = @import("std");
 
+const Attribute = @import("Attribute.zig");
 const pkcs = @import("pkcs.zig");
 const PkcsError = @import("pkcs_error.zig").PkcsError;
-
-const Attribute = @import("Attribute.zig");
+const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
 
 const CKT_NETSCAPE_TRUSTED_DELEGATOR: pkcs.CK_ATTRIBUTE_TYPE = 0xce534352;
 
@@ -210,6 +210,134 @@ pub const CertificateObject = struct {
             else => PkcsError.AttributeTypeInvalid,
         };
     }
+
+    pub fn parse(
+        allocator: std.mem.Allocator,
+        certificate_handle: pkcs.CK_OBJECT_HANDLE,
+        buffer: []const u8,
+        id: [20]u8,
+        file_name: [2]u8,
+    ) PkcsError!CertificateObject {
+        const cert = std.crypto.Certificate{ .buffer = buffer, .index = 0 };
+
+        const parsed = std.crypto.Certificate.parse(cert) catch
+            return PkcsError.GeneralError;
+
+        if (parsed.pub_key_algo != .rsaEncryption)
+            return PkcsError.GeneralError;
+
+        const certificate_value = try clone(allocator, buffer);
+        errdefer allocator.free(certificate_value);
+
+        const serial_number_slice = extractSerialNumber(buffer) catch return PkcsError.GeneralError;
+        const serial_number = try clone(allocator, serial_number_slice);
+        errdefer allocator.free(serial_number);
+
+        // empty on the original token
+        const certificate_url = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(certificate_url);
+        const public_key_hash = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(public_key_hash);
+        const check_value = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(check_value);
+
+        // invalid on the original token
+        const public_key_info = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(public_key_info);
+        const name_hash_algorithm = 0;
+
+        // iffy but it should work
+        const subject = try clone(allocator, buffer[parsed.subject_slice.start - 3 .. parsed.subject_slice.end]);
+        const issuer = try clone(allocator, buffer[parsed.issuer_slice.start - 3 .. parsed.issuer_slice.end]);
+
+        const label_slice = extractLabel(subject);
+        const label = try clone(allocator, label_slice);
+        errdefer allocator.free(label);
+
+        return .{
+            .file_name = file_name,
+            .handle = certificate_handle,
+            .class = pkcs.CKO_CERTIFICATE,
+            .token = pkcs.CK_TRUE,
+            .private = pkcs.CK_FALSE,
+            .modifiable = pkcs.CK_FALSE,
+            .label = label,
+            .copyable = pkcs.CK_FALSE,
+            .destroyable = pkcs.CK_FALSE,
+            .certificate_type = pkcs.CKC_X_509,
+            .trusted = pkcs.CK_FALSE,
+            .certificate_category = pkcs.CK_CERTIFICATE_CATEGORY_TOKEN_USER,
+            .check_value = check_value,
+            .start_date = pkcs.CK_DATE{},
+            .end_date = pkcs.CK_DATE{},
+            .public_key_info = public_key_info,
+            .subject = subject,
+            .id = id,
+            .issuer = issuer,
+            .serial_number = serial_number,
+            .value = certificate_value,
+            .url = certificate_url,
+            .hash_of_subject_public_key = public_key_hash,
+            .name_hash_algorithm = name_hash_algorithm,
+        };
+    }
+
+    fn extractSerialNumber(cert_bytes: []const u8) std.crypto.Certificate.der.Element.ParseError![]const u8 {
+        const certificate = try std.crypto.Certificate.der.Element.parse(cert_bytes, 0);
+        const tbs_certificate = try std.crypto.Certificate.der.Element.parse(cert_bytes, certificate.slice.start);
+        const version_elem = try std.crypto.Certificate.der.Element.parse(cert_bytes, tbs_certificate.slice.start);
+        const serial_number = if (@as(u8, @bitCast(version_elem.identifier)) == 0xa0)
+            try std.crypto.Certificate.der.Element.parse(cert_bytes, version_elem.slice.end)
+        else
+            version_elem;
+
+        return cert_bytes[serial_number.slice.start - 2 .. serial_number.slice.end];
+    }
+
+    fn extractLabel(subject_bytes: []const u8) []const u8 {
+        var i: usize = subject_bytes.len;
+
+        while (i > 0) {
+            i -= 1;
+            if (subject_bytes[i] == 0x0C)
+                break;
+        }
+
+        return subject_bytes[i + 2 .. subject_bytes.len];
+    }
+
+    pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) PkcsError![]u8 {
+        if (compressed_certificate_data.len < 8)
+            return PkcsError.GeneralError;
+
+        var list = std.ArrayList(u8).initCapacity(allocator, 2 * compressed_certificate_data.len) catch
+            return PkcsError.HostMemory;
+        defer list.deinit(allocator);
+
+        const decompress_buffer = allocator.alloc(u8, std.compress.flate.max_window_len) catch
+            return PkcsError.HostMemory;
+        defer allocator.free(decompress_buffer);
+
+        var reader = std.Io.Reader.fixed(compressed_certificate_data[6..]);
+        var decompress: std.compress.flate.Decompress = .init(&reader, std.compress.flate.Container.zlib, decompress_buffer);
+
+        var buf2: [512]u8 = undefined;
+        while (true) {
+            const size = decompress.reader.readSliceShort(&buf2) catch
+                return PkcsError.HostMemory;
+
+            list.appendSlice(allocator, buf2[0..size]) catch
+                return PkcsError.HostMemory;
+
+            if (size < buf2.len)
+                break;
+        }
+
+        const decompressed_certificate = list.toOwnedSlice(allocator) catch
+            return PkcsError.HostMemory;
+
+        return decompressed_certificate;
+    }
 };
 
 pub const PrivateKeyObject = struct {
@@ -343,6 +471,64 @@ pub const PrivateKeyObject = struct {
             else => PkcsError.AttributeTypeInvalid,
         };
     }
+
+    pub fn createPrivateKeyObject(
+        allocator: std.mem.Allocator,
+        public_key_file: PublicKeyFile,
+        private_key_handle: pkcs.CK_OBJECT_HANDLE,
+    ) PkcsError!PrivateKeyObject {
+        const private_key_label = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(private_key_label);
+        const private_key_subject = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(private_key_subject);
+        const private_key_modulus = try clone(allocator, public_key_file.modulus[0..public_key_file.modulus_len]);
+        errdefer allocator.free(private_key_modulus);
+        const priv_key_public_exponent = try clone(allocator, public_key_file.exponent[0..public_key_file.exponent_len]);
+        errdefer allocator.free(priv_key_public_exponent);
+
+        // invalid on original token
+        const priv_public_key_info = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(priv_public_key_info);
+        const private_allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE = try allocEmptySlice(pkcs.CK_MECHANISM_TYPE, allocator);
+        errdefer allocator.free(private_allowed_mechanisms);
+        const unwrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
+        errdefer allocator.free(unwrap_template);
+
+        return .{
+            .file_name = public_key_file.priv_key_file_name,
+            .handle = private_key_handle,
+            .class = pkcs.CKO_PRIVATE_KEY,
+            .token = pkcs.CK_TRUE,
+            .private = pkcs.CK_TRUE,
+            .modifiable = pkcs.CK_TRUE,
+            .label = private_key_label,
+            .copyable = pkcs.CK_FALSE, // invalid on original token
+            .destroyable = pkcs.CK_FALSE, // invalid on original token
+            .key_type = pkcs.CKK_RSA,
+            .id = public_key_file.id,
+            .start_date = pkcs.CK_DATE{},
+            .end_date = pkcs.CK_DATE{},
+            .derive = pkcs.CK_FALSE,
+            .local = pkcs.CK_TRUE,
+            .key_gen_mechanism = 0, // invalid on original token
+            .allowed_mechanisms = private_allowed_mechanisms,
+            .subject = private_key_subject,
+            .sensitive = pkcs.CK_TRUE,
+            .decrypt = if (public_key_file.allow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
+            .sign = pkcs.CK_TRUE,
+            .sign_recover = pkcs.CK_FALSE,
+            .unwrap = pkcs.CK_FALSE,
+            .extractable = pkcs.CK_FALSE,
+            .always_sensitive = pkcs.CK_TRUE,
+            .never_extractable = pkcs.CK_TRUE,
+            .wrap_with_trusted = if (public_key_file.allow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
+            .unwrap_template = unwrap_template,
+            .always_authenticate = pkcs.CK_FALSE,
+            .public_key_info = priv_public_key_info,
+            .modulus = private_key_modulus,
+            .public_exponent = priv_key_public_exponent,
+        };
+    }
 };
 
 pub const PublicKeyObject = struct {
@@ -466,6 +652,60 @@ pub const PublicKeyObject = struct {
             else => PkcsError.AttributeTypeInvalid,
         };
     }
+
+    pub fn createPublicKeyObject(
+        allocator: std.mem.Allocator,
+        public_key_file: PublicKeyFile,
+        public_key_handle: pkcs.CK_OBJECT_HANDLE,
+    ) PkcsError!PublicKeyObject {
+        const public_key_label = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(public_key_label);
+        const public_key_subject = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(public_key_subject);
+        const public_key_modulus = try clone(allocator, public_key_file.modulus[0..public_key_file.modulus_len]);
+        errdefer allocator.free(public_key_modulus);
+        const pub_public_exponent = try clone(allocator, public_key_file.exponent[0..public_key_file.exponent_len]);
+        errdefer allocator.free(pub_public_exponent);
+
+        // invalid on original token
+        const pub_public_key_info = try allocEmptySlice(u8, allocator);
+        errdefer allocator.free(pub_public_key_info);
+        const public_allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE = try allocEmptySlice(pkcs.CK_MECHANISM_TYPE, allocator);
+        errdefer allocator.free(public_allowed_mechanisms);
+        const wrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
+        errdefer allocator.free(wrap_template);
+
+        return .{
+            .file_name = public_key_file.pub_key_file_name,
+            .handle = public_key_handle,
+            .class = pkcs.CKO_PUBLIC_KEY,
+            .token = pkcs.CK_TRUE,
+            .private = pkcs.CK_FALSE,
+            .modifiable = pkcs.CK_TRUE,
+            .label = public_key_label,
+            .copyable = pkcs.CK_FALSE, // invalid on original token
+            .destroyable = pkcs.CK_FALSE, // invalid on original token
+            .key_type = pkcs.CKK_RSA,
+            .id = public_key_file.id,
+            .start_date = pkcs.CK_DATE{},
+            .end_date = pkcs.CK_DATE{},
+            .derive = pkcs.CK_FALSE,
+            .local = pkcs.CK_TRUE,
+            .key_gen_mechanism = 0, // invalid on original token
+            .allowed_mechanisms = public_allowed_mechanisms,
+            .subject = public_key_subject,
+            .encrypt = if (public_key_file.allow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
+            .verify = pkcs.CK_TRUE,
+            .verify_recover = pkcs.CK_FALSE,
+            .wrap = pkcs.CK_FALSE,
+            .trusted = pkcs.CK_FALSE,
+            .wrap_template = wrap_template,
+            .public_key_info = pub_public_key_info,
+            .modulus = public_key_modulus,
+            .modulus_bits = @intCast(public_key_modulus.len * 8),
+            .public_exponent = pub_public_exponent,
+        };
+    }
 };
 
 pub fn deinitSearchTemplate(allocator: std.mem.Allocator, search_template: []Attribute) void {
@@ -478,7 +718,7 @@ pub fn deinitSearchTemplate(allocator: std.mem.Allocator, search_template: []Att
     allocator.free(search_template);
 }
 
-pub fn encodeBool(buff: []u8, value: pkcs.CK_BBOOL) PkcsError![]u8 {
+fn encodeBool(buff: []u8, value: pkcs.CK_BBOOL) PkcsError![]u8 {
     if (buff.len < @sizeOf(pkcs.CK_BBOOL))
         return PkcsError.HostMemory;
 
@@ -488,7 +728,7 @@ pub fn encodeBool(buff: []u8, value: pkcs.CK_BBOOL) PkcsError![]u8 {
     return buff[0..src.len];
 }
 
-pub fn encodeLong(buff: []u8, value: pkcs.CK_ULONG) PkcsError![]u8 {
+fn encodeLong(buff: []u8, value: pkcs.CK_ULONG) PkcsError![]u8 {
     if (buff.len < @sizeOf(pkcs.CK_ULONG))
         return PkcsError.HostMemory;
 
@@ -498,7 +738,7 @@ pub fn encodeLong(buff: []u8, value: pkcs.CK_ULONG) PkcsError![]u8 {
     return buff[0..src.len];
 }
 
-pub fn encodeByteArray(buff: []u8, value: []const u8) PkcsError![]u8 {
+fn encodeByteArray(buff: []u8, value: []const u8) PkcsError![]u8 {
     if (buff.len < value.len)
         return PkcsError.HostMemory;
 
@@ -507,7 +747,7 @@ pub fn encodeByteArray(buff: []u8, value: []const u8) PkcsError![]u8 {
     return buff[0..value.len];
 }
 
-pub fn encodeDate(buff: []u8, value: pkcs.CK_DATE) PkcsError![]u8 {
+fn encodeDate(buff: []u8, value: pkcs.CK_DATE) PkcsError![]u8 {
     if (buff.len < @sizeOf(pkcs.CK_DATE))
         return PkcsError.HostMemory;
 
@@ -517,9 +757,19 @@ pub fn encodeDate(buff: []u8, value: pkcs.CK_DATE) PkcsError![]u8 {
     return buff[0..src.len];
 }
 
-pub fn encodeMechanismTypeList(allocator: std.mem.Allocator, value: []const pkcs.CK_MECHANISM_TYPE) PkcsError![]u8 {
+fn encodeMechanismTypeList(allocator: std.mem.Allocator, value: []const pkcs.CK_MECHANISM_TYPE) PkcsError![]u8 {
     const buff = allocator.alloc(u8, value.len * @sizeOf(pkcs.CK_MECHANISM_TYPE)) catch
         return PkcsError.HostMemory;
 
     return buff;
+}
+
+fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T {
+    return allocator.alloc(T, 0) catch
+        return PkcsError.HostMemory;
+}
+
+fn clone(allocator: std.mem.Allocator, src: []const u8) PkcsError![]u8 {
+    return allocator.dupe(u8, src) catch
+        return PkcsError.HostMemory;
 }

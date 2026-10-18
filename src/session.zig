@@ -1,8 +1,7 @@
 const std = @import("std");
 
-const certificate = @import("certificate.zig");
-const hasher = @import("hasher.zig");
 const Card = @import("smart-card/Card.zig");
+const hasher = @import("hasher.zig");
 const Index = @import("smart-card/Index.zig");
 const MetaFile = @import("smart-card/MetaFile.zig");
 const object = @import("object.zig");
@@ -113,10 +112,10 @@ pub const Session = struct {
                     const compressed_certificate_content = try self.card.readFile(allocator, &meta_file.file_name);
                     defer allocator.free(compressed_certificate_content);
 
-                    const certificate_data = try certificate.decompressCertificate(allocator, compressed_certificate_content);
+                    const certificate_data = try object.CertificateObject.decompressCertificate(allocator, compressed_certificate_content);
                     defer allocator.free(certificate_data);
 
-                    const cert_object = certificate.parseCertificate(
+                    const cert_object = object.CertificateObject.parse(
                         allocator,
                         handle,
                         certificate_data,
@@ -125,7 +124,7 @@ pub const Session = struct {
                     ) catch
                         continue;
 
-                    object_list.append(allocator, cert_object) catch
+                    object_list.append(allocator, .{ .certificate = cert_object }) catch
                         return PkcsError.HostMemory;
 
                     handle += 8;
@@ -141,14 +140,14 @@ pub const Session = struct {
                     pub_key_file.parse(pub_key_file_content) catch
                         continue;
 
-                    const pub_key_object = try certificate.createPublicKeyObject(allocator, pub_key_file, handle);
-                    object_list.append(allocator, pub_key_object) catch
+                    const public_key_object = try object.PublicKeyObject.createPublicKeyObject(allocator, pub_key_file, handle);
+                    object_list.append(allocator, .{ .public_key = public_key_object }) catch
                         return PkcsError.HostMemory;
 
                     handle += 8;
 
-                    const private_key_object = try certificate.createPrivateKeyObject(allocator, pub_key_file, handle);
-                    object_list.append(allocator, private_key_object) catch
+                    const private_key_object = try object.PrivateKeyObject.createPrivateKeyObject(allocator, pub_key_file, handle);
+                    object_list.append(allocator, .{ .private_key = private_key_object }) catch
                         return PkcsError.HostMemory;
 
                     handle += 8;
