@@ -186,3 +186,13 @@ export fn C_GetFunctionList(function_list: ?*?*pkcs.CK_FUNCTION_LIST) pkcs.CK_RV
     function_list.?.* = @constCast(&functionList);
     return pkcs.CKR_OK;
 }
+
+test "init and finalize module" {
+    state.allocator = std.testing.allocator;
+
+    const rv1 = C_Initialize(null);
+    try std.testing.expectEqual(pkcs.CKR_OK, rv1);
+
+    const rv2 = C_Finalize(null);
+    try std.testing.expectEqual(pkcs.CKR_OK, rv2);
+}
