@@ -27,9 +27,14 @@ jobs:
           systemctl status pcscd pcscd.socket --no-pager || true
           sudo journalctl -u pcscd -n 50 --no-pager || true
           ls -la /run/pcscd/
-          sleep 20
           systemctl status pcscd pcscd.socket --no-pager || true
           sudo journalctl -u pcscd -n 50 --no-pager || true
+      - name: Start win service
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Set-Service -Name SCardSvr -StartupType Manual
+          Start-Service -Name SCardSvr
       - name: Install macOS deps
         if: matrix.os == 'macos-latest'
         run: |
