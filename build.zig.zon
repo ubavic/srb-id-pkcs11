@@ -1,11 +1,11 @@
 .{
     .name = .srb_id_pkcs11,
     .version = "0.6.0",
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .pcsc = .{
-            .url = "git+https://github.com/ubavic/pcsc-z.git#c426ed83cb2434068fc84f455595f53a9ebf03b5",
-            .hash = "pcsc-0.1.0-_wds8_UhBgA-zmdTfm9g4W3lXkOL8qQgVJbwBcLk8WF5",
+            .url = "git+https://github.com/ubavic/pcsc-z#93a8112734f30f2c8866434302819415b822edf4",
+            .hash = "pcsc-0.1.0-sAX2ftQhBgA4eIzZcQ6-puQh0NJ_iwTVdqSs6nHw7AjF",
         },
     },
     .paths = .{""},

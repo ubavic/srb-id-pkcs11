@@ -7,7 +7,7 @@ on:
 
 env:
   LIB_NAME: "libsrb-id-pkcs11"
-  ZIG_VERSION: "0.16.0"
+  ZIG_VERSION: "0.17.0"
   RELEASE_MODE: "ReleaseSafe"
 
 jobs:

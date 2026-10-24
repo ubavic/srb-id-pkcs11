@@ -329,6 +329,6 @@ test "reader short name should not be null terminated" {
         };
 
         const output = reader_state.writeShortName();
-        try std.testing.expect(!std.mem.containsAtLeastScalar2(u8, &output, 0x00, 1));
+        try std.testing.expect(!std.mem.containsAtLeastScalar(u8, &output, 0x00, 1));
     }
 }

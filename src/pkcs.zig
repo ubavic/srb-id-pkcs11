@@ -4,19 +4,19 @@ const builtin = @import("builtin");
 pub fn Align(comptime T: type) type {
     const struct_info = @typeInfo(T).@"struct";
 
-    var field_names: [struct_info.fields.len][]const u8 = undefined;
-    var types: [struct_info.fields.len]type = undefined;
-    var attributes: [struct_info.fields.len]std.builtin.Type.StructField.Attributes = undefined;
+    var field_names: [struct_info.field_names.len][]const u8 = undefined;
+    var types: [struct_info.field_names.len]type = undefined;
+    var attributes: [struct_info.field_names.len]std.builtin.Type.Struct.FieldAttributes = undefined;
 
-    for (struct_info.fields, 0..) |field, i| {
-        field_names[i] = field.name;
+    for (struct_info.field_attrs, 0..) |field_attr, i| {
+        field_names[i] = struct_info.field_names[i];
 
-        types[i] = field.type;
+        types[i] = struct_info.field_types[i];
 
-        attributes[i] = std.builtin.Type.StructField.Attributes{
-            .@"align" = if (builtin.os.tag == .windows) 1 else field.alignment,
-            .@"comptime" = field.is_comptime,
-            .default_value_ptr = field.default_value_ptr,
+        attributes[i] = std.builtin.Type.Struct.FieldAttributes{
+            .@"align" = if (builtin.os.tag == .windows) 1 else field_attr.@"align",
+            .@"comptime" = field_attr.@"comptime",
+            .default_value_ptr = field_attr.default_value_ptr,
         };
     }
 
