@@ -155,29 +155,29 @@ pub const CertificateObject = struct {
 
     pub fn getAttributeValue(self: *const CertificateObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
         return switch (attribute_type) {
-            pkcs.CKA_CLASS => encodeLong(buffer, self.class),
-            pkcs.CKA_TOKEN => encodeBool(buffer, self.token),
-            pkcs.CKA_PRIVATE => encodeBool(buffer, self.private),
-            pkcs.CKA_MODIFIABLE => encodeBool(buffer, self.modifiable),
-            pkcs.CKA_LABEL => encodeByteArray(buffer, self.label),
-            pkcs.CKA_COPYABLE => encodeBool(buffer, self.copyable),
-            pkcs.CKA_DESTROYABLE => encodeBool(buffer, self.destroyable),
-            pkcs.CKA_CERTIFICATE_TYPE => encodeLong(buffer, self.certificate_type),
-            pkcs.CKA_TRUSTED => encodeBool(buffer, self.trusted),
-            pkcs.CKA_CERTIFICATE_CATEGORY => encodeLong(buffer, self.certificate_category),
-            pkcs.CKA_CHECK_VALUE => encodeByteArray(buffer, self.check_value),
-            pkcs.CKA_START_DATE => encodeDate(buffer, self.start_date),
-            pkcs.CKA_END_DATE => encodeDate(buffer, self.end_date),
-            pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(buffer, self.public_key_info),
-            pkcs.CKA_SUBJECT => encodeByteArray(buffer, self.subject),
-            pkcs.CKA_ID => encodeByteArray(buffer, &self.id),
-            pkcs.CKA_ISSUER => encodeByteArray(buffer, self.issuer),
-            pkcs.CKA_SERIAL_NUMBER => encodeByteArray(buffer, self.serial_number),
-            pkcs.CKA_VALUE => encodeByteArray(buffer, self.value),
-            pkcs.CKA_URL => encodeByteArray(buffer, self.url),
-            pkcs.CKA_HASH_OF_SUBJECT_PUBLIC_KEY => encodeByteArray(buffer, self.hash_of_subject_public_key),
-            pkcs.CKA_NAME_HASH_ALGORITHM => encodeLong(buffer, self.name_hash_algorithm),
-            CKT_NETSCAPE_TRUSTED_DELEGATOR => encodeBool(buffer, pkcs.CK_TRUE),
+            pkcs.CKA_CLASS => encode(buffer, self.class),
+            pkcs.CKA_TOKEN => encode(buffer, self.token),
+            pkcs.CKA_PRIVATE => encode(buffer, self.private),
+            pkcs.CKA_MODIFIABLE => encode(buffer, self.modifiable),
+            pkcs.CKA_LABEL => encode(buffer, self.label),
+            pkcs.CKA_COPYABLE => encode(buffer, self.copyable),
+            pkcs.CKA_DESTROYABLE => encode(buffer, self.destroyable),
+            pkcs.CKA_CERTIFICATE_TYPE => encode(buffer, self.certificate_type),
+            pkcs.CKA_TRUSTED => encode(buffer, self.trusted),
+            pkcs.CKA_CERTIFICATE_CATEGORY => encode(buffer, self.certificate_category),
+            pkcs.CKA_CHECK_VALUE => encode(buffer, self.check_value),
+            pkcs.CKA_START_DATE => encode(buffer, self.start_date),
+            pkcs.CKA_END_DATE => encode(buffer, self.end_date),
+            pkcs.CKA_PUBLIC_KEY_INFO => encode(buffer, self.public_key_info),
+            pkcs.CKA_SUBJECT => encode(buffer, self.subject),
+            pkcs.CKA_ID => encode(buffer, &self.id),
+            pkcs.CKA_ISSUER => encode(buffer, self.issuer),
+            pkcs.CKA_SERIAL_NUMBER => encode(buffer, self.serial_number),
+            pkcs.CKA_VALUE => encode(buffer, self.value),
+            pkcs.CKA_URL => encode(buffer, self.url),
+            pkcs.CKA_HASH_OF_SUBJECT_PUBLIC_KEY => encode(buffer, self.hash_of_subject_public_key),
+            pkcs.CKA_NAME_HASH_ALGORITHM => encode(buffer, self.name_hash_algorithm),
+            CKT_NETSCAPE_TRUSTED_DELEGATOR => encode(buffer, pkcs.CK_TRUE),
             else => PkcsError.AttributeTypeInvalid,
         };
     }
@@ -404,36 +404,36 @@ pub const PrivateKeyObject = struct {
 
     pub fn getAttributeValue(self: *const PrivateKeyObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
         return switch (attribute_type) {
-            pkcs.CKA_CLASS => encodeLong(buffer, self.class),
-            pkcs.CKA_TOKEN => encodeBool(buffer, self.token),
-            pkcs.CKA_PRIVATE => encodeBool(buffer, self.private),
-            pkcs.CKA_MODIFIABLE => encodeBool(buffer, self.modifiable),
-            pkcs.CKA_LABEL => encodeByteArray(buffer, self.label),
-            pkcs.CKA_COPYABLE => encodeBool(buffer, self.copyable),
-            pkcs.CKA_DESTROYABLE => encodeBool(buffer, self.destroyable),
-            pkcs.CKA_KEY_TYPE => encodeLong(buffer, self.key_type),
-            pkcs.CKA_ID => encodeByteArray(buffer, &self.id),
-            pkcs.CKA_START_DATE => encodeDate(buffer, self.start_date),
-            pkcs.CKA_END_DATE => encodeDate(buffer, self.end_date),
-            pkcs.CKA_DERIVE => encodeBool(buffer, self.derive),
-            pkcs.CKA_LOCAL => encodeBool(buffer, self.local),
-            pkcs.CKA_KEY_GEN_MECHANISM => encodeLong(buffer, self.key_gen_mechanism),
-            // pkcs.CKA_ALLOWED_MECHANISMS => unreachable, // TODO
-            pkcs.CKA_SUBJECT => encodeByteArray(buffer, self.subject),
-            pkcs.CKA_SENSITIVE => encodeBool(buffer, self.sensitive),
-            pkcs.CKA_DECRYPT => encodeBool(buffer, self.decrypt),
-            pkcs.CKA_SIGN => encodeBool(buffer, self.sign),
-            pkcs.CKA_SIGN_RECOVER => encodeBool(buffer, self.sign_recover),
-            pkcs.CKA_UNWRAP => encodeBool(buffer, self.unwrap),
-            pkcs.CKA_EXTRACTABLE => encodeBool(buffer, self.extractable),
-            pkcs.CKA_ALWAYS_SENSITIVE => encodeBool(buffer, self.always_sensitive),
-            pkcs.CKA_NEVER_EXTRACTABLE => encodeBool(buffer, self.never_extractable),
-            pkcs.CKA_WRAP_WITH_TRUSTED => encodeBool(buffer, self.wrap_with_trusted),
-            // pkcs.CKA_UNWRAP_TEMPLATE => unreachable,
-            pkcs.CKA_ALWAYS_AUTHENTICATE => encodeBool(buffer, self.always_authenticate),
-            pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(buffer, self.public_key_info),
-            pkcs.CKA_MODULUS => encodeByteArray(buffer, self.modulus),
-            pkcs.CKA_PUBLIC_EXPONENT => encodeByteArray(buffer, self.public_exponent),
+            pkcs.CKA_CLASS => encode(buffer, self.class),
+            pkcs.CKA_TOKEN => encode(buffer, self.token),
+            pkcs.CKA_PRIVATE => encode(buffer, self.private),
+            pkcs.CKA_MODIFIABLE => encode(buffer, self.modifiable),
+            pkcs.CKA_LABEL => encode(buffer, self.label),
+            pkcs.CKA_COPYABLE => encode(buffer, self.copyable),
+            pkcs.CKA_DESTROYABLE => encode(buffer, self.destroyable),
+            pkcs.CKA_KEY_TYPE => encode(buffer, self.key_type),
+            pkcs.CKA_ID => encode(buffer, &self.id),
+            pkcs.CKA_START_DATE => encode(buffer, self.start_date),
+            pkcs.CKA_END_DATE => encode(buffer, self.end_date),
+            pkcs.CKA_DERIVE => encode(buffer, self.derive),
+            pkcs.CKA_LOCAL => encode(buffer, self.local),
+            pkcs.CKA_KEY_GEN_MECHANISM => encode(buffer, self.key_gen_mechanism),
+            pkcs.CKA_ALLOWED_MECHANISMS => encode(buffer, self.allowed_mechanisms),
+            pkcs.CKA_SUBJECT => encode(buffer, self.subject),
+            pkcs.CKA_SENSITIVE => encode(buffer, self.sensitive),
+            pkcs.CKA_DECRYPT => encode(buffer, self.decrypt),
+            pkcs.CKA_SIGN => encode(buffer, self.sign),
+            pkcs.CKA_SIGN_RECOVER => encode(buffer, self.sign_recover),
+            pkcs.CKA_UNWRAP => encode(buffer, self.unwrap),
+            pkcs.CKA_EXTRACTABLE => encode(buffer, self.extractable),
+            pkcs.CKA_ALWAYS_SENSITIVE => encode(buffer, self.always_sensitive),
+            pkcs.CKA_NEVER_EXTRACTABLE => encode(buffer, self.never_extractable),
+            pkcs.CKA_WRAP_WITH_TRUSTED => encode(buffer, self.wrap_with_trusted),
+            pkcs.CKA_UNWRAP_TEMPLATE => encode(buffer, self.unwrap_template),
+            pkcs.CKA_ALWAYS_AUTHENTICATE => encode(buffer, self.always_authenticate),
+            pkcs.CKA_PUBLIC_KEY_INFO => encode(buffer, self.public_key_info),
+            pkcs.CKA_MODULUS => encode(buffer, self.modulus),
+            pkcs.CKA_PUBLIC_EXPONENT => encode(buffer, self.public_exponent),
             else => PkcsError.AttributeTypeInvalid,
         };
     }
@@ -454,7 +454,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_DERIVE => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_LOCAL => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_KEY_GEN_MECHANISM => @sizeOf(pkcs.CK_ULONG),
-            // pkcs.CKA_ALLOWED_MECHANISMS => unreachable, // TODO
+            pkcs.CKA_ALLOWED_MECHANISMS => self.allowed_mechanisms.len * @sizeOf(pkcs.CK_MECHANISM_TYPE),
             pkcs.CKA_SUBJECT => self.subject.len,
             pkcs.CKA_SENSITIVE => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_DECRYPT => @sizeOf(pkcs.CK_BBOOL),
@@ -465,7 +465,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_ALWAYS_SENSITIVE => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_NEVER_EXTRACTABLE => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_WRAP_WITH_TRUSTED => @sizeOf(pkcs.CK_BBOOL),
-            // pkcs.CKA_UNWRAP_TEMPLATE => unreachable,
+            pkcs.CKA_UNWRAP_TEMPLATE => self.unwrap_template.len * @sizeOf(pkcs.CK_ATTRIBUTE),
             pkcs.CKA_ALWAYS_AUTHENTICATE => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_PUBLIC_KEY_INFO => self.public_key_info.len,
             pkcs.CKA_MODULUS => self.modulus.len,
@@ -593,32 +593,32 @@ pub const PublicKeyObject = struct {
 
     pub fn getAttributeValue(self: *const PublicKeyObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
         return switch (attribute_type) {
-            pkcs.CKA_CLASS => encodeLong(buffer, self.class),
-            pkcs.CKA_TOKEN => encodeBool(buffer, self.token),
-            pkcs.CKA_PRIVATE => encodeBool(buffer, self.private),
-            pkcs.CKA_MODIFIABLE => encodeBool(buffer, self.modifiable),
-            pkcs.CKA_LABEL => encodeByteArray(buffer, self.label),
-            pkcs.CKA_COPYABLE => encodeBool(buffer, self.copyable),
-            pkcs.CKA_DESTROYABLE => encodeBool(buffer, self.destroyable),
-            pkcs.CKA_KEY_TYPE => encodeLong(buffer, self.key_type),
-            pkcs.CKA_ID => encodeByteArray(buffer, &self.id),
-            pkcs.CKA_START_DATE => encodeDate(buffer, self.start_date),
-            pkcs.CKA_END_DATE => encodeDate(buffer, self.end_date),
-            pkcs.CKA_DERIVE => encodeBool(buffer, self.derive),
-            pkcs.CKA_LOCAL => encodeBool(buffer, self.local),
-            pkcs.CKA_KEY_GEN_MECHANISM => encodeLong(buffer, self.key_gen_mechanism),
-            // pkcs.CKA_ALLOWED_MECHANISMS => unreachable,
-            pkcs.CKA_SUBJECT => encodeByteArray(buffer, self.subject),
-            pkcs.CKA_ENCRYPT => encodeBool(buffer, self.encrypt),
-            pkcs.CKA_VERIFY => encodeBool(buffer, self.verify),
-            pkcs.CKA_VERIFY_RECOVER => encodeBool(buffer, self.verify_recover),
-            pkcs.CKA_WRAP => encodeBool(buffer, self.wrap),
-            pkcs.CKA_TRUSTED => encodeBool(buffer, self.trusted),
-            // pkcs.CKA_WRAP_TEMPLATE => unreachable,
-            pkcs.CKA_PUBLIC_KEY_INFO => encodeByteArray(buffer, self.public_key_info),
-            pkcs.CKA_MODULUS => encodeByteArray(buffer, self.modulus),
-            pkcs.CKA_MODULUS_BITS => encodeLong(buffer, self.modulus_bits),
-            pkcs.CKA_PUBLIC_EXPONENT => encodeByteArray(buffer, self.public_exponent),
+            pkcs.CKA_CLASS => encode(buffer, self.class),
+            pkcs.CKA_TOKEN => encode(buffer, self.token),
+            pkcs.CKA_PRIVATE => encode(buffer, self.private),
+            pkcs.CKA_MODIFIABLE => encode(buffer, self.modifiable),
+            pkcs.CKA_LABEL => encode(buffer, self.label),
+            pkcs.CKA_COPYABLE => encode(buffer, self.copyable),
+            pkcs.CKA_DESTROYABLE => encode(buffer, self.destroyable),
+            pkcs.CKA_KEY_TYPE => encode(buffer, self.key_type),
+            pkcs.CKA_ID => encode(buffer, &self.id),
+            pkcs.CKA_START_DATE => encode(buffer, self.start_date),
+            pkcs.CKA_END_DATE => encode(buffer, self.end_date),
+            pkcs.CKA_DERIVE => encode(buffer, self.derive),
+            pkcs.CKA_LOCAL => encode(buffer, self.local),
+            pkcs.CKA_KEY_GEN_MECHANISM => encode(buffer, self.key_gen_mechanism),
+            pkcs.CKA_ALLOWED_MECHANISMS => encode(buffer, self.allowed_mechanisms),
+            pkcs.CKA_SUBJECT => encode(buffer, self.subject),
+            pkcs.CKA_ENCRYPT => encode(buffer, self.encrypt),
+            pkcs.CKA_VERIFY => encode(buffer, self.verify),
+            pkcs.CKA_VERIFY_RECOVER => encode(buffer, self.verify_recover),
+            pkcs.CKA_WRAP => encode(buffer, self.wrap),
+            pkcs.CKA_TRUSTED => encode(buffer, self.trusted),
+            pkcs.CKA_WRAP_TEMPLATE => encode(buffer, self.wrap_template),
+            pkcs.CKA_PUBLIC_KEY_INFO => encode(buffer, self.public_key_info),
+            pkcs.CKA_MODULUS => encode(buffer, self.modulus),
+            pkcs.CKA_MODULUS_BITS => encode(buffer, self.modulus_bits),
+            pkcs.CKA_PUBLIC_EXPONENT => encode(buffer, self.public_exponent),
             else => PkcsError.AttributeTypeInvalid,
         };
     }
@@ -639,14 +639,14 @@ pub const PublicKeyObject = struct {
             pkcs.CKA_DERIVE => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_LOCAL => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_KEY_GEN_MECHANISM => @sizeOf(pkcs.CK_ULONG),
-            // pkcs.CKA_ALLOWED_MECHANISMS => unreachable,
+            pkcs.CKA_ALLOWED_MECHANISMS => self.allowed_mechanisms.len * @sizeOf(pkcs.CK_MECHANISM_TYPE),
             pkcs.CKA_SUBJECT => self.subject.len,
             pkcs.CKA_ENCRYPT => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_VERIFY => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_VERIFY_RECOVER => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_WRAP => @sizeOf(pkcs.CK_BBOOL),
             pkcs.CKA_TRUSTED => @sizeOf(pkcs.CK_BBOOL),
-            // pkcs.CKA_WRAP_TEMPLATE => unreachable,
+            pkcs.CKA_WRAP_TEMPLATE => self.wrap_template.len * @sizeOf(pkcs.CK_ATTRIBUTE),
             pkcs.CKA_PUBLIC_KEY_INFO => self.public_key_info.len,
             pkcs.CKA_MODULUS => self.modulus.len,
             pkcs.CKA_MODULUS_BITS => @sizeOf(pkcs.CK_ULONG),
@@ -720,50 +720,110 @@ pub fn deinitSearchTemplate(allocator: std.mem.Allocator, search_template: []Att
     allocator.free(search_template);
 }
 
-fn encodeBool(buff: []u8, value: pkcs.CK_BBOOL) PkcsError![]u8 {
-    if (buff.len < @sizeOf(pkcs.CK_BBOOL))
+fn encode(buff: []u8, value: anytype) PkcsError![]u8 {
+    const T = @TypeOf(value);
+
+    const value_size = switch (@typeInfo(T)) {
+        .pointer => |ptr_info| switch (ptr_info.size) {
+            .slice => value.len * @sizeOf(ptr_info.child),
+            .one => switch (@typeInfo(ptr_info.child)) {
+                .array => |array| array.len * @sizeOf(array.child),
+                else => unreachable,
+            },
+            else => unreachable,
+        },
+        .array, .int, .@"struct" => @sizeOf(T),
+        else => unreachable,
+    };
+
+    if (buff.len < value_size)
         return PkcsError.HostMemory;
 
-    const src: *const [@sizeOf(pkcs.CK_BBOOL)]u8 = @ptrCast(&value);
-    @memcpy(buff[0..src.len], src);
+    const src: []const u8 =
+        if (@typeInfo(T) == .pointer)
+            @as([*]const u8, @ptrCast(value.ptr))[0..value_size]
+        else
+            @ptrCast(&value);
 
-    return buff[0..src.len];
+    @memcpy(buff[0..value_size], src);
+    return buff[0..value_size];
 }
 
-fn encodeLong(buff: []u8, value: pkcs.CK_ULONG) PkcsError![]u8 {
-    if (buff.len < @sizeOf(pkcs.CK_ULONG))
-        return PkcsError.HostMemory;
+test "encoding scalars" {
+    var buffer = std.mem.zeroes([16]u8);
 
-    const src: *const [@sizeOf(pkcs.CK_ULONG)]u8 = @ptrCast(&value);
-    @memcpy(buff[0..src.len], src);
+    const bool_value: pkcs.CK_BBOOL = pkcs.CK_TRUE;
+    const bool_value_slice = try encode(&buffer, bool_value);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&bool_value), bool_value_slice);
 
-    return buff[0..src.len];
+    const class_value: pkcs.CK_OBJECT_CLASS = pkcs.CKO_CERTIFICATE;
+    const class_value_slice = try encode(&buffer, class_value);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&class_value), class_value_slice);
 }
 
-fn encodeByteArray(buff: []u8, value: []const u8) PkcsError![]u8 {
-    if (buff.len < value.len)
-        return PkcsError.HostMemory;
+test "encoding zero length arrays" {
+    var buffer = std.mem.zeroes([0]u8);
 
-    @memcpy(buff[0..value.len], value);
+    const zero_array = [0]u8{};
+    const zero_array_value_slice = try encode(&buffer, zero_array);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&zero_array), zero_array_value_slice);
 
-    return buff[0..value.len];
+    const zero_slice_value = try encode(&buffer, @as([]const u8, &zero_array));
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&zero_array), zero_slice_value);
+
+    const mechanism_array = [0]pkcs.CK_MECHANISM_TYPE{};
+    const mechanism_array_value = try encode(&buffer, &mechanism_array);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_array_value);
+
+    const mechanism_slice_value = try encode(&buffer, @as([]const pkcs.CK_MECHANISM_TYPE, &mechanism_array));
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_slice_value);
 }
 
-fn encodeDate(buff: []u8, value: pkcs.CK_DATE) PkcsError![]u8 {
-    if (buff.len < @sizeOf(pkcs.CK_DATE))
-        return PkcsError.HostMemory;
+test "encoding arrays" {
+    var buffer = std.mem.zeroes([16]u8);
 
-    const src: *const [@sizeOf(pkcs.CK_DATE)]u8 = @ptrCast(&value);
-    @memcpy(buff[0..src.len], src);
+    const byte_array = [_]u8{ 1, 2, 3 };
+    const byte_array_value_slice = try encode(&buffer, byte_array);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&byte_array), byte_array_value_slice);
 
-    return buff[0..src.len];
+    const byte_array_pointer_value = try encode(&buffer, &byte_array);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&byte_array), byte_array_pointer_value);
+
+    const byte_slice_value = try encode(&buffer, @as([]const u8, &byte_array));
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&byte_array), byte_slice_value);
+
+    const mechanism_array = [_]pkcs.CK_MECHANISM_TYPE{ pkcs.CKM_ECDSA, pkcs.CKM_AES_GCM };
+    const mechanism_array_value = try encode(&buffer, &mechanism_array);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_array_value);
+
+    const mechanism_slice_value = try encode(&buffer, @as([]const pkcs.CK_MECHANISM_TYPE, &mechanism_array));
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_slice_value);
+
+    const date_array = [_]pkcs.CK_DATE{
+        .{
+            .year = .{ '1', '9', '8', '2' },
+            .month = .{ '0', '7' },
+            .day = .{ '3', '1' },
+        },
+        .{
+            .year = .{ '2', '0', '1', '4' },
+            .month = .{ '0', '5' },
+            .day = .{ '0', '6' },
+        },
+    };
+
+    const date_array_value = try encode(&buffer, &date_array);
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&date_array), date_array_value);
+
+    const date_slice_value = try encode(&buffer, @as([]const pkcs.CK_DATE, &date_array));
+    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&date_array), date_slice_value);
 }
 
-fn encodeMechanismTypeList(allocator: std.mem.Allocator, value: []const pkcs.CK_MECHANISM_TYPE) PkcsError![]u8 {
-    const buff = allocator.alloc(u8, value.len * @sizeOf(pkcs.CK_MECHANISM_TYPE)) catch
-        return PkcsError.HostMemory;
+test "encoding to small buffer" {
+    var buffer = std.mem.zeroes([2]u8);
 
-    return buff;
+    const class_value: pkcs.CK_OBJECT_CLASS = pkcs.CKO_CERTIFICATE;
+    try std.testing.expectError(PkcsError.HostMemory, encode(&buffer, class_value));
 }
 
 fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T {
