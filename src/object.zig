@@ -206,7 +206,7 @@ pub const CertificateObject = struct {
             pkcs.CKA_URL => self.url.len,
             pkcs.CKA_HASH_OF_SUBJECT_PUBLIC_KEY => self.hash_of_subject_public_key.len,
             pkcs.CKA_NAME_HASH_ALGORITHM => @sizeOf(pkcs.CK_ULONG),
-            CKT_NETSCAPE_TRUSTED_DELEGATOR => @sizeOf(pkcs.CK_BBOOL),
+            CKT_NETSCAPE_TRUSTED_DELEGATOR => @sizeOf(pkcs.CK_BBOOL), // TODO
             else => PkcsError.AttributeTypeInvalid,
         };
     }
@@ -248,7 +248,9 @@ pub const CertificateObject = struct {
 
         // iffy but it should work
         const subject = try clone(allocator, buffer[parsed.subject_slice.start - 3 .. parsed.subject_slice.end]);
+        errdefer allocator.free(subject);
         const issuer = try clone(allocator, buffer[parsed.issuer_slice.start - 3 .. parsed.issuer_slice.end]);
+        errdefer allocator.free(issuer);
 
         const label_slice = extractLabel(subject);
         const label = try clone(allocator, label_slice);
