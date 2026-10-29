@@ -75,6 +75,9 @@ pub export fn C_GetSlotInfo(
     var reader_state = reader.reader_states.getPtr(slot_ID) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
 
+    if (!reader_state.active)
+        return pkcs.CKR_SLOT_ID_INVALID;
+
     @memcpy(&slot_info.?.slotDescription, &reader_state.writeShortName());
     @memset(&slot_info.?.manufacturerID, ' ');
 
@@ -110,6 +113,9 @@ pub export fn C_GetTokenInfo(
     defer reader.lock.unlock(state.io);
 
     var reader_state = reader.reader_states.getPtr(slot_id) orelse
+        return pkcs.CKR_SLOT_ID_INVALID;
+
+    if (!reader_state.active)
         return pkcs.CKR_SLOT_ID_INVALID;
 
     reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
@@ -195,6 +201,9 @@ pub export fn C_GetMechanismList(
     const reader_state = reader.reader_states.getPtr(slot_id) orelse
         return pkcs.CKR_SLOT_ID_INVALID;
 
+    if (!reader_state.active)
+        return pkcs.CKR_SLOT_ID_INVALID;
+
     if (!reader_state.card_present)
         return pkcs.CKR_TOKEN_NOT_PRESENT;
 
@@ -229,6 +238,9 @@ pub export fn C_GetMechanismInfo(
     defer reader.lock.unlockShared(state.io);
 
     const reader_state = reader.reader_states.get(slot_id) orelse
+        return pkcs.CKR_SLOT_ID_INVALID;
+
+    if (!reader_state.active)
         return pkcs.CKR_SLOT_ID_INVALID;
 
     if (!reader_state.card_present)
