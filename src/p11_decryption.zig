@@ -105,6 +105,9 @@ pub export fn C_Decrypt(
     const message = current_operation.stripPad(computed_data) catch |err|
         return pkcs_error.toRV(err);
 
+    if (message.len > data_len.?.*)
+        return pkcs.CKR_GENERAL_ERROR;
+
     data_len.?.* = @intCast(message.len);
     @memcpy(data.?, message);
 
@@ -207,6 +210,9 @@ pub export fn C_DecryptFinal(
 
     const message = current_operation.stripPad(computed_data) catch |err|
         return pkcs_error.toRV(err);
+
+    if (message.len > last_part_len.?.*)
+        return pkcs.CKR_GENERAL_ERROR;
 
     last_part_len.?.* = @intCast(message.len);
     @memcpy(last_part.?, message);
