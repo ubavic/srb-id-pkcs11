@@ -59,10 +59,10 @@ pub export fn C_Verify(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    defer current_session.resetOperation();
-
     current_session.assertOperation(operation.Type.Verify) catch |err|
         return pkcs_error.toRV(err);
+
+    defer current_session.resetOperation();
 
     const current_operation = &current_session.operation.verify;
 
@@ -126,10 +126,10 @@ pub export fn C_VerifyFinal(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    defer current_session.resetOperation();
-
     current_session.assertOperation(operation.Type.Verify) catch |err|
         return pkcs_error.toRV(err);
+
+    defer current_session.resetOperation();
 
     const current_operation = &current_session.operation.verify;
 
