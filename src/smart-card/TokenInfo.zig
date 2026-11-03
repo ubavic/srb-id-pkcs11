@@ -8,7 +8,7 @@ token_serial_number: [16]u8 = @splat(0x20),
 pub fn parse(data: []const u8) TokenInfo {
     var token_info = TokenInfo{};
 
-    if (data.len <= 48)
+    if (data.len < 48)
         return token_info;
 
     @memcpy(&token_info.token_label, data[0..32]);
@@ -40,11 +40,11 @@ test "parse token info" {
             .expected = TokenInfo{},
         },
         .{
-            .data = &@as([48]u8, @splat(0x10)),
+            .data = &@as([47]u8, @splat(0x10)),
             .expected = TokenInfo{},
         },
         .{
-            .data = &@as([49]u8, @splat(0x20)),
+            .data = &@as([48]u8, @splat(0x20)),
             .expected = TokenInfo{
                 .token_label = @splat(0x20),
                 .token_serial_number = @splat(0x20),
