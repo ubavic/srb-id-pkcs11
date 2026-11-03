@@ -98,7 +98,7 @@ pub const ReaderState = struct {
 
         @memcpy(buffer[0..open_index.?], self.name[0..open_index.?]);
 
-        while (close_index.? < self.name.len - 1) {
+        while (close_index.? < self.name.len) {
             if (self.name[close_index.?] == ' ')
                 close_index.? += 1
             else if (self.name[close_index.?] == ']')
@@ -281,6 +281,8 @@ test "set and get user types" {
 }
 
 test "reader short name" {
+    const zeros: [64]u8 = @splat(0x20);
+
     const test_cases = [_]struct {
         name: [:0]const u8,
         expected: []const u8,
@@ -307,28 +309,7 @@ test "reader short name" {
         const output = reader_state.writeShortName();
         const min = @min(tc.expected.len, output.len);
         try std.testing.expectEqualSlices(u8, tc.expected[0..min], output[0..min]);
-    }
-}
-
-test "reader short name should not be null terminated" {
-    const test_cases = [_]struct {
-        name: [:0]const u8,
-    }{
-        .{ .name = "" },
-        .{ .name = "reader" },
-        .{ .name = "reader ABC - 123 [XYZ] model" },
-    };
-
-    for (test_cases) |tc| {
-        const reader_state = ReaderState{
-            .active = true,
-            .card_present = true,
-            .recognized = true,
-            .user_type = .User,
-            .name = tc.name,
-        };
-
-        const output = reader_state.writeShortName();
+        try std.testing.expectEqualSlices(u8, zeros[min..], output[min..]);
         try std.testing.expect(!std.mem.containsAtLeastScalar(u8, &output, 0x00, 1));
     }
 }
