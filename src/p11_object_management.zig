@@ -161,7 +161,7 @@ pub export fn C_FindObjectsInit(
     const current_session = session.getSession(session_handle, false) catch |err|
         return pkcs_error.toRV(err);
 
-    current_session.assertOperation(operation.Type.None) catch |err|
+    current_session.assertNoOperation() catch |err|
         return pkcs_error.toRV(err);
 
     if (template == null and count != 0)

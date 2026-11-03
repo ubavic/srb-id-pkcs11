@@ -154,6 +154,8 @@ pub export fn C_Login(
     current_session.login(pin.?[0..pin_length]) catch |err|
         return pkcs_error.toRV(err);
 
+    current_session.resetOperation();
+
     return pkcs.CKR_OK;
 }
 
@@ -168,6 +170,8 @@ pub export fn C_Logout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
         return pkcs.CKR_USER_NOT_LOGGED_IN;
 
     current_session.logout();
+
+    current_session.resetOperation();
 
     return pkcs.CKR_OK;
 }
