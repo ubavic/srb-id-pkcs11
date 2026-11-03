@@ -23,26 +23,27 @@ pub fn build(
 
     if (length == 0) {
         if (ne != 0) {
-            if (ne <= 256) {
-                const l: u8 = if (ne == 256) 0x00 else @intCast(ne);
+            if (ne <= 0x1_00) {
+                const l: u8 = if (ne == 0x1_00) 0x00 else @intCast(ne);
                 try apdu.append(allocator, l);
             } else {
                 var l1: u8 = undefined;
                 var l2: u8 = undefined;
-                if (ne == 65536) {
+                if (ne == 0x1_00_00) {
                     l1 = 0;
                     l2 = 0;
                 } else {
                     l1 = @intCast(ne >> 8);
                     l2 = @intCast(ne & 0xFF);
                 }
+                try apdu.append(allocator, 0x00);
                 try apdu.append(allocator, l1);
                 try apdu.append(allocator, l2);
             }
         }
     } else {
         if (ne == 0) {
-            if (length <= 255) {
+            if (length <= 0xFF) {
                 try apdu.append(allocator, @intCast(length));
                 try apdu.appendSlice(allocator, data.?);
             } else {
@@ -52,17 +53,17 @@ pub fn build(
                 try apdu.appendSlice(allocator, data.?);
             }
         } else {
-            if (length <= 255 and ne <= 256) {
+            if (length <= 0xFF and ne <= 0x1_00) {
                 try apdu.append(allocator, @intCast(length));
                 try apdu.appendSlice(allocator, data.?);
-                const neByte: u8 = if (ne == 256) 0x00 else @intCast(ne);
+                const neByte: u8 = if (ne == 0x1_00) 0x00 else @intCast(ne);
                 try apdu.append(allocator, neByte);
             } else {
                 try apdu.append(allocator, 0x00);
                 try apdu.append(allocator, @intCast(length >> 8));
                 try apdu.append(allocator, @intCast(length & 0xFF));
                 try apdu.appendSlice(allocator, data.?);
-                if (ne != 65536) {
+                if (ne != 0x1_00_00) {
                     try apdu.append(allocator, @intCast(ne >> 8));
                     try apdu.append(allocator, @intCast(ne & 0xFF));
                 }
@@ -82,8 +83,8 @@ test "build APDU" {
     }{
         .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{}, .ne = 0, .expected = &.{ 0x00, 0xA4, 0x04, 0x01 } },
         .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{}, .ne = 0xFF, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0xFF } },
-        .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{}, .ne = 0x01FF, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x01, 0xFF } },
-        .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{}, .ne = 0x10000, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x00, 0x00 } },
+        .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x03 }, .data = &.{}, .ne = 0x01FF, .expected = &.{ 0x00, 0xA4, 0x04, 0x03, 0x00, 0x01, 0xFF } },
+        .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{}, .ne = 0x10000, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x00, 0x00, 0x00 } },
         .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{ 0x00, 0x00, 0x00 }, .ne = 0, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x03, 0x00, 0x00, 0x00 } },
         .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{ 0x00, 0x00, 0x00 }, .ne = 0x01, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x03, 0x00, 0x00, 0x00, 0x01 } },
         .{ .parameters = .{ 0x00, 0xA4, 0x04, 0x01 }, .data = &.{ 0x00, 0x00, 0x00 }, .ne = 0x100, .expected = &.{ 0x00, 0xA4, 0x04, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00 } },
