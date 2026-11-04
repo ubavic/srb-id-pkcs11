@@ -1,3 +1,4 @@
+const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("smart-card/reader.zig");
@@ -151,7 +152,10 @@ pub export fn C_Login(
     if (current_session.loggedIn())
         return pkcs.CKR_USER_ALREADY_LOGGED_IN;
 
-    current_session.login(pin.?[0..pin_length]) catch |err|
+    const padded_pin = PaddedPin.construct(pin.?[0..pin_length]) catch
+        return pkcs_error.toRV(pkcs_error.PkcsError.PinIncorrect);
+
+    current_session.login(&padded_pin) catch |err|
         return pkcs_error.toRV(err);
 
     current_session.resetOperation();

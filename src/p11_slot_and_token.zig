@@ -3,6 +3,7 @@ const std = @import("std");
 const session = @import("session.zig");
 const state = @import("state.zig");
 const reader = @import("smart-card/reader.zig");
+const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 
@@ -324,8 +325,15 @@ pub export fn C_SetPIN(
     if (old_pin == null or new_pin == null)
         return pkcs.CKR_ARGUMENTS_BAD;
 
-    current_session.card.setPin(state.allocator, old_pin.?[0..old_pin_len], new_pin.?[0..new_pin_len]) catch |err|
+    const padded_old_pin = PaddedPin.construct(old_pin.?[0..old_pin_len]) catch |err|
         return pkcs_error.toRV(err);
+
+    const padded_new_pin = PaddedPin.construct(new_pin.?[0..new_pin_len]) catch |err|
+        return pkcs_error.toRV(err);
+
+    current_session.setPin(state.allocator, &padded_old_pin, &padded_new_pin) catch |err|
+        return pkcs_error.toRV(err);
+
     return pkcs.CKR_OK;
 }
 

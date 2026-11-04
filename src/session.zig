@@ -6,6 +6,7 @@ const Index = @import("smart-card/Index.zig");
 const MetaFile = @import("smart-card/MetaFile.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
+const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const PkcsError = @import("pkcs_error.zig").PkcsError;
 const PublicKeyFile = @import("smart-card/PublicKeyFile.zig");
@@ -28,9 +29,14 @@ pub const Session = struct {
     operation: operation.Operation,
     objects: []object.Object,
 
-    pub fn login(self: *Session, new_pin: []const u8) PkcsError!void {
+    pub fn setPin(self: *Session, allocator: std.mem.Allocator, old_pin: *const PaddedPin, new_pin: *const PaddedPin) PkcsError!void {
+        try self.login(old_pin);
+        try self.card.setPin(allocator, old_pin, new_pin);
+    }
+
+    pub fn login(self: *Session, pin: *const PaddedPin) PkcsError!void {
         errdefer reader.setUserType(self.reader_id, reader.UserType.None);
-        try self.card.verifyPin(self.allocator, new_pin);
+        try self.card.verifyPin(self.allocator, pin);
         reader.setUserType(self.reader_id, reader.UserType.User);
     }
 

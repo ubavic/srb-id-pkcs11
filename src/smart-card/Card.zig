@@ -2,7 +2,7 @@ const std = @import("std");
 const pcsc = @import("pcsc");
 
 const apdu = @import("apdu.zig");
-const pin = @import("pin.zig");
+const PaddedPin = @import("PaddedPin.zig");
 const TokenInfo = @import("TokenInfo.zig");
 
 const pkcs_error = @import("../pkcs_error.zig");
@@ -196,14 +196,8 @@ pub fn readRandom(
     return response;
 }
 
-pub fn verifyPin(self: *const Card, allocator: std.mem.Allocator, pin_to_verify: []const u8) PkcsError!void {
-    pin.validate(pin_to_verify) catch
-        return PkcsError.PinIncorrect;
-
-    var padded_pin = try pin.pad(pin_to_verify);
-    defer std.crypto.secureZero(u8, &padded_pin);
-
-    const data_unit = apdu.build(allocator, 0x00, 0x20, 0x00, 0x80, &padded_pin, 0) catch
+pub fn verifyPin(self: *const Card, allocator: std.mem.Allocator, pin: *const PaddedPin) PkcsError!void {
+    const data_unit = apdu.build(allocator, 0x00, 0x20, 0x00, 0x80, pin.slice(), 0) catch
         return PkcsError.HostMemory;
     defer allocator.free(data_unit);
     defer std.crypto.secureZero(u8, data_unit);
@@ -226,25 +220,14 @@ pub fn verifyPin(self: *const Card, allocator: std.mem.Allocator, pin_to_verify:
 pub fn setPin(
     self: *const Card,
     allocator: std.mem.Allocator,
-    old_pin: []const u8,
-    new_pin: []const u8,
+    old_pin: *const PaddedPin,
+    new_pin: *const PaddedPin,
 ) PkcsError!void {
-    try pin.validate(old_pin);
-    try pin.validate(new_pin);
-
-    try self.verifyPin(allocator, old_pin);
-
-    var data: [16]u8 = [_]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    var data: [16]u8 = @splat(0x00);
     defer std.crypto.secureZero(u8, &data);
 
-    var padded_old_pin = try pin.pad(old_pin);
-    defer std.crypto.secureZero(u8, &padded_old_pin);
-
-    var padded_new_pin = try pin.pad(new_pin);
-    defer std.crypto.secureZero(u8, &padded_new_pin);
-
-    @memcpy(data[0..8], &padded_old_pin);
-    @memcpy(data[8..16], &padded_new_pin);
+    @memcpy(data[0..8], old_pin.slice());
+    @memcpy(data[8..16], new_pin.slice());
 
     const data_unit = apdu.build(allocator, 0x00, 0x24, 0x00, 0x80, &data, 0) catch
         return PkcsError.HostMemory;
