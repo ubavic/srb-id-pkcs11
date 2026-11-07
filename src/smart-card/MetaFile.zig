@@ -9,13 +9,13 @@ file_name: [2]u8,
 label: ?[]const u8,
 id: [20]u8,
 
-pub fn parse(buffer: []const u8) PkcsError!MetaFile {
+pub fn parse(buffer: []const u8) !MetaFile {
     if (buffer.len < 4)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     const class = buffer[0];
     if (class == 0 or class > 3)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     const file_name = [2]u8{ buffer[1], buffer[2] };
 
@@ -27,7 +27,7 @@ pub fn parse(buffer: []const u8) PkcsError!MetaFile {
 
     if (label_length > 0) {
         if (position + label_length > buffer.len)
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         label = buffer[position .. position + label_length];
 
@@ -35,16 +35,16 @@ pub fn parse(buffer: []const u8) PkcsError!MetaFile {
     }
 
     if (position >= buffer.len)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     const id_length = buffer[position];
     position += 1;
 
     if (id_length != 20)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     if (position + id_length > buffer.len)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     var id: [20]u8 = std.mem.zeroes([20]u8);
     @memcpy(&id, buffer[position .. position + id_length]);
@@ -72,7 +72,7 @@ test "parse invalid meta file" {
     };
 
     for (test_cases) |tc|
-        try std.testing.expectError(PkcsError.GeneralError, MetaFile.parse(tc));
+        try std.testing.expectError(error.GeneralError, MetaFile.parse(tc));
 }
 
 test "parse valid meta file" {

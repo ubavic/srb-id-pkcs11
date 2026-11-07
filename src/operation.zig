@@ -4,7 +4,6 @@ const Attribute = @import("Attribute.zig");
 const hasher = @import("hasher.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
-const PkcsError = @import("pkcs_error.zig").PkcsError;
 
 // rfc8017 - Section 9.2
 const md5_prefix: [18]u8 = [_]u8{ 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10 };
@@ -20,9 +19,9 @@ pub const SignType = enum {
     DigestAndSign,
 };
 
-pub fn signTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) PkcsError!SignType {
+pub fn signTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) !SignType {
     if (mechanism == null)
-        return PkcsError.ArgumentsBad;
+        return error.ArgumentsBad;
 
     return switch (mechanism.?.*.mechanism) {
         pkcs.CKM_RSA_X_509 => .RawRsa,
@@ -33,19 +32,19 @@ pub fn signTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) PkcsError!Sig
         pkcs.CKM_SHA384_RSA_PKCS => .DigestAndSign,
         pkcs.CKM_SHA512_RSA_PKCS => .DigestAndSign,
         pkcs.CKM_RIPEMD160_RSA_PKCS => .DigestAndSign,
-        else => return PkcsError.MechanismInvalid,
+        else => return error.MechanismInvalid,
     };
 }
 
-pub fn encryptTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) PkcsError!bool {
+pub fn encryptTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) !bool {
     if (mechanism == null)
-        return PkcsError.ArgumentsBad;
+        return error.ArgumentsBad;
 
     if (mechanism.?.mechanism != pkcs.CKM_RSA_PKCS and mechanism.?.mechanism != pkcs.CKM_RSA_X_509)
-        return PkcsError.MechanismInvalid;
+        return error.MechanismInvalid;
 
     if (mechanism.?.ulParameterLen != 0)
-        return PkcsError.MechanismParamInvalid;
+        return error.MechanismParamInvalid;
 
     return mechanism.?.mechanism == pkcs.CKM_RSA_X_509;
 }
@@ -66,9 +65,9 @@ pub const Digest = struct {
     hasher: hasher.Hasher,
     multipart_operation: bool,
 
-    pub fn init(mechanism: ?*pkcs.CK_MECHANISM) PkcsError!Digest {
+    pub fn init(mechanism: ?*pkcs.CK_MECHANISM) !Digest {
         if (mechanism == null)
-            return PkcsError.ArgumentsBad;
+            return error.ArgumentsBad;
 
         const hash_mechanism = try hasher.fromDigestMechanism(mechanism.?.mechanism);
         const hash = hasher.createAndInit(hash_mechanism);
@@ -88,7 +87,7 @@ pub const Sign = struct {
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
-    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, key_size: usize, private_key: pkcs.CK_OBJECT_HANDLE) PkcsError!Sign {
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, key_size: usize, private_key: pkcs.CK_OBJECT_HANDLE) !Sign {
         const sign_type = try signTypeFromMechanism(mechanism);
         const hash_mechanism = try hasher.fromSignMechanism(mechanism.?.*.mechanism);
 
@@ -108,17 +107,17 @@ pub const Sign = struct {
         };
     }
 
-    pub fn update(self: *Sign, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
+    pub fn update(self: *Sign, allocator: std.mem.Allocator, data: []const u8) !void {
         switch (self.sign_type) {
             .DigestAndSign => self.hasher.?.update(data),
             .RawRsa, .Pkcs1Pad => {
                 self.msg_buffer.?.appendSlice(allocator, data) catch
-                    return PkcsError.HostMemory;
+                    return error.HostMemory;
             },
         }
     }
 
-    pub fn createSignRequest(self: *Sign, allocator: std.mem.Allocator) PkcsError![]u8 {
+    pub fn createSignRequest(self: *Sign, allocator: std.mem.Allocator) ![]u8 {
         return switch (self.sign_type) {
             .RawRsa => createRawSignRequest(&self.msg_buffer, allocator, self.key_size),
             .Pkcs1Pad => createPkcs1PaddedSignRequest(&self.msg_buffer, allocator, self.key_size),
@@ -145,7 +144,7 @@ pub const Verify = struct {
     hasher: ?hasher.Hasher,
     msg_buffer: ?std.ArrayList(u8),
 
-    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, public_key: std.crypto.Certificate.rsa.PublicKey) PkcsError!Verify {
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, public_key: std.crypto.Certificate.rsa.PublicKey) !Verify {
         const sign_type = try signTypeFromMechanism(mechanism);
         const hash_mechanism = try hasher.fromSignMechanism(mechanism.?.*.mechanism);
 
@@ -165,17 +164,17 @@ pub const Verify = struct {
         };
     }
 
-    pub fn update(self: *Verify, allocator: std.mem.Allocator, data: []const u8) PkcsError!void {
+    pub fn update(self: *Verify, allocator: std.mem.Allocator, data: []const u8) !void {
         switch (self.sign_type) {
             .DigestAndSign => self.hasher.?.update(data),
             .RawRsa, .Pkcs1Pad => {
                 self.msg_buffer.?.appendSlice(allocator, data) catch
-                    return PkcsError.HostMemory;
+                    return error.HostMemory;
             },
         }
     }
 
-    pub fn verify(self: *Verify, allocator: std.mem.Allocator, signature: []const u8) PkcsError!void {
+    pub fn verify(self: *Verify, allocator: std.mem.Allocator, signature: []const u8) !void {
         const sign_request = try self.createVerifyBlock(allocator);
         defer allocator.free(sign_request);
 
@@ -183,30 +182,30 @@ pub const Verify = struct {
         const Fe = Modulus.Fe;
 
         const sig_fe = Fe.fromBytes(self.public_key.n, signature, .big) catch
-            return PkcsError.SignatureInvalid;
+            return error.SignatureInvalid;
 
         const recovered = self.public_key.n.powPublic(sig_fe, self.public_key.e) catch
-            return PkcsError.SignatureInvalid;
+            return error.SignatureInvalid;
 
         const recovered_bytes = allocator.alloc(u8, self.keySizeBytes()) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         defer allocator.free(recovered_bytes);
 
         recovered.toBytes(recovered_bytes, .big) catch
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         if (sign_request.len != self.keySizeBytes())
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         var mismatch: u16 = 0;
         for (recovered_bytes, sign_request[0..]) |a, b|
             mismatch |= a ^ b;
 
         if (mismatch != 0)
-            return PkcsError.SignatureInvalid;
+            return error.SignatureInvalid;
     }
 
-    fn createVerifyBlock(self: *Verify, allocator: std.mem.Allocator) PkcsError![]u8 {
+    fn createVerifyBlock(self: *Verify, allocator: std.mem.Allocator) ![]u8 {
         return switch (self.sign_type) {
             .RawRsa => createRawSignRequest(&self.msg_buffer, allocator, self.public_key.n.bits() / 8),
             .Pkcs1Pad => createPkcs1PaddedSignRequest(&self.msg_buffer, allocator, self.public_key.n.bits() / 8),
@@ -232,7 +231,7 @@ pub const Encrypt = struct {
     msg_buffer: std.ArrayList(u8),
     raw: bool,
 
-    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, public_key: std.crypto.Certificate.rsa.PublicKey) PkcsError!Encrypt {
+    pub fn init(mechanism: ?*const pkcs.CK_MECHANISM, public_key: std.crypto.Certificate.rsa.PublicKey) !Encrypt {
         const raw = try encryptTypeFromMechanism(mechanism);
 
         return .{
@@ -243,30 +242,30 @@ pub const Encrypt = struct {
         };
     }
 
-    pub fn update(self: *Encrypt, allocator: std.mem.Allocator, data: []const u8) PkcsError![]u8 {
+    pub fn update(self: *Encrypt, allocator: std.mem.Allocator, data: []const u8) ![]u8 {
         self.msg_buffer.appendSlice(allocator, data) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
 
         return &[_]u8{};
     }
 
-    fn pad(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![]u8 {
+    fn pad(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) ![]u8 {
         var buf = allocator.alloc(u8, self.keySizeBytes()) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         errdefer allocator.free(buf);
 
         @memset(buf, 0x00);
 
         if (self.raw) {
             if (self.msg_buffer.items.len != self.keySizeBytes())
-                return PkcsError.DataLenRange;
+                return error.DataLenRange;
         } else {
             if (self.msg_buffer.items.len > self.keySizeBytes() - 11)
-                return PkcsError.DataLenRange;
+                return error.DataLenRange;
         }
 
         const msg = self.msg_buffer.toOwnedSlice(allocator) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         defer allocator.free(msg);
         defer std.crypto.secureZero(u8, msg);
 
@@ -286,7 +285,7 @@ pub const Encrypt = struct {
         return buf;
     }
 
-    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) PkcsError![]u8 {
+    pub fn encrypt(self: *Encrypt, allocator: std.mem.Allocator, io: std.Io) ![]u8 {
         const Modulus = std.crypto.ff.Modulus(4096);
         const Fe = Modulus.Fe;
 
@@ -294,17 +293,17 @@ pub const Encrypt = struct {
         defer allocator.free(buffer);
 
         const m = Fe.fromBytes(self.public_key.n, buffer[0..], .big) catch
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         const e = self.public_key.n.powPublic(m, self.public_key.e) catch
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         const result = allocator.alloc(u8, self.keySizeBytes()) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         errdefer allocator.free(result);
 
         e.toBytes(result, .big) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
 
         return result;
     }
@@ -325,7 +324,7 @@ pub const Decrypt = struct {
     msg_buffer: std.ArrayList(u8),
     raw: bool,
 
-    pub fn init(mechanism: ?*pkcs.CK_MECHANISM, private_key: pkcs.CK_OBJECT_HANDLE, key_size: usize) PkcsError!Decrypt {
+    pub fn init(mechanism: ?*pkcs.CK_MECHANISM, private_key: pkcs.CK_OBJECT_HANDLE, key_size: usize) !Decrypt {
         const raw = try encryptTypeFromMechanism(mechanism);
 
         return .{
@@ -337,19 +336,19 @@ pub const Decrypt = struct {
         };
     }
 
-    pub fn update(self: *Decrypt, allocator: std.mem.Allocator, data: []const u8) PkcsError![]u8 {
+    pub fn update(self: *Decrypt, allocator: std.mem.Allocator, data: []const u8) ![]u8 {
         self.msg_buffer.appendSlice(allocator, data) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
 
         return &[_]u8{};
     }
 
-    pub fn createDecryptRequest(self: *Decrypt, allocator: std.mem.Allocator) PkcsError![]u8 {
+    pub fn createDecryptRequest(self: *Decrypt, allocator: std.mem.Allocator) ![]u8 {
         return self.msg_buffer.toOwnedSlice(allocator) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
     }
 
-    pub fn stripPad(self: *const Decrypt, data: []const u8) PkcsError![]const u8 {
+    pub fn stripPad(self: *const Decrypt, data: []const u8) ![]const u8 {
         if (self.raw)
             return data;
 
@@ -363,7 +362,7 @@ pub const Decrypt = struct {
         }
 
         if (start_index >= data.len)
-            return PkcsError.EncryptedDataInvalid;
+            return error.EncryptedDataInvalid;
 
         return data[start_index..];
     }
@@ -391,7 +390,7 @@ pub const Search = struct {
         self: *Search,
         allocator: std.mem.Allocator,
         buffer: []pkcs.CK_OBJECT_HANDLE,
-    ) PkcsError!usize {
+    ) !usize {
         var i: usize = 0;
 
         while (i < buffer.len and self.index < self.objects.len) {
@@ -444,31 +443,31 @@ pub const Operation = union(enum) {
     }
 };
 
-fn createRawSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
+fn createRawSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator, key_size: usize) ![]u8 {
     const payload = msg_buffer.*.?.toOwnedSlice(allocator) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
     errdefer allocator.free(payload);
 
     msg_buffer.* = null;
 
     if (payload.len != key_size)
-        return PkcsError.DataLenRange;
+        return error.DataLenRange;
 
     return payload;
 }
 
-fn createPkcs1PaddedSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
+fn createPkcs1PaddedSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.mem.Allocator, key_size: usize) ![]u8 {
     const payload = msg_buffer.*.?.toOwnedSlice(allocator) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
     defer allocator.free(payload);
 
     msg_buffer.* = null;
 
     if (payload.len > key_size - 11)
-        return PkcsError.DataLenRange;
+        return error.DataLenRange;
 
     var request = allocator.alloc(u8, key_size) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     for (request) |*b|
         b.* = 0xff;
@@ -482,13 +481,13 @@ fn createPkcs1PaddedSignRequest(msg_buffer: *?std.ArrayList(u8), allocator: std.
     return request;
 }
 
-fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) PkcsError![]u8 {
+fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) ![]u8 {
     const digest_length = hash.digestLength();
 
     const prefix = getPrefixFromHasher(hash);
 
     const request = allocator.alloc(u8, prefix.len + digest_length) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
     errdefer allocator.free(request);
 
     @memcpy(request[0..prefix.len], prefix);
@@ -497,17 +496,17 @@ fn createHashedSignRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator) P
     return request;
 }
 
-fn createPkcs1PaddedHashRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator, key_size: usize) PkcsError![]u8 {
+fn createPkcs1PaddedHashRequest(hash: *hasher.Hasher, allocator: std.mem.Allocator, key_size: usize) ![]u8 {
     const digest_length = hash.digestLength();
 
     const prefix = getPrefixFromHasher(hash);
 
     const digest_info_len = prefix.len + digest_length;
     if (digest_info_len > key_size - 11)
-        return PkcsError.DataLenRange;
+        return error.DataLenRange;
 
     const request = allocator.alloc(u8, key_size) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
     errdefer allocator.free(request);
 
     @memset(request, 0xff);
@@ -763,7 +762,7 @@ test "strip pad padded malformed" {
 
     for (test_cases) |tc| {
         const result = decrypt.stripPad(tc);
-        try std.testing.expectError(PkcsError.EncryptedDataInvalid, result);
+        try std.testing.expectError(error.EncryptedDataInvalid, result);
     }
 }
 
@@ -812,7 +811,7 @@ test "raw sign request with invalid length" {
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 50);
 
     const result = createRawSignRequest(&msg_buffer, std.testing.allocator, 128);
-    try std.testing.expectError(PkcsError.DataLenRange, result);
+    try std.testing.expectError(error.DataLenRange, result);
 
     try std.testing.expectEqual(null, msg_buffer);
 }
@@ -838,7 +837,7 @@ test "pkcs1 padded sign request with invalid length" {
     try msg_buffer.?.appendNTimes(std.testing.allocator, 0x01, 118);
 
     const result = createPkcs1PaddedSignRequest(&msg_buffer, std.testing.allocator, 128);
-    try std.testing.expectError(PkcsError.DataLenRange, result);
+    try std.testing.expectError(error.DataLenRange, result);
 
     try std.testing.expectEqual(null, msg_buffer);
 }
@@ -947,7 +946,7 @@ fn TestHelper(signature_size: usize) type {
 
             var tampered = signature;
             tampered[0] ^= 0xff;
-            try std.testing.expectError(PkcsError.SignatureInvalid, verify_operation_tampered.verify(ta, &tampered));
+            try std.testing.expectError(error.SignatureInvalid, verify_operation_tampered.verify(ta, &tampered));
         }
 
         fn buildSignedBlock(sign_request: []const u8, plain_sign: bool) [signature_size]u8 {
@@ -1030,7 +1029,7 @@ test "sign and verify" {
         &([_]u8{0x00} ++ @as([128 - 1]u8, @splat(0x01))),
     };
 
-    var test_helper_1024 = try TestHelper(128).loadRsaKey(ta, tio, "testdata/1024.key");
+    var test_helper_1024 = try TestHelper(128).loadRsaKey(ta, tio, "../testdata/1024.key");
     defer test_helper_1024.key.deinit(ta);
 
     for (data_1024) |d|
@@ -1045,7 +1044,7 @@ test "sign and verify" {
         &([_]u8{0x00} ++ @as([256 - 1]u8, @splat(0x01))),
     };
 
-    var test_helper_2048 = try TestHelper(256).loadRsaKey(ta, tio, "testdata/2048.key");
+    var test_helper_2048 = try TestHelper(256).loadRsaKey(ta, tio, "../testdata/2048.key");
     defer test_helper_2048.key.deinit(ta);
 
     for (data_2048) |d|

@@ -3,193 +3,214 @@ const std = @import("std");
 const operation = @import("operation.zig");
 const object = @import("object.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const session = @import("session.zig");
 const state = @import("state.zig");
 
-pub export fn C_EncryptInit(
+pub fn encryptInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    KeyHandleInvalid,
+    KeyFunctionNotPermitted,
+    MechanismInvalid,
+    MechanismParamInvalid,
+    OperationActive,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertNoOperation() catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertNoOperation();
 
     const found_object = current_session.getObject(key) catch
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.KeyHandleInvalid;
 
     if (found_object.* != .public_key)
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.KeyHandleInvalid;
 
     if (found_object.public_key.encrypt != pkcs.CK_TRUE)
-        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+        return error.KeyFunctionNotPermitted;
 
     const public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
         found_object.public_key.public_exponent,
         found_object.public_key.modulus,
-    ) catch return pkcs.CKR_GENERAL_ERROR;
+    ) catch return error.GeneralError;
 
-    const encrypt_operation = operation.Encrypt.init(mechanism, public_key) catch |err|
-        return pkcs_error.toRV(err);
+    const encrypt_operation = try operation.Encrypt.init(mechanism, public_key);
 
     current_session.operation = .{ .encrypt = encrypt_operation };
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_Encrypt(
+pub fn encrypt(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
     encrypted_data: ?[*]pkcs.CK_BYTE,
     encrypted_data_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    DataLenRange,
+    FunctionCanceled,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Encrypt) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Encrypt);
 
     const current_operation = &current_session.operation.encrypt;
 
     if (current_operation.multipart_operation) {
         current_session.resetOperation();
-        return pkcs.CKR_FUNCTION_CANCELED;
+        return error.FunctionCanceled;
     }
 
     if (encrypted_data_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     const required_encrypted_data_size = current_operation.keySizeBytes();
 
     if (encrypted_data == null) {
         encrypted_data_len.?.* = @intCast(required_encrypted_data_size);
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (encrypted_data_len.?.* < required_encrypted_data_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
 
     defer current_session.resetOperation();
 
     if (data == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    _ = current_operation.update(current_session.allocator, data.?[0..data_len]) catch |err|
-        return pkcs_error.toRV(err);
+    _ = try current_operation.update(current_session.allocator, data.?[0..data_len]);
 
-    const computed_encrypted_data = current_operation.encrypt(current_session.allocator, state.io) catch |err|
-        return pkcs_error.toRV(err);
+    const computed_encrypted_data = try current_operation.encrypt(current_session.allocator, state.io);
     defer current_session.allocator.free(computed_encrypted_data);
 
     if (computed_encrypted_data.len > encrypted_data_len.?.*)
-        return pkcs.CKR_GENERAL_ERROR;
+        return error.GeneralError;
 
     encrypted_data_len.?.* = @intCast(computed_encrypted_data.len);
     @memcpy(encrypted_data.?, computed_encrypted_data[0..computed_encrypted_data.len]);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_EncryptUpdate(
+pub fn encryptUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
     encrypted_part: ?[*]pkcs.CK_BYTE,
     encrypted_part_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DataLenRange,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Encrypt) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Encrypt);
 
     const current_operation = &current_session.operation.encrypt;
 
     if (encrypted_part_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     if (encrypted_part == null) {
         encrypted_part_len.?.* = 0;
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (part == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     current_operation.multipart_operation = true;
     const encrypted = current_operation.update(current_session.allocator, part.?[0..part_len]) catch
-        return pkcs.CKR_HOST_MEMORY;
+        return error.HostMemory;
 
     if (encrypted.len > encrypted_part_len.?.*)
-        return pkcs.CKR_GENERAL_ERROR;
+        return error.GeneralError;
 
     encrypted_part_len.?.* = @intCast(encrypted.len);
     @memcpy(encrypted_part.?, encrypted);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_EncryptFinal(
+pub fn encryptFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     last_encrypted_part: ?[*]pkcs.CK_BYTE,
     last_encrypted_part_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    DataLenRange,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Encrypt) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Encrypt);
 
     const current_operation = &current_session.operation.encrypt;
 
     if (last_encrypted_part_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     const required_encrypted_data_size = current_operation.keySizeBytes();
 
     if (last_encrypted_part == null) {
         last_encrypted_part_len.?.* = @intCast(required_encrypted_data_size);
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (last_encrypted_part_len.?.* < required_encrypted_data_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
 
     defer current_session.resetOperation();
 
-    const computed_encrypted_data = current_operation.encrypt(current_session.allocator, state.io) catch |err|
-        return pkcs_error.toRV(err);
+    const computed_encrypted_data = try current_operation.encrypt(current_session.allocator, state.io);
     defer current_session.allocator.free(computed_encrypted_data);
 
     if (computed_encrypted_data.len > last_encrypted_part_len.?.*)
-        return pkcs.CKR_GENERAL_ERROR;
+        return error.GeneralError;
 
     last_encrypted_part_len.?.* = @intCast(computed_encrypted_data.len);
     @memcpy(last_encrypted_part.?, computed_encrypted_data[0..computed_encrypted_data.len]);
-
-    return pkcs.CKR_OK;
 }

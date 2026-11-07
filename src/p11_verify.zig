@@ -2,173 +2,200 @@ const std = @import("std");
 
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
 const hasher = @import("hasher.zig");
 
-pub export fn C_VerifyInit(
+pub fn verifyInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    KeyFunctionNotPermitted,
+    KeyHandleInvalid,
+    MechanismInvalid,
+    OperationActive,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertNoOperation() catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertNoOperation();
 
     const found_object = current_session.getObject(key) catch
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.KeyHandleInvalid;
 
     if (found_object.* != .public_key)
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.KeyHandleInvalid;
 
     // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.public_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
     //    return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 
     if (found_object.public_key.verify != pkcs.CK_TRUE)
-        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+        return error.KeyFunctionNotPermitted;
 
     const public_key = std.crypto.Certificate.rsa.PublicKey.fromBytes(
         found_object.public_key.public_exponent,
         found_object.public_key.modulus,
-    ) catch return pkcs.CKR_GENERAL_ERROR;
+    ) catch return error.GeneralError;
 
-    const verify_operation = operation.Verify.init(mechanism, public_key) catch |err|
-        return pkcs_error.toRV(err);
+    const verify_operation = try operation.Verify.init(mechanism, public_key);
 
     current_session.operation = .{ .verify = verify_operation };
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_Verify(
+pub fn verify(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DataLenRange,
+    FunctionCanceled,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+    SignatureInvalid,
+    SignatureLenRange,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Verify) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Verify);
 
     defer current_session.resetOperation();
 
     const current_operation = &current_session.operation.verify;
 
     if (data == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     if (signature == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     if (current_operation.multipart_operation)
-        return pkcs.CKR_FUNCTION_CANCELED;
+        return error.FunctionCanceled;
 
     if (signature_len != current_operation.keySizeBytes())
-        return pkcs.CKR_SIGNATURE_LEN_RANGE;
+        return error.SignatureLenRange;
 
     current_operation.update(current_session.allocator, data.?[0..data_len]) catch
-        return pkcs.CKR_HOST_MEMORY;
+        return error.HostMemory;
 
-    current_operation.verify(current_session.allocator, signature.?[0..signature_len]) catch |err|
-        return pkcs_error.toRV(err);
-
-    return pkcs.CKR_OK;
+    try current_operation.verify(current_session.allocator, signature.?[0..signature_len]);
 }
 
-pub export fn C_VerifyUpdate(
+pub fn verifyUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DataLenRange,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Verify) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Verify);
 
     const current_operation = &current_session.operation.verify;
 
     if (part == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     current_operation.multipart_operation = true;
     current_operation.update(current_session.allocator, part.?[0..part_len]) catch
-        return pkcs.CKR_HOST_MEMORY;
-
-    return pkcs.CKR_OK;
+        return error.HostMemory;
 }
 
-pub export fn C_VerifyFinal(
+pub fn verifyFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DataLenRange,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+    SignatureInvalid,
+    SignatureLenRange,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Verify) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Verify);
 
     defer current_session.resetOperation();
 
     const current_operation = &current_session.operation.verify;
 
     if (signature == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     if (signature_len != current_operation.keySizeBytes())
-        return pkcs.CKR_SIGNATURE_LEN_RANGE;
+        return error.SignatureLenRange;
 
-    current_operation.verify(current_session.allocator, signature.?[0..signature_len]) catch |err|
-        return pkcs_error.toRV(err);
-
-    return pkcs.CKR_OK;
+    try current_operation.verify(current_session.allocator, signature.?[0..signature_len]);
 }
 
-pub export fn C_VerifyRecoverInit(
+pub fn verifyRecoverInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
+) error{
+    FunctionNotSupported,
+}!void {
     _ = session_handle;
     _ = mechanism;
     _ = key;
 
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_VerifyRecover(
+pub fn verifyRecover(
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    FunctionNotSupported,
+}!void {
     _ = session_handle;
     _ = signature;
     _ = signature_len;
     _ = data;
     _ = data_len;
 
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+    return error.FunctionNotSupported;
 }

@@ -5,21 +5,26 @@ const state = @import("state.zig");
 const reader = @import("smart-card/reader.zig");
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 
-pub export fn C_GetSlotList(
+pub fn getSlotList(
     token_present: pkcs.CK_BBOOL,
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    GeneralError,
+    HostMemory,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     if (slot_count == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     const only_with_token = token_present == pkcs.CK_TRUE;
 
@@ -27,8 +32,7 @@ pub export fn C_GetSlotList(
     defer reader.lock.unlock(state.io);
 
     if (slot_list == null or !reader.scanned)
-        reader.refreshStatuses(state.allocator, &state.smart_card_client) catch |err|
-            return pkcs_error.toRV(err);
+        try reader.refreshStatuses(state.allocator, &state.smart_card_client);
 
     var count: usize = 0;
     var iter = reader.reader_states.iterator();
@@ -40,10 +44,10 @@ pub export fn C_GetSlotList(
     defer slot_count.?.* = @intCast(count);
 
     if (slot_list == null)
-        return pkcs.CKR_OK;
+        return;
 
     if (slot_count.?.* < count)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
 
     var i: usize = 0;
     iter = reader.reader_states.iterator();
@@ -53,37 +57,40 @@ pub export fn C_GetSlotList(
             i += 1;
         }
     }
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_GetSlotInfo(
+pub fn getSlotInfo(
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DeviceError,
+    GeneralError,
+    SlotIdInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     if (slot_info == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
     var reader_state = reader.reader_states.getPtr(slot_ID) orelse
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     if (!reader_state.active)
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     @memcpy(&slot_info.?.slotDescription, &reader_state.writeShortName());
     @memset(&slot_info.?.manufacturerID, ' ');
 
-    reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
-        return pkcs_error.toRV(err);
+    try reader_state.refreshCardPresent(state.allocator, &state.smart_card_client);
 
     slot_info.?.flags = pkcs.CKF_HW_SLOT | pkcs.CKF_REMOVABLE_DEVICE;
     if (reader_state.card_present)
@@ -93,40 +100,45 @@ pub export fn C_GetSlotInfo(
     slot_info.?.hardwareVersion.minor = 0x00;
     slot_info.?.firmwareVersion.major = 0x01;
     slot_info.?.firmwareVersion.minor = 0x00;
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_GetTokenInfo(
+pub fn getTokenInfo(
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DeviceError,
+    GeneralError,
+    SlotIdInvalid,
+    TokenNoPresent,
+    TokenNotRecognized,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     if (token_info == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
     var reader_state = reader.reader_states.getPtr(slot_id) orelse
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     if (!reader_state.active)
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
-    reader_state.refreshCardPresent(state.allocator, &state.smart_card_client) catch |err|
-        return pkcs_error.toRV(err);
+    try reader_state.refreshCardPresent(state.allocator, &state.smart_card_client);
 
     if (!reader_state.card_present)
-        return pkcs.CKR_TOKEN_NOT_PRESENT;
+        return error.TokenNoPresent;
 
     if (!reader_state.recognized)
-        return pkcs.CKR_TOKEN_NOT_RECOGNIZED;
+        return error.TokenNotRecognized;
 
     @memcpy(&token_info.?.label, &reader_state.token_label);
     @memcpy(&token_info.?.serialNumber, &reader_state.token_serial_number);
@@ -146,8 +158,7 @@ pub export fn C_GetTokenInfo(
 
     var session_count: usize = 0;
     var rw_session_count: usize = 0;
-    session.countSessions(slot_id, &session_count, &rw_session_count) catch |err|
-        return pkcs_error.toRV(err);
+    try session.countSessions(slot_id, &session_count, &rw_session_count);
     token_info.?.ulSessionCount = @intCast(session_count);
     token_info.?.ulRwSessionCount = @intCast(rw_session_count);
 
@@ -160,20 +171,27 @@ pub export fn C_GetTokenInfo(
     token_info.?.ulFreePublicMemory = pkcs.CK_UNAVAILABLE_INFORMATION;
     token_info.?.ulTotalPrivateMemory = pkcs.CK_UNAVAILABLE_INFORMATION;
     token_info.?.ulFreePrivateMemory = pkcs.CK_UNAVAILABLE_INFORMATION;
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_GetMechanismList(
+pub fn getMechanismList(
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    DeviceError,
+    GeneralError,
+    SlotIdInvalid,
+    TokenNoPresent,
+    TokenNotRecognized,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (count == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     const mechanisms = [_]pkcs.CK_MECHANISM_TYPE{
         // pkcs.CKM_RSA_PKCS_KEY_PAIR_GEN,
@@ -194,26 +212,26 @@ pub export fn C_GetMechanismList(
     };
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     reader.lock.lockSharedUncancelable(state.io);
     defer reader.lock.unlockShared(state.io);
 
     const reader_state = reader.reader_states.getPtr(slot_id) orelse
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     if (!reader_state.active)
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     if (!reader_state.card_present)
-        return pkcs.CKR_TOKEN_NOT_PRESENT;
+        return error.TokenNoPresent;
 
     if (!reader_state.recognized)
-        return pkcs.CKR_TOKEN_NOT_RECOGNIZED;
+        return error.TokenNotRecognized;
 
     if (mechanism_list != null) {
         if (count.?.* < mechanisms.len)
-            return pkcs.CKR_BUFFER_TOO_SMALL;
+            return error.BufferTooSmall;
 
         for (mechanisms, 0..) |m, i| {
             mechanism_list.?[i] = m;
@@ -221,37 +239,45 @@ pub export fn C_GetMechanismList(
     }
 
     count.?.* = mechanisms.len;
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_GetMechanismInfo(
+pub fn getMechanismInfo(
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DeviceError,
+    GeneralError,
+    MechanismInvalid,
+    SlotIdInvalid,
+    TokenNoPresent,
+    TokenNotRecognized,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     reader.lock.lockSharedUncancelable(state.io);
     defer reader.lock.unlockShared(state.io);
 
     const reader_state = reader.reader_states.get(slot_id) orelse
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     if (!reader_state.active)
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
     if (!reader_state.card_present)
-        return pkcs.CKR_TOKEN_NOT_PRESENT;
+        return error.TokenNoPresent;
 
     if (!reader_state.recognized)
-        return pkcs.CKR_TOKEN_NOT_RECOGNIZED;
+        return error.TokenNotRecognized;
 
     if (mechanism_info == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     switch (mechanism_type) {
         pkcs.CKM_RSA_PKCS_KEY_PAIR_GEN => {
@@ -283,67 +309,77 @@ pub export fn C_GetMechanismInfo(
             mechanism_info.?.ulMaxKeySize = 0;
             mechanism_info.?.flags = pkcs.CKF_DIGEST;
         },
-        else => return pkcs.CKR_MECHANISM_INVALID,
+        else => return error.MechanismInvalid,
     }
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_InitToken(
+pub fn initToken(
     _: pkcs.CK_SLOT_ID,
     _: ?*pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
     _: ?*pkcs.CK_UTF8CHAR,
-) pkcs.CK_RV {
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_InitPIN(
+pub fn initPIN(
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
-) pkcs.CK_RV {
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_SetPIN(
+pub fn setPIN(
     session_handle: pkcs.CK_SESSION_HANDLE,
     old_pin: ?[*]pkcs.CK_UTF8CHAR,
     old_pin_len: pkcs.CK_ULONG,
     new_pin: ?[*]pkcs.CK_UTF8CHAR,
     new_pin_len: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DeviceError,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    PinInvalid,
+    PinIncorrect,
+    PinLenRange,
+    PinLocked,
+    SessionHandleInvalid,
+    SessionReadOnly,
+    TokenNoPresent,
+    TokenNotRecognized,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
     if (!current_session.write_enabled)
-        return pkcs.CKR_SESSION_READ_ONLY;
+        return error.SessionReadOnly;
 
     if (old_pin == null or new_pin == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    const padded_old_pin = PaddedPin.construct(old_pin.?[0..old_pin_len]) catch |err|
-        return pkcs_error.toRV(err);
+    const padded_old_pin = try PaddedPin.construct(old_pin.?[0..old_pin_len]);
 
-    const padded_new_pin = PaddedPin.construct(new_pin.?[0..new_pin_len]) catch |err|
-        return pkcs_error.toRV(err);
+    const padded_new_pin = try PaddedPin.construct(new_pin.?[0..new_pin_len]);
 
-    current_session.setPin(state.allocator, &padded_old_pin, &padded_new_pin) catch |err|
-        return pkcs_error.toRV(err);
-
-    return pkcs.CKR_OK;
+    try current_session.setPin(state.allocator, &padded_old_pin, &padded_new_pin);
 }
 
-pub export fn C_WaitForSlotEvent(
-    flags: pkcs.CK_FLAGS,
-    slot: ?*pkcs.CK_SLOT_ID,
-    reserved: ?*anyopaque,
-) pkcs.CK_RV {
-    _ = flags;
-    _ = slot;
-    _ = reserved;
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn waitForSlotEvent(
+    _: pkcs.CK_FLAGS,
+    _: ?*pkcs.CK_SLOT_ID,
+    _: ?*anyopaque,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }

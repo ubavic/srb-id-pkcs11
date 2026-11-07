@@ -2,162 +2,167 @@ const std = @import("std");
 
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
 const hasher = @import("hasher.zig");
 
-pub export fn C_DigestInit(
+pub fn digestInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    GeneralError,
+    FunctionFailed,
+    MechanismInvalid,
+    OperationActive,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
+    try current_session.assertNoOperation();
 
-    current_session.assertNoOperation() catch |err|
-        return pkcs_error.toRV(err);
-
-    const digest_operation = operation.Digest.init(mechanism) catch |err|
-        return pkcs_error.toRV(err);
-
+    const digest_operation = try operation.Digest.init(mechanism);
     current_session.operation = .{ .digest = digest_operation };
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_Digest(
+pub fn digest(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    FunctionCanceled,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
-
-    current_session.assertOperation(operation.Type.Digest) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
+    try current_session.assertOperation(operation.Type.Digest);
 
     const current_operation = &current_session.operation.digest;
 
     if (current_operation.multipart_operation) {
         current_session.resetOperation();
-        return pkcs.CKR_FUNCTION_CANCELED;
+        return error.FunctionCanceled;
     }
 
     if (data_digest_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     const required_digest_size = current_operation.hasher.digestLength();
 
     if (data_digest == null) {
         data_digest_len.?.* = @intCast(required_digest_size);
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (data_digest_len.?.* < required_digest_size) {
         data_digest_len.?.* = @intCast(required_digest_size);
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
     }
 
     defer current_session.resetOperation();
 
     if (data == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     current_operation.hasher.update(data.?[0..data_len]);
-
-    _ = current_operation.hasher.finalize(data_digest.?[0..required_digest_size]) catch |err|
-        return pkcs_error.toRV(err);
-
+    _ = try current_operation.hasher.finalize(data_digest.?[0..required_digest_size]);
     data_digest_len.?.* = @intCast(required_digest_size);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_DigestUpdate(
+pub fn digestUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
-
-    current_session.assertOperation(operation.Type.Digest) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
+    try current_session.assertOperation(operation.Type.Digest);
 
     const current_operation = &current_session.operation.digest;
 
     if (part == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     current_operation.multipart_operation = true;
     current_operation.hasher.update(part.?[0..part_len]);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_DigestKey(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = key;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn digestKey(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: pkcs.CK_OBJECT_HANDLE,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_DigestFinal(
+pub fn digestFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
-
-    current_session.assertOperation(operation.Type.Digest) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
+    try current_session.assertOperation(operation.Type.Digest);
 
     var current_operation = &current_session.operation.digest;
 
     if (data_digest_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     const required_digest_size = current_operation.hasher.digestLength();
     if (data_digest == null) {
         data_digest_len.?.* = @intCast(required_digest_size);
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (data_digest_len.?.* < required_digest_size) {
         data_digest_len.?.* = @intCast(required_digest_size);
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
     }
 
     defer current_session.resetOperation();
 
-    _ = current_operation.hasher.finalize(data_digest.?[0..required_digest_size]) catch |err|
-        return pkcs_error.toRV(err);
-
+    _ = try current_operation.hasher.finalize(data_digest.?[0..required_digest_size]);
     data_digest_len.?.* = @intCast(required_digest_size);
-
-    return pkcs.CKR_OK;
 }

@@ -8,14 +8,14 @@ buffer: []const u8,
 length: u16,
 i: usize,
 
-pub fn init(buffer: []const u8) PkcsError!Index {
+pub fn init(buffer: []const u8) !Index {
     if (buffer.len < 2)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     const length = std.mem.readInt(u16, buffer[0..2], .little);
 
     if (2 * @as(usize, length) > buffer.len - 2)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     return .{
         .buffer = buffer,
@@ -49,7 +49,7 @@ test "parse invalid index" {
     };
 
     for (test_cases) |tc|
-        try std.testing.expectError(PkcsError.GeneralError, Index.init(tc));
+        try std.testing.expectError(error.GeneralError, Index.init(tc));
 }
 
 test "parse valid index" {

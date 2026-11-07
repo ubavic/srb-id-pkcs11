@@ -1,9 +1,17 @@
 const pkcs = @import("pkcs.zig");
 
-pub export fn C_GetFunctionStatus(_: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    return pkcs.CKR_FUNCTION_NOT_PARALLEL;
+pub fn getFunctionStatus(
+    _: pkcs.CK_SESSION_HANDLE,
+) error{
+    FunctionNotParallel,
+}!void {
+    return error.FunctionNotParallel;
 }
 
-pub export fn C_CancelFunction(_: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    return pkcs.CKR_FUNCTION_NOT_PARALLEL;
+pub fn cancelFunction(
+    _: pkcs.CK_SESSION_HANDLE,
+) error{
+    FunctionNotParallel,
+}!void {
+    return error.FunctionNotParallel;
 }

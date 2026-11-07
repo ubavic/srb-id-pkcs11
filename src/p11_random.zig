@@ -1,30 +1,41 @@
 const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
 
 // not supported in the original module
-pub export fn C_SeedRandom(
+pub fn seedRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    CryptokiNotInitialized,
+    FunctionFailed,
+    RandomSeedNotSupported,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    _ = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    _ = try session.getSession(session_handle, false);
 
-    return pkcs.CKR_RANDOM_SEED_NOT_SUPPORTED;
+    return error.RandomSeedNotSupported;
 }
 
-pub export fn C_GenerateRandom(
+pub fn generateRandom(
     session_handle: pkcs.CK_SESSION_HANDLE,
     random_data: ?[*]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DeviceError,
+    GeneralError,
+    HostMemory,
+    FunctionFailed,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
@@ -33,14 +44,12 @@ pub export fn C_GenerateRandom(
     var response_buffer: [max_length + 2]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
     if (random_data == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    const tx = current_session.card.startTransaction() catch |err|
-        return pkcs_error.toRV(err);
+    const tx = try current_session.card.startTransaction();
     defer current_session.card.endTransaction(tx);
 
     var i: usize = 0;
@@ -48,17 +57,14 @@ pub export fn C_GenerateRandom(
     while (i < random_size) {
         const segment_size: u8 = @min(max_length, remaining_size);
 
-        const segment = current_session.card.readRandom(current_session.allocator, segment_size, &response_buffer) catch |err|
-            return pkcs_error.toRV(err);
+        const segment = try current_session.card.readRandom(current_session.allocator, segment_size, &response_buffer);
 
         if (segment.len < segment_size + 2)
-            return pkcs.CKR_DEVICE_ERROR;
+            return error.DeviceError;
 
         @memcpy(random_data.?[i .. i + segment_size], segment[0..segment_size]);
 
         i += segment_size;
         remaining_size -= segment_size;
     }
-
-    return pkcs.CKR_OK;
 }

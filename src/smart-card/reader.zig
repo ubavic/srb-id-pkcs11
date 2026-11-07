@@ -40,7 +40,7 @@ pub const ReaderState = struct {
         self: *ReaderState,
         allocator: std.mem.Allocator,
         smart_card_client: *pcsc.Client,
-    ) PkcsError!void {
+    ) !void {
         @memset(&self.*.token_label, 0x20);
         @memset(&self.*.token_serial_number, 0x20);
 
@@ -50,8 +50,8 @@ pub const ReaderState = struct {
                     self.card_present = false;
                     return;
                 },
-                pcsc.Err.UnpoweredCard, pcsc.Err.UnresponsiveCard, pcsc.Err.ReaderUnavailable => return PkcsError.DeviceError,
-                else => return PkcsError.GeneralError,
+                pcsc.Err.UnpoweredCard, pcsc.Err.UnresponsiveCard, pcsc.Err.ReaderUnavailable => return error.DeviceError,
+                else => return error.GeneralError,
             }
         };
 
@@ -60,7 +60,7 @@ pub const ReaderState = struct {
         self.card_present = true;
 
         const card_state = card.state() catch
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         self.recognized = atr.validATR(card_state.atr.buf[0..card_state.atr.len]);
 
@@ -118,7 +118,7 @@ pub const ReaderState = struct {
     }
 };
 
-pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Client) PkcsError!void {
+pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Client) !void {
     var readers_name_iterator = smart_card_client.readerNamesBuf(&reader_names_buf) catch |err|
         return pkcs_error.formPCSC(err);
 
@@ -126,7 +126,7 @@ pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Cl
 
     while (readers_name_iterator.next()) |reader_name| {
         addIfNotExists(allocator, reader_name) catch
-            return PkcsError.GeneralError;
+            return error.GeneralError;
     }
 
     var reader_iterator = reader_states.iterator();

@@ -2,7 +2,6 @@ const std = @import("std");
 
 const Attribute = @import("Attribute.zig");
 const pkcs = @import("pkcs.zig");
-const PkcsError = @import("pkcs_error.zig").PkcsError;
 const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
 
 const CKT_NETSCAPE_TRUSTED_DELEGATOR: pkcs.CK_ATTRIBUTE_TYPE = 0xce534352;
@@ -38,7 +37,7 @@ pub const Object = union(enum) {
         };
     }
 
-    pub fn getAttribute(self: *const Object, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!Attribute {
+    pub fn getAttribute(self: *const Object, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) !Attribute {
         const value = try switch (self.*) {
             .certificate => |o| o.getAttributeValue(buffer, attribute_type),
             .private_key => |o| o.getAttributeValue(buffer, attribute_type),
@@ -51,7 +50,7 @@ pub const Object = union(enum) {
         };
     }
 
-    pub fn getAttributeSize(self: *const Object, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!usize {
+    pub fn getAttributeSize(self: *const Object, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) !usize {
         return try switch (self.*) {
             .certificate => |o| o.getAttributeSize(attribute_type),
             .private_key => |o| o.getAttributeSize(attribute_type),
@@ -59,17 +58,16 @@ pub const Object = union(enum) {
         };
     }
 
-    pub fn hasAttributeValue(self: *const Object, allocator: std.mem.Allocator, attribute: Attribute) PkcsError!bool {
+    pub fn hasAttributeValue(self: *const Object, allocator: std.mem.Allocator, attribute: Attribute) !bool {
         const attribute_size = self.getAttributeSize(attribute.attribute_type) catch |err| switch (err) {
-            PkcsError.AttributeTypeInvalid => return false,
-            else => return err,
+            error.AttributeTypeInvalid => return false,
         };
 
         if (attribute_size != attribute.value.len)
             return false;
 
         const buffer = allocator.alloc(u8, attribute_size) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         defer allocator.free(buffer);
 
         const object_attribute = try self.getAttribute(buffer, attribute.attribute_type);
@@ -153,7 +151,7 @@ pub const CertificateObject = struct {
         std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
 
-    pub fn getAttributeValue(self: *const CertificateObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
+    pub fn getAttributeValue(self: *const CertificateObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) ![]u8 {
         return switch (attribute_type) {
             pkcs.CKA_CLASS => encode(buffer, self.class),
             pkcs.CKA_TOKEN => encode(buffer, self.token),
@@ -178,11 +176,11 @@ pub const CertificateObject = struct {
             pkcs.CKA_HASH_OF_SUBJECT_PUBLIC_KEY => encode(buffer, self.hash_of_subject_public_key),
             pkcs.CKA_NAME_HASH_ALGORITHM => encode(buffer, self.name_hash_algorithm),
             CKT_NETSCAPE_TRUSTED_DELEGATOR => encode(buffer, pkcs.CK_TRUE),
-            else => PkcsError.AttributeTypeInvalid,
+            else => error.AttributeTypeInvalid,
         };
     }
 
-    pub fn getAttributeSize(self: *const CertificateObject, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!usize {
+    pub fn getAttributeSize(self: *const CertificateObject, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) !usize {
         return switch (attribute_type) {
             pkcs.CKA_CLASS => @sizeOf(pkcs.CK_ULONG),
             pkcs.CKA_TOKEN => @sizeOf(pkcs.CK_BBOOL),
@@ -207,7 +205,7 @@ pub const CertificateObject = struct {
             pkcs.CKA_HASH_OF_SUBJECT_PUBLIC_KEY => self.hash_of_subject_public_key.len,
             pkcs.CKA_NAME_HASH_ALGORITHM => @sizeOf(pkcs.CK_ULONG),
             CKT_NETSCAPE_TRUSTED_DELEGATOR => @sizeOf(pkcs.CK_BBOOL), // TODO
-            else => PkcsError.AttributeTypeInvalid,
+            else => error.AttributeTypeInvalid,
         };
     }
 
@@ -217,19 +215,19 @@ pub const CertificateObject = struct {
         buffer: []const u8,
         id: [20]u8,
         file_name: [2]u8,
-    ) PkcsError!CertificateObject {
+    ) !CertificateObject {
         const cert = std.crypto.Certificate{ .buffer = buffer, .index = 0 };
 
         const parsed = std.crypto.Certificate.parse(cert) catch
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         if (parsed.pub_key_algo != .rsaEncryption)
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         const certificate_value = try clone(allocator, buffer);
         errdefer allocator.free(certificate_value);
 
-        const serial_number_slice = extractSerialNumber(buffer) catch return PkcsError.GeneralError;
+        const serial_number_slice = extractSerialNumber(buffer) catch return error.GeneralError;
         const serial_number = try clone(allocator, serial_number_slice);
         errdefer allocator.free(serial_number);
 
@@ -308,16 +306,16 @@ pub const CertificateObject = struct {
         return subject_bytes[i + 2 .. subject_bytes.len];
     }
 
-    pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) PkcsError![]u8 {
+    pub fn decompressCertificate(allocator: std.mem.Allocator, compressed_certificate_data: []const u8) ![]u8 {
         if (compressed_certificate_data.len < 8)
-            return PkcsError.GeneralError;
+            return error.GeneralError;
 
         var list = std.ArrayList(u8).initCapacity(allocator, 2 * compressed_certificate_data.len) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         defer list.deinit(allocator);
 
         const decompress_buffer = allocator.alloc(u8, std.compress.flate.max_window_len) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         defer allocator.free(decompress_buffer);
 
         var reader = std.Io.Reader.fixed(compressed_certificate_data[6..]);
@@ -326,17 +324,17 @@ pub const CertificateObject = struct {
         var buf2: [512]u8 = undefined;
         while (true) {
             const size = decompress.reader.readSliceShort(&buf2) catch
-                return PkcsError.HostMemory;
+                return error.HostMemory;
 
             list.appendSlice(allocator, buf2[0..size]) catch
-                return PkcsError.HostMemory;
+                return error.HostMemory;
 
             if (size < buf2.len)
                 break;
         }
 
         const decompressed_certificate = list.toOwnedSlice(allocator) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
 
         return decompressed_certificate;
     }
@@ -402,7 +400,7 @@ pub const PrivateKeyObject = struct {
         std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
 
-    pub fn getAttributeValue(self: *const PrivateKeyObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
+    pub fn getAttributeValue(self: *const PrivateKeyObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) ![]u8 {
         return switch (attribute_type) {
             pkcs.CKA_CLASS => encode(buffer, self.class),
             pkcs.CKA_TOKEN => encode(buffer, self.token),
@@ -434,11 +432,11 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_PUBLIC_KEY_INFO => encode(buffer, self.public_key_info),
             pkcs.CKA_MODULUS => encode(buffer, self.modulus),
             pkcs.CKA_PUBLIC_EXPONENT => encode(buffer, self.public_exponent),
-            else => PkcsError.AttributeTypeInvalid,
+            else => error.AttributeTypeInvalid,
         };
     }
 
-    pub fn getAttributeSize(self: *const PrivateKeyObject, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!usize {
+    pub fn getAttributeSize(self: *const PrivateKeyObject, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) !usize {
         return switch (attribute_type) {
             pkcs.CKA_CLASS => @sizeOf(pkcs.CK_ULONG),
             pkcs.CKA_TOKEN => @sizeOf(pkcs.CK_BBOOL),
@@ -470,7 +468,7 @@ pub const PrivateKeyObject = struct {
             pkcs.CKA_PUBLIC_KEY_INFO => self.public_key_info.len,
             pkcs.CKA_MODULUS => self.modulus.len,
             pkcs.CKA_PUBLIC_EXPONENT => self.public_exponent.len,
-            else => PkcsError.AttributeTypeInvalid,
+            else => error.AttributeTypeInvalid,
         };
     }
 
@@ -478,7 +476,7 @@ pub const PrivateKeyObject = struct {
         allocator: std.mem.Allocator,
         public_key_file: PublicKeyFile,
         private_key_handle: pkcs.CK_OBJECT_HANDLE,
-    ) PkcsError!PrivateKeyObject {
+    ) !PrivateKeyObject {
         const private_key_label = try allocEmptySlice(u8, allocator);
         errdefer allocator.free(private_key_label);
         const private_key_subject = try allocEmptySlice(u8, allocator);
@@ -591,7 +589,7 @@ pub const PublicKeyObject = struct {
         std.crypto.secureZero(u8, std.mem.asBytes(self));
     }
 
-    pub fn getAttributeValue(self: *const PublicKeyObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError![]u8 {
+    pub fn getAttributeValue(self: *const PublicKeyObject, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) ![]u8 {
         return switch (attribute_type) {
             pkcs.CKA_CLASS => encode(buffer, self.class),
             pkcs.CKA_TOKEN => encode(buffer, self.token),
@@ -619,11 +617,11 @@ pub const PublicKeyObject = struct {
             pkcs.CKA_MODULUS => encode(buffer, self.modulus),
             pkcs.CKA_MODULUS_BITS => encode(buffer, self.modulus_bits),
             pkcs.CKA_PUBLIC_EXPONENT => encode(buffer, self.public_exponent),
-            else => PkcsError.AttributeTypeInvalid,
+            else => error.AttributeTypeInvalid,
         };
     }
 
-    pub fn getAttributeSize(self: *const PublicKeyObject, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) PkcsError!usize {
+    pub fn getAttributeSize(self: *const PublicKeyObject, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) !usize {
         return switch (attribute_type) {
             pkcs.CKA_CLASS => @sizeOf(pkcs.CK_ULONG),
             pkcs.CKA_TOKEN => @sizeOf(pkcs.CK_BBOOL),
@@ -651,7 +649,7 @@ pub const PublicKeyObject = struct {
             pkcs.CKA_MODULUS => self.modulus.len,
             pkcs.CKA_MODULUS_BITS => @sizeOf(pkcs.CK_ULONG),
             pkcs.CKA_PUBLIC_EXPONENT => self.public_exponent.len,
-            else => PkcsError.AttributeTypeInvalid,
+            else => error.AttributeTypeInvalid,
         };
     }
 
@@ -659,7 +657,7 @@ pub const PublicKeyObject = struct {
         allocator: std.mem.Allocator,
         public_key_file: PublicKeyFile,
         public_key_handle: pkcs.CK_OBJECT_HANDLE,
-    ) PkcsError!PublicKeyObject {
+    ) !PublicKeyObject {
         const public_key_label = try allocEmptySlice(u8, allocator);
         errdefer allocator.free(public_key_label);
         const public_key_subject = try allocEmptySlice(u8, allocator);
@@ -720,7 +718,7 @@ pub fn deinitSearchTemplate(allocator: std.mem.Allocator, search_template: []Att
     allocator.free(search_template);
 }
 
-fn encode(buff: []u8, value: anytype) PkcsError![]u8 {
+fn encode(buff: []u8, value: anytype) ![]u8 {
     const T = @TypeOf(value);
 
     const value_size = switch (@typeInfo(T)) {
@@ -737,7 +735,7 @@ fn encode(buff: []u8, value: anytype) PkcsError![]u8 {
     };
 
     if (buff.len < value_size)
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     const src: []const u8 =
         if (@typeInfo(T) == .pointer)
@@ -823,15 +821,15 @@ test "encoding to small buffer" {
     var buffer = std.mem.zeroes([2]u8);
 
     const class_value: pkcs.CK_OBJECT_CLASS = pkcs.CKO_CERTIFICATE;
-    try std.testing.expectError(PkcsError.HostMemory, encode(&buffer, class_value));
+    try std.testing.expectError(error.HostMemory, encode(&buffer, class_value));
 }
 
-fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) PkcsError![]T {
+fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) ![]T {
     return allocator.alloc(T, 0) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 }
 
-fn clone(allocator: std.mem.Allocator, src: []const u8) PkcsError![]u8 {
+fn clone(allocator: std.mem.Allocator, src: []const u8) ![]u8 {
     return allocator.dupe(u8, src) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 }

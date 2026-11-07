@@ -1,89 +1,112 @@
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const reader = @import("smart-card/reader.zig");
 const session = @import("session.zig");
 const state = @import("state.zig");
 
-pub export fn C_OpenSession(
+pub fn openSession(
     slot_id: pkcs.CK_SLOT_ID,
     flags: pkcs.CK_FLAGS,
     _: ?*anyopaque,
     _: pkcs.CK_NOTIFY,
     session_handle: ?*pkcs.CK_SESSION_HANDLE,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    DeviceError,
+    GeneralError,
+    HostMemory,
+    FunctionFailed,
+    SlotIdInvalid,
+    SessionParallelNotSupported,
+    TokenNoPresent,
+    TokenNotRecognized,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     if ((flags & pkcs.CKF_SERIAL_SESSION) == 0)
-        return pkcs.CKR_SESSION_PARALLEL_NOT_SUPPORTED;
+        return error.SessionParallelNotSupported;
 
     if (session_handle == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     const write_enabled = (flags & pkcs.CKF_RW_SESSION) != 0;
-
-    session_handle.?.* = session.newSession(state.allocator, slot_id, write_enabled) catch |err|
-        return pkcs_error.toRV(err);
-
-    return pkcs.CKR_OK;
+    session_handle.?.* = try session.newSession(state.allocator, slot_id, write_enabled);
 }
 
-pub export fn C_CloseSession(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
+pub fn closeSession(
+    session_handle: pkcs.CK_SESSION_HANDLE,
+) error{
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    SessionClosed,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
-    session.closeSession(state.allocator, session_handle) catch |err|
-        return pkcs_error.toRV(err);
-
-    return pkcs.CKR_OK;
+    try session.closeSession(state.allocator, session_handle);
 }
 
-pub export fn C_CloseAllSessions(slot_id: pkcs.CK_SLOT_ID) pkcs.CK_RV {
+pub fn closeAllSessions(
+    slot_id: pkcs.CK_SLOT_ID,
+) error{
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    SlotIdInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     reader.lock.lockUncancelable(state.io);
     defer reader.lock.unlock(state.io);
 
     if (!reader.reader_states.contains(slot_id))
-        return pkcs.CKR_SLOT_ID_INVALID;
+        return error.SlotIdInvalid;
 
-    session.closeAllSessions(state.allocator, slot_id) catch |err|
-        return pkcs_error.toRV(err);
+    try session.closeAllSessions(state.allocator, slot_id);
 
     // TODO: refresh reader status;
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_GetSessionInfo(
+pub fn getSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    SessionClosed,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return pkcs.CKR_CRYPTOKI_NOT_INITIALIZED;
+        return error.CryptokiNotInitialized;
 
     if (session_info == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
     if (current_session.closed)
-        return pkcs.CKR_SESSION_CLOSED;
+        return error.SessionClosed;
 
     session_info.?.slotID = current_session.reader_id;
     session_info.?.flags = pkcs.CKF_SERIAL_SESSION | (if (current_session.write_enabled) pkcs.CKF_RW_SESSION else 0);
@@ -96,86 +119,90 @@ pub export fn C_GetSessionInfo(
     };
 
     session_info.?.ulDeviceError = 0;
-
-    return pkcs.CKR_OK;
 }
 
 // not supported in the original module
-pub export fn C_GetOperationState(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    operationS_state: ?[*]pkcs.CK_BYTE,
-    operation_state_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = operationS_state;
-    _ = operation_state_len;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn getOperationState(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: ?[*]pkcs.CK_BYTE,
+    _: ?*pkcs.CK_ULONG,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
 // not supported in the original module
-pub export fn C_SetOperationState(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    operation_state: ?[*]const pkcs.CK_BYTE,
-    operation_state_len: pkcs.CK_ULONG,
-    encryption_key: pkcs.CK_OBJECT_HANDLE,
-    authentication_key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = operation_state;
-    _ = operation_state_len;
-    _ = encryption_key;
-    _ = authentication_key;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn setOperationState(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: ?[*]const pkcs.CK_BYTE,
+    _: pkcs.CK_ULONG,
+    _: pkcs.CK_OBJECT_HANDLE,
+    _: pkcs.CK_OBJECT_HANDLE,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_Login(
+pub fn login(
     session_handle: pkcs.CK_SESSION_HANDLE,
     user_type: pkcs.CK_USER_TYPE,
     pin: ?[*]const pkcs.CK_UTF8CHAR,
     pin_length: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    GeneralError,
+    HostMemory,
+    PinIncorrect,
+    PinLocked,
+    SessionClosed,
+    SessionHandleInvalid,
+    UserAlreadyLoggedIn,
+    UserTypeInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
     // Difference form the standard.
     if (user_type != pkcs.CKU_USER)
-        return pkcs.CKR_USER_TYPE_INVALID;
+        return error.UserTypeInvalid;
 
     if (pin == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     if (current_session.loggedIn())
-        return pkcs.CKR_USER_ALREADY_LOGGED_IN;
+        return error.UserAlreadyLoggedIn;
 
     const padded_pin = PaddedPin.construct(pin.?[0..pin_length]) catch
-        return pkcs_error.toRV(pkcs_error.PkcsError.PinIncorrect);
+        return error.PinIncorrect;
 
-    current_session.login(&padded_pin) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.login(&padded_pin);
 
     current_session.resetOperation();
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_Logout(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
+pub fn logout(
+    session_handle: pkcs.CK_SESSION_HANDLE,
+) error{
+    CryptokiNotInitialized,
+    FunctionFailed,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
     if (!current_session.loggedIn())
-        return pkcs.CKR_USER_NOT_LOGGED_IN;
+        return error.UserNotLoggedIn;
 
     current_session.logout();
 
     current_session.resetOperation();
-
-    return pkcs.CKR_OK;
 }

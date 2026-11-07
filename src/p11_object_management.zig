@@ -4,88 +4,82 @@ const Attribute = @import("Attribute.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const session = @import("session.zig");
 const state = @import("state.zig");
 
-const PkcsError = pkcs_error.PkcsError;
-
-pub export fn C_CreateObject(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    template: ?[*]pkcs.CK_ATTRIBUTE,
-    count: pkcs.CK_ULONG,
-    object_handle: ?*pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = template;
-    _ = count;
-    _ = object_handle;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn createObject(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: ?[*]pkcs.CK_ATTRIBUTE,
+    _: pkcs.CK_ULONG,
+    _: ?*pkcs.CK_OBJECT_HANDLE,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_CopyObject(
+pub fn copyObject(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: pkcs.CK_OBJECT_HANDLE,
+    _: ?[*]pkcs.CK_ATTRIBUTE,
+    _: pkcs.CK_ULONG,
+    _: ?*pkcs.CK_OBJECT_HANDLE,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
+}
+
+pub fn destroyObject(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: pkcs.CK_OBJECT_HANDLE,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
+}
+
+pub fn getObjectSize(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: pkcs.CK_OBJECT_HANDLE,
+    _: ?*pkcs.CK_ULONG,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
+}
+
+pub fn getAttributeValue(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
-    new_object_handle: ?*pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = object_handle;
-    _ = template;
-    _ = count;
-    _ = new_object_handle;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
-}
-
-pub export fn C_DestroyObject(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    object_handle: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = object_handle;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
-}
-
-pub export fn C_GetObjectSize(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    object_handle: pkcs.CK_OBJECT_HANDLE,
-    size: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = object_handle;
-    _ = size;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
-}
-
-pub export fn C_GetAttributeValue(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    object_handle: pkcs.CK_OBJECT_HANDLE,
-    template: ?[*]pkcs.CK_ATTRIBUTE,
-    count: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    AttributeTypeInvalid,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    HostMemory,
+    ObjectHandleInvalid,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    var has_attribute_sensitive = false;
+    const has_attribute_sensitive = false;
     var has_attribute_type_invalid = false;
     var has_small_buffer = false;
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
     if (template == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     if (count == 0)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    const selected_object = current_session.getObject(object_handle) catch |err|
-        return pkcs_error.toRV(err);
+    const selected_object = try current_session.getObject(object_handle);
 
     for (0..count) |i| {
         const attribute_size = selected_object.getAttributeSize(template.?[i].type) catch {
@@ -109,16 +103,16 @@ pub export fn C_GetAttributeValue(
 
         const object_attribute = selected_object.getAttribute(target_buffer[0..attribute_size], template.?[i].type) catch |err| {
             switch (err) {
-                PkcsError.AttributeSensitive => {
-                    has_attribute_sensitive = true;
-                    continue;
-                },
-                PkcsError.AttributeTypeInvalid => {
+                // error.AttributeSensitive => {
+                //     has_attribute_sensitive = true;
+                //     continue; // TODO: check this
+                // },
+                error.AttributeTypeInvalid => {
                     template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
                     has_attribute_type_invalid = true;
                     continue;
                 },
-                else => return pkcs_error.toRV(err),
+                else => return err,
             }
         };
 
@@ -126,51 +120,51 @@ pub export fn C_GetAttributeValue(
     }
 
     if (has_attribute_sensitive)
-        return pkcs.CKR_ATTRIBUTE_SENSITIVE;
+        return error.AttributeSensitive;
 
     if (has_attribute_type_invalid)
-        return pkcs.CKR_ATTRIBUTE_TYPE_INVALID;
+        return error.AttributeTypeInvalid;
 
     if (has_small_buffer)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
-
-    return pkcs.CKR_OK;
+        return error.BufferTooSmall;
 }
 
-pub export fn C_SetAttributeValue(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    object_handle: pkcs.CK_OBJECT_HANDLE,
-    template: ?[*]pkcs.CK_ATTRIBUTE,
-    count: pkcs.CK_ULONG,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = object_handle;
-    _ = template;
-    _ = count;
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn setAttributeValue(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: pkcs.CK_OBJECT_HANDLE,
+    _: ?[*]pkcs.CK_ATTRIBUTE,
+    _: pkcs.CK_ULONG,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_FindObjectsInit(
+pub fn findObjectsInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    HostMemory,
+    OperationActive,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertNoOperation() catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertNoOperation();
 
     if (template == null and count != 0)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     var search_template: []Attribute = &.{};
     if (count > 0) {
-        search_template = Attribute.parseAttributes(current_session.allocator, template.?[0..count]) catch |err|
-            return pkcs_error.toRV(err);
+        search_template = try Attribute.parseAttributes(current_session.allocator, template.?[0..count]);
     }
 
     current_session.operation = operation.Operation{
@@ -181,54 +175,56 @@ pub export fn C_FindObjectsInit(
             .logged_in = current_session.loggedIn(),
         },
     };
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_FindObjects(
+pub fn findObjects(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handles: ?[*]pkcs.CK_OBJECT_HANDLE,
     max_object_count: pkcs.CK_ULONG,
     object_count: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    AttributeTypeInvalid, //TODO: remove
+    CryptokiNotInitialized,
+    FunctionFailed,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Search) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Search);
 
     const current_operation = &current_session.operation.search;
 
     if (object_handles == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     if (object_count == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    const found_objects = current_operation.findNextObjects(current_session.allocator, object_handles.?[0..max_object_count]) catch |err|
-        return pkcs_error.toRV(err);
+    const found_objects = try current_operation.findNextObjects(current_session.allocator, object_handles.?[0..max_object_count]);
 
     object_count.?.* = @intCast(found_objects);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_FindObjectsFinal(
+pub fn findObjectsFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
-) pkcs.CK_RV {
+) error{
+    CryptokiNotInitialized,
+    FunctionFailed,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, false) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, false);
 
-    current_session.assertOperation(operation.Type.Search) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Search);
 
     current_session.resetOperation();
-
-    return pkcs.CKR_OK;
 }

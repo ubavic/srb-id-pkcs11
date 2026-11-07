@@ -6,13 +6,13 @@ const PaddedPin = @This();
 
 buffer: [8]u8,
 
-pub fn construct(pin_slice: []const u8) PkcsError!PaddedPin {
+pub fn construct(pin_slice: []const u8) !PaddedPin {
     if (pin_slice.len < 4 or pin_slice.len > 8)
-        return PkcsError.PinLenRange;
+        return error.PinLenRange;
 
     for (pin_slice) |p| {
         if (p < '0' or p > '9')
-            return PkcsError.PinInvalid;
+            return error.PinInvalid;
     }
 
     var new_pin = PaddedPin{
@@ -56,31 +56,31 @@ test "validate pin" {
     }{
         .{
             .pin = "",
-            .expected = PkcsError.PinLenRange,
+            .expected = error.PinLenRange,
         },
         .{
             .pin = "1",
-            .expected = PkcsError.PinLenRange,
+            .expected = error.PinLenRange,
         },
         .{
             .pin = "123456789",
-            .expected = PkcsError.PinLenRange,
+            .expected = error.PinLenRange,
         },
         .{
             .pin = "123A",
-            .expected = PkcsError.PinInvalid,
+            .expected = error.PinInvalid,
         },
         .{
             .pin = "abcd",
-            .expected = PkcsError.PinInvalid,
+            .expected = error.PinInvalid,
         },
         .{
             .pin = "01w1",
-            .expected = PkcsError.PinInvalid,
+            .expected = error.PinInvalid,
         },
         .{
             .pin = "#+()",
-            .expected = PkcsError.PinInvalid,
+            .expected = error.PinInvalid,
         },
     };
 

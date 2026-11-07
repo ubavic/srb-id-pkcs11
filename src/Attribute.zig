@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
-const PkcsError = @import("pkcs_error.zig").PkcsError;
 
 pub const Attribute = @This();
 
@@ -15,9 +14,9 @@ pub fn deinit(self: *const Attribute, allocator: std.mem.Allocator) void {
 pub fn parseAttributes(
     allocator: std.mem.Allocator,
     template: []pkcs.CK_ATTRIBUTE,
-) PkcsError![]Attribute {
+) ![]Attribute {
     var search_template = std.ArrayList(Attribute).initCapacity(allocator, template.len) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
     errdefer search_template.deinit(allocator);
 
     for (template) |attribute| {
@@ -25,11 +24,11 @@ pub fn parseAttributes(
         errdefer parsed_attribute.deinit(allocator);
 
         search_template.append(allocator, parsed_attribute) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
     }
 
     const slice = search_template.toOwnedSlice(allocator) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     return slice;
 }
@@ -37,12 +36,12 @@ pub fn parseAttributes(
 pub fn parseAttribute(
     allocator: std.mem.Allocator,
     attribute: pkcs.CK_ATTRIBUTE,
-) PkcsError!Attribute {
+) !Attribute {
     if (attribute.pValue == null and attribute.ulValueLen != 0)
-        return PkcsError.ArgumentsBad;
+        return error.ArgumentsBad;
 
     const value = allocator.alloc(u8, attribute.ulValueLen) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     if (attribute.ulValueLen > 0) {
         const src: [*c]u8 = @ptrCast(attribute.pValue.?);

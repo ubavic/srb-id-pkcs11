@@ -13,33 +13,33 @@ exponent: [8]u8 = std.mem.zeroes([8]u8),
 exponent_len: usize = 0,
 allow_encrypt: bool = false,
 
-pub fn parse(self: *PublicKeyFile, data: []const u8) PkcsError!void {
+pub fn parse(self: *PublicKeyFile, data: []const u8) !void {
     if (data.len < 2)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     if (data[0] != 0x00 or data[1] != 0x05)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     var pos: usize = 3;
 
     if (data.len < pos + 2)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     @memcpy(&self.priv_key_file_name, data[pos..(pos + 2)][0..2]);
 
     pos += 2;
 
     if (data.len < pos + 2)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     const modulus_length = std.mem.readInt(u16, data[pos..(pos + 2)][0..2], .big);
     if (modulus_length > self.modulus.len)
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     pos += 2;
 
     if (data.len < pos + modulus_length)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     self.modulus_len = modulus_length;
     @memcpy(self.modulus[0..modulus_length], data[pos..(pos + modulus_length)]);
@@ -47,16 +47,16 @@ pub fn parse(self: *PublicKeyFile, data: []const u8) PkcsError!void {
     pos += modulus_length;
 
     if (data.len < pos + 2)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     const exponent_length = std.mem.readInt(u16, data[pos..(pos + 2)][0..2], .big);
     if (exponent_length > self.exponent.len)
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     pos += 2;
 
     if (data.len < pos + exponent_length)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 
     self.exponent_len = exponent_length;
     @memcpy(self.exponent[0..exponent_length], data[pos..(pos + exponent_length)]);
@@ -116,6 +116,6 @@ test "parse invalid public key" {
             .id = std.mem.zeroes([20]u8),
             .pub_key_file_name = .{ 0x00, 0x00 },
         };
-        try std.testing.expectError(PkcsError.GeneralError, key_pair.parse(tc));
+        try std.testing.expectError(error.GeneralError, key_pair.parse(tc));
     }
 }

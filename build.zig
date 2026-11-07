@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
     const mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("src/p11_general.zig"),
+        .root_source_file = b.path("src/module.zig"),
     });
 
     const options = b.addOptions();

@@ -2,231 +2,242 @@ const std = @import("std");
 
 const operation = @import("operation.zig");
 const pkcs = @import("pkcs.zig");
-const pkcs_error = @import("pkcs_error.zig");
 const state = @import("state.zig");
 const session = @import("session.zig");
 const hasher = @import("hasher.zig");
 
-pub export fn C_SignInit(
+pub fn signInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    KeyHandleInvalid,
+    KeyFunctionNotPermitted,
+    MechanismInvalid,
+    OperationActive,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, true);
 
     if (mechanism == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
-    current_session.assertNoOperation() catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertNoOperation();
 
     const found_object = current_session.getObject(key) catch
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.KeyHandleInvalid;
 
     if (found_object.* != .private_key)
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.KeyHandleInvalid;
 
     // if (std.mem.indexOfScalar(pkcs.CK_MECHANISM_TYPE, current_object.private_key.allowed_mechanisms, mechanism.?.*.mechanism) == null)
     //     return pkcs.CKR_KEY_TYPE_INCONSISTENT;
 
     if (found_object.private_key.sign != pkcs.CK_TRUE)
-        return pkcs.CKR_KEY_FUNCTION_NOT_PERMITTED;
+        return error.KeyFunctionNotPermitted;
 
-    const sign_operation = operation.Sign.init(
+    const sign_operation = try operation.Sign.init(
         mechanism,
         found_object.private_key.modulus.len,
         key,
-    ) catch |err|
-        return pkcs_error.toRV(err);
+    );
 
     current_session.operation = .{ .sign = sign_operation };
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_Sign(
+pub fn sign(
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    DataLenRange,
+    GeneralError,
+    FunctionCanceled,
+    FunctionFailed,
+    HostMemory,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, true);
 
-    current_session.assertOperation(operation.Type.Sign) catch |err|
-        return pkcs_error.toRV(err);
+    try current_session.assertOperation(operation.Type.Sign);
 
     const current_operation = &current_session.operation.sign;
 
     if (current_operation.multipart_operation) {
         current_session.resetOperation();
-        return pkcs.CKR_FUNCTION_CANCELED;
+        return error.FunctionCanceled;
     }
 
     if (signature_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     const required_signature_size = current_operation.keySizeBytes();
     if (signature == null) {
         signature_len.?.* = @intCast(required_signature_size);
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (signature_len.?.* < required_signature_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
 
     defer current_session.resetOperation();
 
     if (data == null)
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
 
     current_operation.update(current_session.allocator, data.?[0..data_len]) catch
-        return pkcs.CKR_HOST_MEMORY;
+        return error.HostMemory;
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
-        return pkcs_error.toRV(err);
+    const sign_request = try current_operation.createSignRequest(current_session.allocator);
     defer current_session.allocator.free(sign_request);
 
     const key_object = current_session.getObject(current_operation.private_key) catch
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.GeneralError;
 
-    const computed_signature = current_session.card.sign(
+    const computed_signature = try current_session.card.sign(
         current_session.allocator,
         key_object.fileName(),
         current_operation.sign_type != .DigestAndSign,
         sign_request,
-    ) catch |err|
-        return pkcs_error.toRV(err);
+    );
     defer current_session.allocator.free(computed_signature);
 
     if (computed_signature.len > signature_len.?.*)
-        return pkcs.CKR_GENERAL_ERROR;
+        return error.GeneralError;
 
     signature_len.?.* = @intCast(computed_signature.len);
     @memcpy(signature.?, computed_signature);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_SignUpdate(
+pub fn signUpdate(
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    HostMemory,
+    FunctionFailed,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
-
-    current_session.assertOperation(operation.Type.Sign) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, true);
+    try current_session.assertOperation(operation.Type.Sign);
 
     const current_operation = &current_session.operation.sign;
 
     if (part == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     current_operation.multipart_operation = true;
     current_operation.update(current_session.allocator, part.?[0..part_len]) catch
-        return pkcs.CKR_HOST_MEMORY;
-
-    return pkcs.CKR_OK;
+        return error.HostMemory;
 }
 
-pub export fn C_SignFinal(
+pub fn signFinal(
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
+) error{
+    ArgumentsBad,
+    BufferTooSmall,
+    CryptokiNotInitialized,
+    DataLenRange,
+    HostMemory,
+    FunctionFailed,
+    GeneralError,
+    OperationNotInitialized,
+    SessionHandleInvalid,
+    UserNotLoggedIn,
+}!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = session.getSession(session_handle, true) catch |err|
-        return pkcs_error.toRV(err);
-
-    current_session.assertOperation(operation.Type.Sign) catch |err|
-        return pkcs_error.toRV(err);
+    const current_session = try session.getSession(session_handle, true);
+    try current_session.assertOperation(operation.Type.Sign);
 
     const current_operation = &current_session.operation.sign;
 
     if (signature_len == null) {
         current_session.resetOperation();
-        return pkcs.CKR_ARGUMENTS_BAD;
+        return error.ArgumentsBad;
     }
 
     const required_signature_size = current_operation.keySizeBytes();
     if (signature == null) {
         signature_len.?.* = @intCast(required_signature_size);
-        return pkcs.CKR_OK;
+        return;
     }
 
     if (signature_len.?.* < required_signature_size)
-        return pkcs.CKR_BUFFER_TOO_SMALL;
+        return error.BufferTooSmall;
 
     defer current_session.resetOperation();
 
-    const sign_request = current_operation.createSignRequest(current_session.allocator) catch |err|
-        return pkcs_error.toRV(err);
+    const sign_request = try current_operation.createSignRequest(current_session.allocator);
     defer current_session.allocator.free(sign_request);
 
     const key_object = current_session.getObject(current_operation.private_key) catch
-        return pkcs.CKR_KEY_HANDLE_INVALID;
+        return error.GeneralError;
 
-    const computed_signature = current_session.card.sign(
+    const computed_signature = try current_session.card.sign(
         current_session.allocator,
         key_object.fileName(),
         current_operation.sign_type != .DigestAndSign,
         sign_request,
-    ) catch |err|
-        return pkcs_error.toRV(err);
+    );
     defer current_session.allocator.free(computed_signature);
 
     if (computed_signature.len > signature_len.?.*)
-        return pkcs.CKR_GENERAL_ERROR;
+        return error.GeneralError;
 
     signature_len.?.* = @intCast(computed_signature.len);
     @memcpy(signature.?, computed_signature);
-
-    return pkcs.CKR_OK;
 }
 
-pub export fn C_SignRecoverInit(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    mechanism: ?*pkcs.CK_MECHANISM,
-    key: pkcs.CK_OBJECT_HANDLE,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = mechanism;
-    _ = key;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn signRecoverInit(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: ?*pkcs.CK_MECHANISM,
+    _: pkcs.CK_OBJECT_HANDLE,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }
 
-pub export fn C_SignRecover(
-    session_handle: pkcs.CK_SESSION_HANDLE,
-    data: ?[*]const pkcs.CK_BYTE,
-    data_len: pkcs.CK_ULONG,
-    signature: ?[*]pkcs.CK_BYTE,
-    signature_len: ?*pkcs.CK_ULONG,
-) pkcs.CK_RV {
-    _ = session_handle;
-    _ = data;
-    _ = data_len;
-    _ = signature;
-    _ = signature_len;
-
-    return pkcs.CKR_FUNCTION_NOT_SUPPORTED;
+pub fn signRecover(
+    _: pkcs.CK_SESSION_HANDLE,
+    _: ?[*]const pkcs.CK_BYTE,
+    _: pkcs.CK_ULONG,
+    _: ?[*]pkcs.CK_BYTE,
+    _: ?*pkcs.CK_ULONG,
+) error{
+    FunctionNotSupported,
+}!void {
+    return error.FunctionNotSupported;
 }

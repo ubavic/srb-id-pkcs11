@@ -8,7 +8,7 @@ const object = @import("object.zig");
 const operation = @import("operation.zig");
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
-const PkcsError = @import("pkcs_error.zig").PkcsError;
+
 const PublicKeyFile = @import("smart-card/PublicKeyFile.zig");
 const reader = @import("smart-card/reader.zig");
 const state = @import("state.zig");
@@ -29,12 +29,12 @@ pub const Session = struct {
     operation: operation.Operation,
     objects: []object.Object,
 
-    pub fn setPin(self: *Session, allocator: std.mem.Allocator, old_pin: *const PaddedPin, new_pin: *const PaddedPin) PkcsError!void {
+    pub fn setPin(self: *Session, allocator: std.mem.Allocator, old_pin: *const PaddedPin, new_pin: *const PaddedPin) !void {
         try self.login(old_pin);
         try self.card.setPin(allocator, old_pin, new_pin);
     }
 
-    pub fn login(self: *Session, pin: *const PaddedPin) PkcsError!void {
+    pub fn login(self: *Session, pin: *const PaddedPin) !void {
         errdefer reader.setUserType(self.reader_id, reader.UserType.None);
         try self.card.verifyPin(self.allocator, pin);
         reader.setUserType(self.reader_id, reader.UserType.User);
@@ -48,14 +48,14 @@ pub const Session = struct {
         return reader.getUserType(self.reader_id) != reader.UserType.None;
     }
 
-    pub fn assertNoOperation(self: *Session) PkcsError!void {
+    pub fn assertNoOperation(self: *Session) !void {
         return switch (self.operation) {
             .none => {},
-            else => PkcsError.OperationActive,
+            else => error.OperationActive,
         };
     }
 
-    pub fn assertOperation(self: *Session, kind: operation.Type) PkcsError!void {
+    pub fn assertOperation(self: *Session, kind: operation.Type) !void {
         const active: operation.Type = switch (self.operation) {
             .none => .None,
             .digest => .Digest,
@@ -67,7 +67,7 @@ pub const Session = struct {
         };
 
         if (active != kind)
-            return PkcsError.OperationNotInitialized;
+            return error.OperationNotInitialized;
     }
 
     pub fn slot(self: *Session) void {
@@ -81,7 +81,7 @@ pub const Session = struct {
         };
     }
 
-    pub fn getObject(self: *Session, object_handle: pkcs.CK_OBJECT_HANDLE) PkcsError!*object.Object {
+    pub fn getObject(self: *Session, object_handle: pkcs.CK_OBJECT_HANDLE) !*object.Object {
         for (self.objects) |*current_object| {
             if (current_object.private() and !self.loggedIn())
                 continue;
@@ -90,13 +90,13 @@ pub const Session = struct {
                 return current_object;
         }
 
-        return PkcsError.ObjectHandleInvalid;
+        return error.ObjectHandleInvalid;
     }
 
     fn loadObjects(
         self: *Session,
         allocator: std.mem.Allocator,
-    ) PkcsError!void {
+    ) !void {
         const tx = try self.card.startTransaction();
         defer self.card.endTransaction(tx);
 
@@ -106,7 +106,7 @@ pub const Session = struct {
         var index = try Index.init(index_content);
 
         var object_list = std.ArrayList(object.Object).initCapacity(allocator, index.length) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
         errdefer object_list.deinit(allocator);
 
         var handle: pkcs.CK_OBJECT_HANDLE = 0x80000000;
@@ -134,7 +134,7 @@ pub const Session = struct {
                         continue;
 
                     object_list.append(allocator, .{ .certificate = cert_object }) catch
-                        return PkcsError.HostMemory;
+                        return error.HostMemory;
 
                     handle += 8;
                 },
@@ -151,13 +151,13 @@ pub const Session = struct {
 
                     const public_key_object = try object.PublicKeyObject.createPublicKeyObject(allocator, pub_key_file, handle);
                     object_list.append(allocator, .{ .public_key = public_key_object }) catch
-                        return PkcsError.HostMemory;
+                        return error.HostMemory;
 
                     handle += 8;
 
                     const private_key_object = try object.PrivateKeyObject.createPrivateKeyObject(allocator, pub_key_file, handle);
                     object_list.append(allocator, .{ .private_key = private_key_object }) catch
-                        return PkcsError.HostMemory;
+                        return error.HostMemory;
 
                     handle += 8;
                 },
@@ -169,12 +169,12 @@ pub const Session = struct {
         }
 
         self.objects = object_list.toOwnedSlice(allocator) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
     }
 
-    fn closeSession(self: *Session, allocator: std.mem.Allocator) PkcsError!void {
+    fn closeSession(self: *Session, allocator: std.mem.Allocator) !void {
         if (self.closed)
-            return PkcsError.SessionClosed;
+            return error.SessionClosed;
 
         self.closed = true;
         self.resetOperation();
@@ -186,9 +186,9 @@ pub const Session = struct {
     }
 };
 
-pub fn initSessions(allocator: std.mem.Allocator) PkcsError!void {
+pub fn initSessions(allocator: std.mem.Allocator) !void {
     if (!lock.tryLock(state.io))
-        return PkcsError.FunctionFailed;
+        return error.FunctionFailed;
     defer lock.unlock(state.io);
 
     sessions = std.AutoHashMap(pkcs.CK_SLOT_ID, Session).init(allocator);
@@ -198,22 +198,22 @@ pub fn newSession(
     allocator: std.mem.Allocator,
     slot_id: pkcs.CK_SESSION_HANDLE,
     write_enabled: bool,
-) PkcsError!pkcs.CK_SESSION_HANDLE {
+) !pkcs.CK_SESSION_HANDLE {
     if (!lock.tryLock(state.io))
-        return PkcsError.FunctionFailed;
+        return error.FunctionFailed;
     defer lock.unlock(state.io);
 
     const session_id: pkcs.CK_SESSION_HANDLE = next_session_id;
     next_session_id += 1;
 
     const reader_state = reader.reader_states.get(slot_id) orelse
-        return PkcsError.SlotIdInvalid;
+        return error.SlotIdInvalid;
 
     if (!reader_state.card_present)
-        return PkcsError.TokenNoPresent;
+        return error.TokenNoPresent;
 
     if (!reader_state.recognized)
-        return PkcsError.TokenNotRecognized;
+        return error.TokenNotRecognized;
 
     const card = try Card.connect(
         allocator,
@@ -222,7 +222,7 @@ pub fn newSession(
     );
 
     const objects: []object.Object = allocator.alloc(object.Object, 0) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     var new_session = Session{
         .id = session_id,
@@ -239,54 +239,54 @@ pub fn newSession(
     try new_session.loadObjects(allocator);
 
     sessions.put(session_id, new_session) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
 
     return session_id;
 }
 
 pub fn getSession(
     session_handle: pkcs.CK_SESSION_HANDLE,
-    login_required: bool,
-) PkcsError!*Session {
+    comptime login_required: bool,
+) !*Session {
     if (!lock.tryLockShared(state.io))
-        return PkcsError.FunctionFailed;
+        return error.FunctionFailed;
     defer lock.unlockShared(state.io);
 
     if (!state.initialized)
-        return PkcsError.CryptokiNotInitialized;
+        return error.CryptokiNotInitialized;
 
     const current_session = sessions.getPtr(session_handle) orelse
-        return PkcsError.SessionHandleInvalid;
+        return error.SessionHandleInvalid;
 
     if (login_required and !current_session.loggedIn())
-        return PkcsError.UserNotLoggedIn;
+        return error.UserNotLoggedIn;
 
     return current_session;
 }
 
-pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSION_HANDLE) PkcsError!void {
+pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSION_HANDLE) !void {
     if (!lock.tryLock(state.io))
-        return PkcsError.FunctionFailed;
+        return error.FunctionFailed;
     defer lock.unlock(state.io);
 
     const current_session = sessions.getPtr(session_handle) orelse
-        return PkcsError.SessionHandleInvalid;
+        return error.SessionHandleInvalid;
 
     try current_session.closeSession(allocator);
 
     if (!sessions.remove(session_handle))
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 }
 
-pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) PkcsError!void {
+pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) !void {
     if (!lock.tryLock(state.io))
-        return PkcsError.FunctionFailed;
+        return error.FunctionFailed;
     defer lock.unlock(state.io);
 
     var errored = false;
 
     var sessions_to_close = std.ArrayList(pkcs.CK_SESSION_HANDLE).initCapacity(allocator, sessions.count()) catch
-        return PkcsError.HostMemory;
+        return error.HostMemory;
     defer sessions_to_close.deinit(allocator);
 
     var it = sessions.iterator();
@@ -299,17 +299,17 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
         };
 
         sessions_to_close.append(allocator, entry.key_ptr.*) catch
-            return PkcsError.HostMemory;
+            return error.HostMemory;
     }
 
     for (sessions_to_close.items) |key|
         _ = sessions.remove(key);
 
     if (errored)
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 }
 
-pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *usize, rw_sessions: *usize) PkcsError!void {
+pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *usize, rw_sessions: *usize) !void {
     lock.lockSharedUncancelable(state.io);
     defer lock.unlockShared(state.io);
 
