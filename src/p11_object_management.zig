@@ -1,10 +1,9 @@
 const std = @import("std");
 
-const Attribute = @import("Attribute.zig");
-const object = @import("object.zig");
-const operation = @import("operation.zig");
+const Attribute = @import("session/Attribute.zig");
+const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session.zig");
+const session = @import("session/session.zig");
 const state = @import("state.zig");
 
 pub fn createObject(

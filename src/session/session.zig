@@ -1,17 +1,16 @@
 const std = @import("std");
 
-const Card = @import("smart-card/Card.zig");
+const Card = @import("../smart-card/Card.zig");
 const hasher = @import("hasher.zig");
-const Index = @import("smart-card/Index.zig");
-const MetaFile = @import("smart-card/MetaFile.zig");
+const Index = @import("../smart-card/Index.zig");
+const MetaFile = @import("../smart-card/MetaFile.zig");
 const object = @import("object.zig");
 const operation = @import("operation.zig");
-const PaddedPin = @import("smart-card/PaddedPin.zig");
-const pkcs = @import("pkcs.zig");
-
-const PublicKeyFile = @import("smart-card/PublicKeyFile.zig");
-const reader = @import("smart-card/reader.zig");
-const state = @import("state.zig");
+const PaddedPin = @import("../smart-card/PaddedPin.zig");
+const pkcs = @import("../pkcs.zig");
+const PublicKeyFile = @import("../smart-card/PublicKeyFile.zig");
+const reader = @import("../smart-card/reader.zig");
+const state = @import("../state.zig");
 
 var next_session_id: pkcs.CK_SESSION_HANDLE = 1;
 

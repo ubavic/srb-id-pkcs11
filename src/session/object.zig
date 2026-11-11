@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const Attribute = @import("Attribute.zig");
-const pkcs = @import("pkcs.zig");
-const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
+const pkcs = @import("../pkcs.zig");
+const PublicKeyFile = @import("../smart-card/PublicKeyFile.zig").PublicKeyFile;
 
 const CKT_NETSCAPE_TRUSTED_DELEGATOR: pkcs.CK_ATTRIBUTE_TYPE = 0xce534352;
 

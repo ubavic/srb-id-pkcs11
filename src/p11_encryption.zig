@@ -1,9 +1,8 @@
 const std = @import("std");
 
-const operation = @import("operation.zig");
-const object = @import("object.zig");
+const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session.zig");
+const session = @import("session/session.zig");
 const state = @import("state.zig");
 
 pub fn encryptInit(
@@ -72,7 +71,7 @@ pub fn encrypt(
 
     const current_session = try session.getSession(session_handle, false);
 
-    try current_session.assertOperation(operation.Type.Encrypt);
+    try current_session.assertOperation(operation.Type.Encrypt); //?
 
     const current_operation = &current_session.operation.encrypt;
 

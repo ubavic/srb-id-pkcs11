@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const pkcs = @import("pkcs.zig");
+const pkcs = @import("../pkcs.zig");
 
 pub const Attribute = @This();
 

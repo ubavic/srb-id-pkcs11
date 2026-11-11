@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const session = @import("session.zig");
+const session = @import("session/session.zig");
 const state = @import("state.zig");
 const reader = @import("smart-card/reader.zig");
 const PaddedPin = @import("smart-card/PaddedPin.zig");

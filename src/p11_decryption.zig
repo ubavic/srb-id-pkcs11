@@ -1,8 +1,8 @@
 const std = @import("std");
 
-const operation = @import("operation.zig");
+const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session.zig");
+const session = @import("session/session.zig");
 const state = @import("state.zig");
 
 pub fn decryptInit(

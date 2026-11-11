@@ -2,7 +2,7 @@ const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
 const state = @import("state.zig");
-const session = @import("session.zig");
+const session = @import("session/session.zig");
 
 // not supported in the original module
 pub fn seedRandom(

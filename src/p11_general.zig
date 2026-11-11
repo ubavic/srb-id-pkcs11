@@ -3,7 +3,7 @@ const pcsc = @import("pcsc");
 
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
-const session = @import("session.zig");
+const session = @import("session/session.zig");
 const state = @import("state.zig");
 const version = @import("options").version;
 

@@ -3,7 +3,7 @@ const std = @import("std");
 const Attribute = @import("Attribute.zig");
 const hasher = @import("hasher.zig");
 const object = @import("object.zig");
-const pkcs = @import("pkcs.zig");
+const pkcs = @import("../pkcs.zig");
 
 // rfc8017 - Section 9.2
 const md5_prefix: [18]u8 = [_]u8{ 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10 };
@@ -1070,7 +1070,7 @@ const SearchTestObjects = struct {
     objects: [4]object.Object,
 
     fn init(allocator: std.mem.Allocator) !SearchTestObjects {
-        const PublicKeyFile = @import("smart-card/PublicKeyFile.zig").PublicKeyFile;
+        const PublicKeyFile = @import("../smart-card/PublicKeyFile.zig").PublicKeyFile;
 
         const file_a = PublicKeyFile{
             .id = search_test_id_a,
