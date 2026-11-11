@@ -1029,7 +1029,7 @@ test "sign and verify" {
         &([_]u8{0x00} ++ @as([128 - 1]u8, @splat(0x01))),
     };
 
-    var test_helper_1024 = try TestHelper(128).loadRsaKey(ta, tio, "../testdata/1024.key");
+    var test_helper_1024 = try TestHelper(128).loadRsaKey(ta, tio, "./testdata/1024.key");
     defer test_helper_1024.key.deinit(ta);
 
     for (data_1024) |d|
@@ -1044,7 +1044,7 @@ test "sign and verify" {
         &([_]u8{0x00} ++ @as([256 - 1]u8, @splat(0x01))),
     };
 
-    var test_helper_2048 = try TestHelper(256).loadRsaKey(ta, tio, "../testdata/2048.key");
+    var test_helper_2048 = try TestHelper(256).loadRsaKey(ta, tio, "./testdata/2048.key");
     defer test_helper_2048.key.deinit(ta);
 
     for (data_2048) |d|
