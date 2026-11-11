@@ -344,6 +344,7 @@ pub fn setPIN(
     ArgumentsBad,
     CryptokiNotInitialized,
     DeviceError,
+    DeviceRemoved,
     FunctionFailed,
     GeneralError,
     HostMemory,

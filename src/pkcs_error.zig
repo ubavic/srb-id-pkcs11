@@ -1,6 +1,3 @@
-const pkcs = @import("pkcs.zig");
-const pcsc = @import("pcsc");
-
 pub const PkcsError = error{
     Cancel,
     HostMemory,
@@ -49,12 +46,3 @@ pub const PkcsError = error{
     EncryptedDataInvalid,
     EncryptedDataLenRange,
 };
-
-/// TODO: REMOVE
-pub fn formPCSC(err: pcsc.Err) error{GeneralError} {
-    return switch (err) {
-        // pcsc.Err.NoSmartCard => error.TokenNoPresent,
-        // pcsc.Err.NoMemory => error.HostMemory,
-        else => error.GeneralError,
-    };
-}

@@ -120,7 +120,10 @@ pub const ReaderState = struct {
 
 pub fn refreshStatuses(allocator: std.mem.Allocator, smart_card_client: *pcsc.Client) !void {
     var readers_name_iterator = smart_card_client.readerNamesBuf(&reader_names_buf) catch |err|
-        return pkcs_error.formPCSC(err);
+        return switch (err) {
+            pcsc.Err.InsufficientBuffer, pcsc.Err.NoMemory => error.HostMemory,
+            else => error.GeneralError,
+        };
 
     resetStates();
 

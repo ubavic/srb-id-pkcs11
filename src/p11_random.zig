@@ -31,9 +31,10 @@ pub fn generateRandom(
     ArgumentsBad,
     CryptokiNotInitialized,
     DeviceError,
+    DeviceRemoved,
+    FunctionFailed,
     GeneralError,
     HostMemory,
-    FunctionFailed,
     SessionHandleInvalid,
 }!void {
     state.lock.lockSharedUncancelable(state.io);

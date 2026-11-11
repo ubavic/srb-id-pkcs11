@@ -34,8 +34,7 @@ fn selectFile(
     defer std.crypto.secureZero(u8, data_unit);
 
     var buf: [pcsc.max_buffer_len]u8 = undefined;
-    const response = self.smart_card.transmit(data_unit, &buf) catch |err|
-        return pkcs_error.formPCSC(err);
+    const response = try self.transmit(data_unit, &buf);
 
     defer std.crypto.secureZero(u8, &buf);
 
@@ -54,7 +53,12 @@ fn transmit(
     out: []u8,
 ) ![]const u8 {
     return self.smart_card.transmit(data_unit, out) catch |err|
-        return pkcs_error.formPCSC(err);
+        return switch (err) {
+            pcsc.Err.NoSmartCard, pcsc.Err.RemovedCard, pcsc.Err.ReaderUnavailable => error.DeviceRemoved,
+            pcsc.Err.InsufficientBuffer => error.HostMemory,
+            pcsc.Err.InvalidHandle, pcsc.Err.InvalidParameter, pcsc.Err.InvalidValue, pcsc.Err.NoService => error.GeneralError,
+            else => error.DeviceError,
+        };
 }
 
 fn read(
@@ -149,8 +153,8 @@ pub fn readTokenInfo(
 pub fn disconnect(
     self: *Card,
 ) !void {
-    self.smart_card.disconnect(.LEAVE) catch |err|
-        return pkcs_error.formPCSC(err);
+    self.smart_card.disconnect(.LEAVE) catch
+        return PkcsError.GeneralError;
 }
 
 pub fn initCrypto(
@@ -344,7 +348,11 @@ pub fn connect(
     reader_name: [*:0]const u8,
 ) !Card {
     const smart_handle = smart_card_client.connect(reader_name, .SHARED, .ANY) catch |err|
-        return pkcs_error.formPCSC(err);
+        return switch (err) {
+            pcsc.Err.NoSmartCard => error.DeviceRemoved,
+            pcsc.Err.InvalidHandle, pcsc.Err.InvalidParameter, pcsc.Err.InvalidValue, pcsc.Err.NoService => error.GeneralError,
+            else => error.DeviceError,
+        };
 
     const card = Card{ .smart_card = smart_handle };
 
