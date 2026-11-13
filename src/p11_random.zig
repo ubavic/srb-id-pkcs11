@@ -1,11 +1,12 @@
 const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
-const state = @import("state.zig");
+const State = @import("ModuleState.zig");
 const session = @import("session/session.zig");
 
 // not supported in the original module
 pub fn seedRandom(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -18,12 +19,16 @@ pub fn seedRandom(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    _ = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    _ = try session.getSession(state.io, session_handle, false);
 
     return error.RandomSeedNotSupported;
 }
 
 pub fn generateRandom(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     random_data: ?[*]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
@@ -40,12 +45,15 @@ pub fn generateRandom(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
     const max_length: comptime_int = 128;
 
     var response_buffer: [max_length + 2]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 
-    const current_session = try session.getSession(session_handle, false);
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     if (random_data == null)
         return error.ArgumentsBad;

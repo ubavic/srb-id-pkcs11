@@ -1,12 +1,13 @@
 const std = @import("std");
 
+const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const state = @import("state.zig");
 const session = @import("session/session.zig");
-const hasher = @import("session/hasher.zig");
+const State = @import("ModuleState.zig");
 
 pub fn signInit(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -24,14 +25,17 @@ pub fn signInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, true);
 
     if (mechanism == null)
         return error.ArgumentsBad;
 
     try current_session.assertNoOperation();
 
-    const found_object = current_session.getObject(key) catch
+    const found_object = current_session.getObject(state.io, key) catch
         return error.KeyHandleInvalid;
 
     if (found_object.* != .private_key)
@@ -53,6 +57,7 @@ pub fn signInit(
 }
 
 pub fn sign(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -76,7 +81,10 @@ pub fn sign(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, true);
 
     try current_session.assertOperation(operation.Type.Sign);
 
@@ -112,7 +120,7 @@ pub fn sign(
     const sign_request = try current_operation.createSignRequest(current_session.allocator);
     defer current_session.allocator.free(sign_request);
 
-    const key_object = current_session.getObject(current_operation.private_key) catch
+    const key_object = current_session.getObject(state.io, current_operation.private_key) catch
         return error.GeneralError;
 
     const computed_signature = try current_session.card.sign(
@@ -131,6 +139,7 @@ pub fn sign(
 }
 
 pub fn signUpdate(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -146,7 +155,7 @@ pub fn signUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    const current_session = try session.getSession(state.io, session_handle, true);
     try current_session.assertOperation(operation.Type.Sign);
 
     const current_operation = &current_session.operation.sign;
@@ -162,6 +171,7 @@ pub fn signUpdate(
 }
 
 pub fn signFinal(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
@@ -182,7 +192,7 @@ pub fn signFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    const current_session = try session.getSession(state.io, session_handle, true);
     try current_session.assertOperation(operation.Type.Sign);
 
     const current_operation = &current_session.operation.sign;
@@ -206,7 +216,7 @@ pub fn signFinal(
     const sign_request = try current_operation.createSignRequest(current_session.allocator);
     defer current_session.allocator.free(sign_request);
 
-    const key_object = current_session.getObject(current_operation.private_key) catch
+    const key_object = current_session.getObject(state.io, current_operation.private_key) catch
         return error.GeneralError;
 
     const computed_signature = try current_session.card.sign(
@@ -225,6 +235,7 @@ pub fn signFinal(
 }
 
 pub fn signRecoverInit(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,
@@ -235,6 +246,7 @@ pub fn signRecoverInit(
 }
 
 pub fn signRecover(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,

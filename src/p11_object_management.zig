@@ -4,9 +4,10 @@ const Attribute = @import("session/Attribute.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
 const session = @import("session/session.zig");
-const state = @import("state.zig");
+const State = @import("ModuleState.zig");
 
 pub fn createObject(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_ATTRIBUTE,
     _: pkcs.CK_ULONG,
@@ -18,6 +19,7 @@ pub fn createObject(
 }
 
 pub fn copyObject(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
     _: ?[*]pkcs.CK_ATTRIBUTE,
@@ -30,6 +32,7 @@ pub fn copyObject(
 }
 
 pub fn destroyObject(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
 ) error{
@@ -39,6 +42,7 @@ pub fn destroyObject(
 }
 
 pub fn getObjectSize(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
     _: ?*pkcs.CK_ULONG,
@@ -49,6 +53,7 @@ pub fn getObjectSize(
 }
 
 pub fn getAttributeValue(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
@@ -66,11 +71,14 @@ pub fn getAttributeValue(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
     const has_attribute_sensitive = false;
     var has_attribute_type_invalid = false;
     var has_small_buffer = false;
 
-    const current_session = try session.getSession(session_handle, false);
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     if (template == null)
         return error.ArgumentsBad;
@@ -78,7 +86,7 @@ pub fn getAttributeValue(
     if (count == 0)
         return error.ArgumentsBad;
 
-    const selected_object = try current_session.getObject(object_handle);
+    const selected_object = try current_session.getObject(state.io, object_handle);
 
     for (0..count) |i| {
         const attribute_size = selected_object.getAttributeSize(template.?[i].type) catch {
@@ -129,6 +137,7 @@ pub fn getAttributeValue(
 }
 
 pub fn setAttributeValue(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
     _: ?[*]pkcs.CK_ATTRIBUTE,
@@ -140,6 +149,7 @@ pub fn setAttributeValue(
 }
 
 pub fn findObjectsInit(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
@@ -154,7 +164,10 @@ pub fn findObjectsInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertNoOperation();
 
@@ -171,12 +184,13 @@ pub fn findObjectsInit(
             .index = 0,
             .search_template = search_template,
             .objects = current_session.objects,
-            .logged_in = current_session.loggedIn(),
+            .logged_in = current_session.loggedIn(state.io),
         },
     };
 }
 
 pub fn findObjects(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handles: ?[*]pkcs.CK_OBJECT_HANDLE,
     max_object_count: pkcs.CK_ULONG,
@@ -193,7 +207,10 @@ pub fn findObjects(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertOperation(operation.Type.Search);
 
@@ -211,6 +228,7 @@ pub fn findObjects(
 }
 
 pub fn findObjectsFinal(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) error{
     CryptokiNotInitialized,
@@ -221,7 +239,10 @@ pub fn findObjectsFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertOperation(operation.Type.Search);
 

@@ -15,6 +15,9 @@ const p11_session = @import("p11_session.zig");
 const p11_sign = @import("p11_sign.zig");
 const p11_slot_and_token = @import("p11_slot_and_token.zig");
 const p11_verify = @import("p11_verify.zig");
+const State = @import("ModuleState.zig");
+
+var state: State = undefined;
 
 export fn C_GetFunctionList(function_list: ?*?*pkcs.CK_FUNCTION_LIST) pkcs.CK_RV {
     if (function_list == null)
@@ -97,16 +100,22 @@ const functionList = pkcs.CK_FUNCTION_LIST{
     .C_WaitForSlotEvent = C_WaitForSlotEvent,
 };
 
-export fn C_Initialize(init_args: pkcs.CK_VOID_PTR) pkcs.CK_RV {
-    return rv(p11_general.initialize(init_args));
+export fn C_Initialize(
+    init_args: pkcs.CK_VOID_PTR,
+) pkcs.CK_RV {
+    return rv(p11_general.initialize(&state, init_args));
 }
 
-export fn C_Finalize(reserved: pkcs.CK_VOID_PTR) pkcs.CK_RV {
-    return rv(p11_general.finalize(reserved));
+export fn C_Finalize(
+    reserved: pkcs.CK_VOID_PTR,
+) pkcs.CK_RV {
+    return rv(p11_general.finalize(&state, reserved));
 }
 
-export fn C_GetInfo(info: ?*pkcs.CK_INFO) pkcs.CK_RV {
-    return rv(p11_general.getInfo(info));
+export fn C_GetInfo(
+    info: ?*pkcs.CK_INFO,
+) pkcs.CK_RV {
+    return rv(p11_general.getInfo(&state, info));
 }
 
 export fn C_GetSlotList(
@@ -114,21 +123,21 @@ export fn C_GetSlotList(
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.getSlotList(token_present, slot_list, slot_count));
+    return rv(p11_slot_and_token.getSlotList(&state, token_present, slot_list, slot_count));
 }
 
 export fn C_GetSlotInfo(
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.getSlotInfo(slot_ID, slot_info));
+    return rv(p11_slot_and_token.getSlotInfo(&state, slot_ID, slot_info));
 }
 
 export fn C_GetTokenInfo(
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.getTokenInfo(slot_id, token_info));
+    return rv(p11_slot_and_token.getTokenInfo(&state, slot_id, token_info));
 }
 
 export fn C_GetMechanismList(
@@ -136,7 +145,7 @@ export fn C_GetMechanismList(
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.getMechanismList(slot_id, mechanism_list, count));
+    return rv(p11_slot_and_token.getMechanismList(&state, slot_id, mechanism_list, count));
 }
 
 export fn C_GetMechanismInfo(
@@ -144,7 +153,7 @@ export fn C_GetMechanismInfo(
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.getMechanismInfo(slot_id, mechanism_type, mechanism_info));
+    return rv(p11_slot_and_token.getMechanismInfo(&state, slot_id, mechanism_type, mechanism_info));
 }
 
 export fn C_InitToken(
@@ -153,7 +162,7 @@ export fn C_InitToken(
     pin_len: pkcs.CK_ULONG,
     label: ?*pkcs.CK_UTF8CHAR,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.initToken(slot_id, pin, pin_len, label));
+    return rv(p11_slot_and_token.initToken(&state, slot_id, pin, pin_len, label));
 }
 
 export fn C_InitPIN(
@@ -161,7 +170,7 @@ export fn C_InitPIN(
     pin: ?[*]pkcs.CK_UTF8CHAR,
     pin_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.initPIN(session_handle, pin, pin_len));
+    return rv(p11_slot_and_token.initPIN(&state, session_handle, pin, pin_len));
 }
 
 export fn C_SetPIN(
@@ -171,7 +180,7 @@ export fn C_SetPIN(
     new_pin: ?[*]pkcs.CK_UTF8CHAR,
     new_pin_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.setPIN(session_handle, old_pin, old_pin_len, new_pin, new_pin_len));
+    return rv(p11_slot_and_token.setPIN(&state, session_handle, old_pin, old_pin_len, new_pin, new_pin_len));
 }
 
 export fn C_OpenSession(
@@ -181,26 +190,26 @@ export fn C_OpenSession(
     notify: pkcs.CK_NOTIFY,
     session_handle: ?*pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_session.openSession(slot_id, flags, application, notify, session_handle));
+    return rv(p11_session.openSession(&state, slot_id, flags, application, notify, session_handle));
 }
 
 export fn C_CloseSession(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_session.closeSession(session_handle));
+    return rv(p11_session.closeSession(&state, session_handle));
 }
 
 export fn C_CloseAllSessions(
     slot_id: pkcs.CK_SLOT_ID,
 ) pkcs.CK_RV {
-    return rv(p11_session.closeAllSessions(slot_id));
+    return rv(p11_session.closeAllSessions(&state, slot_id));
 }
 
 export fn C_GetSessionInfo(
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) pkcs.CK_RV {
-    return rv(p11_session.getSessionInfo(session_handle, session_info));
+    return rv(p11_session.getSessionInfo(&state, session_handle, session_info));
 }
 
 export fn C_GetOperationState(
@@ -208,7 +217,7 @@ export fn C_GetOperationState(
     operation_state: ?[*]pkcs.CK_BYTE,
     operation_state_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_session.getOperationState(session_handle, operation_state, operation_state_len));
+    return rv(p11_session.getOperationState(&state, session_handle, operation_state, operation_state_len));
 }
 
 export fn C_SetOperationState(
@@ -218,7 +227,7 @@ export fn C_SetOperationState(
     encryption_key: pkcs.CK_OBJECT_HANDLE,
     authentication_key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_session.setOperationState(session_handle, operation_state, operation_state_len, encryption_key, authentication_key));
+    return rv(p11_session.setOperationState(&state, session_handle, operation_state, operation_state_len, encryption_key, authentication_key));
 }
 
 export fn C_Login(
@@ -227,13 +236,13 @@ export fn C_Login(
     pin: ?[*]const pkcs.CK_UTF8CHAR,
     pin_length: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_session.login(session_handle, user_type, pin, pin_length));
+    return rv(p11_session.login(&state, session_handle, user_type, pin, pin_length));
 }
 
 export fn C_Logout(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_session.logout(session_handle));
+    return rv(p11_session.logout(&state, session_handle));
 }
 
 export fn C_CreateObject(
@@ -242,7 +251,7 @@ export fn C_CreateObject(
     count: pkcs.CK_ULONG,
     object_handle: ?*pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.createObject(session_handle, template, count, object_handle));
+    return rv(p11_object_management.createObject(&state, session_handle, template, count, object_handle));
 }
 
 export fn C_CopyObject(
@@ -252,14 +261,14 @@ export fn C_CopyObject(
     count: pkcs.CK_ULONG,
     new_object_handle: ?*pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.copyObject(session_handle, object_handle, template, count, new_object_handle));
+    return rv(p11_object_management.copyObject(&state, session_handle, object_handle, template, count, new_object_handle));
 }
 
 export fn C_DestroyObject(
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.destroyObject(session_handle, object_handle));
+    return rv(p11_object_management.destroyObject(&state, session_handle, object_handle));
 }
 
 export fn C_GetObjectSize(
@@ -267,7 +276,7 @@ export fn C_GetObjectSize(
     object_handle: pkcs.CK_OBJECT_HANDLE,
     size: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.getObjectSize(session_handle, object_handle, size));
+    return rv(p11_object_management.getObjectSize(&state, session_handle, object_handle, size));
 }
 
 export fn C_GetAttributeValue(
@@ -276,7 +285,7 @@ export fn C_GetAttributeValue(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.getAttributeValue(session_handle, object_handle, template, count));
+    return rv(p11_object_management.getAttributeValue(&state, session_handle, object_handle, template, count));
 }
 
 export fn C_SetAttributeValue(
@@ -285,7 +294,7 @@ export fn C_SetAttributeValue(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.setAttributeValue(session_handle, object_handle, template, count));
+    return rv(p11_object_management.setAttributeValue(&state, session_handle, object_handle, template, count));
 }
 
 export fn C_FindObjectsInit(
@@ -293,7 +302,7 @@ export fn C_FindObjectsInit(
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.findObjectsInit(session_handle, template, count));
+    return rv(p11_object_management.findObjectsInit(&state, session_handle, template, count));
 }
 
 export fn C_FindObjects(
@@ -302,11 +311,13 @@ export fn C_FindObjects(
     max_object_count: pkcs.CK_ULONG,
     object_count: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_object_management.findObjects(session_handle, object_handles, max_object_count, object_count));
+    return rv(p11_object_management.findObjects(&state, session_handle, object_handles, max_object_count, object_count));
 }
 
-export fn C_FindObjectsFinal(session_handle: pkcs.CK_SESSION_HANDLE) pkcs.CK_RV {
-    return rv(p11_object_management.findObjectsFinal(session_handle));
+export fn C_FindObjectsFinal(
+    session_handle: pkcs.CK_SESSION_HANDLE,
+) pkcs.CK_RV {
+    return rv(p11_object_management.findObjectsFinal(&state, session_handle));
 }
 
 export fn C_EncryptInit(
@@ -314,7 +325,7 @@ export fn C_EncryptInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_encryption.encryptInit(session_handle, mechanism, key));
+    return rv(p11_encryption.encryptInit(&state, session_handle, mechanism, key));
 }
 
 export fn C_Encrypt(
@@ -324,7 +335,7 @@ export fn C_Encrypt(
     encrypted_data: ?[*]pkcs.CK_BYTE,
     encrypted_data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_encryption.encrypt(session_handle, data, data_len, encrypted_data, encrypted_data_len));
+    return rv(p11_encryption.encrypt(&state, session_handle, data, data_len, encrypted_data, encrypted_data_len));
 }
 
 export fn C_EncryptUpdate(
@@ -334,7 +345,7 @@ export fn C_EncryptUpdate(
     encrypted_part: ?[*]pkcs.CK_BYTE,
     encrypted_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_encryption.encryptUpdate(session_handle, part, part_len, encrypted_part, encrypted_part_len));
+    return rv(p11_encryption.encryptUpdate(&state, session_handle, part, part_len, encrypted_part, encrypted_part_len));
 }
 
 export fn C_EncryptFinal(
@@ -342,7 +353,7 @@ export fn C_EncryptFinal(
     last_encrypted_part: ?[*]pkcs.CK_BYTE,
     last_encrypted_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_encryption.encryptFinal(session_handle, last_encrypted_part, last_encrypted_part_len));
+    return rv(p11_encryption.encryptFinal(&state, session_handle, last_encrypted_part, last_encrypted_part_len));
 }
 
 export fn C_DecryptInit(
@@ -350,7 +361,7 @@ export fn C_DecryptInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_decryption.decryptInit(session_handle, mechanism, key));
+    return rv(p11_decryption.decryptInit(&state, session_handle, mechanism, key));
 }
 
 export fn C_Decrypt(
@@ -360,7 +371,7 @@ export fn C_Decrypt(
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_decryption.decrypt(session_handle, encrypted_data, encrypted_data_len, data, data_len));
+    return rv(p11_decryption.decrypt(&state, session_handle, encrypted_data, encrypted_data_len, data, data_len));
 }
 
 export fn C_DecryptUpdate(
@@ -370,7 +381,7 @@ export fn C_DecryptUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_decryption.decryptUpdate(session_handle, encrypted_part, encrypted_part_len, part, part_len));
+    return rv(p11_decryption.decryptUpdate(&state, session_handle, encrypted_part, encrypted_part_len, part, part_len));
 }
 
 export fn C_DecryptFinal(
@@ -378,14 +389,14 @@ export fn C_DecryptFinal(
     last_part: ?[*]pkcs.CK_BYTE,
     last_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_decryption.decryptFinal(session_handle, last_part, last_part_len));
+    return rv(p11_decryption.decryptFinal(&state, session_handle, last_part, last_part_len));
 }
 
 export fn C_DigestInit(
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
 ) pkcs.CK_RV {
-    return rv(p11_digest.digestInit(session_handle, mechanism));
+    return rv(p11_digest.digestInit(&state, session_handle, mechanism));
 }
 
 export fn C_Digest(
@@ -395,7 +406,7 @@ export fn C_Digest(
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_digest.digest(session_handle, data, data_len, data_digest, data_digest_len));
+    return rv(p11_digest.digest(&state, session_handle, data, data_len, data_digest, data_digest_len));
 }
 
 export fn C_DigestUpdate(
@@ -403,14 +414,14 @@ export fn C_DigestUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_digest.digestUpdate(session_handle, part, part_len));
+    return rv(p11_digest.digestUpdate(&state, session_handle, part, part_len));
 }
 
 export fn C_DigestKey(
     session_handle: pkcs.CK_SESSION_HANDLE,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_digest.digestKey(session_handle, key));
+    return rv(p11_digest.digestKey(&state, session_handle, key));
 }
 
 export fn C_DigestFinal(
@@ -418,7 +429,7 @@ export fn C_DigestFinal(
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_digest.digestFinal(session_handle, data_digest, data_digest_len));
+    return rv(p11_digest.digestFinal(&state, session_handle, data_digest, data_digest_len));
 }
 
 export fn C_SignInit(
@@ -426,7 +437,7 @@ export fn C_SignInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_sign.signInit(session_handle, mechanism, key));
+    return rv(p11_sign.signInit(&state, session_handle, mechanism, key));
 }
 
 export fn C_Sign(
@@ -436,7 +447,7 @@ export fn C_Sign(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_sign.sign(session_handle, data, data_len, signature, signature_len));
+    return rv(p11_sign.sign(&state, session_handle, data, data_len, signature, signature_len));
 }
 
 export fn C_SignUpdate(
@@ -444,7 +455,7 @@ export fn C_SignUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_sign.signUpdate(session_handle, part, part_len));
+    return rv(p11_sign.signUpdate(&state, session_handle, part, part_len));
 }
 
 export fn C_SignFinal(
@@ -452,7 +463,7 @@ export fn C_SignFinal(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_sign.signFinal(session_handle, signature, signature_len));
+    return rv(p11_sign.signFinal(&state, session_handle, signature, signature_len));
 }
 
 export fn C_SignRecoverInit(
@@ -460,7 +471,7 @@ export fn C_SignRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_sign.signRecoverInit(session_handle, mechanism, key));
+    return rv(p11_sign.signRecoverInit(&state, session_handle, mechanism, key));
 }
 
 export fn C_SignRecover(
@@ -470,7 +481,7 @@ export fn C_SignRecover(
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_sign.signRecover(session_handle, data, data_len, signature, signature_len));
+    return rv(p11_sign.signRecover(&state, session_handle, data, data_len, signature, signature_len));
 }
 
 export fn C_VerifyInit(
@@ -478,7 +489,7 @@ export fn C_VerifyInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_verify.verifyInit(session_handle, mechanism, key));
+    return rv(p11_verify.verifyInit(&state, session_handle, mechanism, key));
 }
 
 export fn C_Verify(
@@ -488,7 +499,7 @@ export fn C_Verify(
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_verify.verify(session_handle, data, data_len, signature, signature_len));
+    return rv(p11_verify.verify(&state, session_handle, data, data_len, signature, signature_len));
 }
 
 export fn C_VerifyUpdate(
@@ -496,7 +507,7 @@ export fn C_VerifyUpdate(
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_verify.verifyUpdate(session_handle, part, part_len));
+    return rv(p11_verify.verifyUpdate(&state, session_handle, part, part_len));
 }
 
 export fn C_VerifyFinal(
@@ -504,7 +515,7 @@ export fn C_VerifyFinal(
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_verify.verifyFinal(session_handle, signature, signature_len));
+    return rv(p11_verify.verifyFinal(&state, session_handle, signature, signature_len));
 }
 
 export fn C_VerifyRecoverInit(
@@ -512,7 +523,7 @@ export fn C_VerifyRecoverInit(
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_verify.verifyRecoverInit(session_handle, mechanism, key));
+    return rv(p11_verify.verifyRecoverInit(&state, session_handle, mechanism, key));
 }
 
 export fn C_VerifyRecover(
@@ -522,7 +533,7 @@ export fn C_VerifyRecover(
     data: ?[*]pkcs.CK_BYTE,
     data_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_verify.verifyRecover(session_handle, signature, signature_len, data, data_len));
+    return rv(p11_verify.verifyRecover(&state, session_handle, signature, signature_len, data, data_len));
 }
 
 export fn C_DigestEncryptUpdate(
@@ -532,7 +543,7 @@ export fn C_DigestEncryptUpdate(
     encrypted_part: ?[*]pkcs.CK_BYTE,
     encrypted_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_dual_functions.digestEncryptUpdate(session_handle, part, part_len, encrypted_part, encrypted_part_len));
+    return rv(p11_dual_functions.digestEncryptUpdate(&state, session_handle, part, part_len, encrypted_part, encrypted_part_len));
 }
 
 export fn C_DecryptDigestUpdate(
@@ -542,7 +553,7 @@ export fn C_DecryptDigestUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_dual_functions.decryptDigestUpdate(session_handle, encrypted_part, encrypted_part_len, part, part_len));
+    return rv(p11_dual_functions.decryptDigestUpdate(&state, session_handle, encrypted_part, encrypted_part_len, part, part_len));
 }
 
 export fn C_SignEncryptUpdate(
@@ -552,7 +563,7 @@ export fn C_SignEncryptUpdate(
     encrypted_part: ?[*]pkcs.CK_BYTE,
     encrypted_part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_dual_functions.signEncryptUpdate(session_handle, part, part_len, encrypted_part, encrypted_part_len));
+    return rv(p11_dual_functions.signEncryptUpdate(&state, session_handle, part, part_len, encrypted_part, encrypted_part_len));
 }
 
 export fn C_DecryptVerifyUpdate(
@@ -562,7 +573,7 @@ export fn C_DecryptVerifyUpdate(
     part: ?[*]pkcs.CK_BYTE,
     part_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_dual_functions.decryptVerifyUpdate(session_handle, encrypted_part, encrypted_part_len, part, part_len));
+    return rv(p11_dual_functions.decryptVerifyUpdate(&state, session_handle, encrypted_part, encrypted_part_len, part, part_len));
 }
 
 export fn C_GenerateKey(
@@ -572,7 +583,7 @@ export fn C_GenerateKey(
     count: pkcs.CK_ULONG,
     key_handle: ?*pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_key_management.generateKey(session_handle, mechanism, template, count, key_handle));
+    return rv(p11_key_management.generateKey(&state, session_handle, mechanism, template, count, key_handle));
 }
 
 export fn C_GenerateKeyPair(
@@ -585,7 +596,7 @@ export fn C_GenerateKeyPair(
     public_key_handle: ?*pkcs.CK_OBJECT_HANDLE,
     private_key_handle: ?*pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_key_management.generateKeyPair(session_handle, mechanism, public_key_template, public_key_attribute_count, private_key_template, private_key_attribute_count, public_key_handle, private_key_handle));
+    return rv(p11_key_management.generateKeyPair(&state, session_handle, mechanism, public_key_template, public_key_attribute_count, private_key_template, private_key_attribute_count, public_key_handle, private_key_handle));
 }
 
 export fn C_WrapKey(
@@ -596,7 +607,7 @@ export fn C_WrapKey(
     wrapped_key: ?[*]pkcs.CK_BYTE,
     wrapped_key_len: ?*pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_key_management.wrapKey(session_handle, mechanism, wrapping_key, key, wrapped_key, wrapped_key_len));
+    return rv(p11_key_management.wrapKey(&state, session_handle, mechanism, wrapping_key, key, wrapped_key, wrapped_key_len));
 }
 
 export fn C_UnwrapKey(
@@ -609,7 +620,7 @@ export fn C_UnwrapKey(
     attribute_count: pkcs.CK_ULONG,
     key_handle: ?*pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_key_management.unwrapKey(session_handle, mechanism, unwrapping_key, wrapped_key, wrapped_key_len, template, attribute_count, key_handle));
+    return rv(p11_key_management.unwrapKey(&state, session_handle, mechanism, unwrapping_key, wrapped_key, wrapped_key_len, template, attribute_count, key_handle));
 }
 
 export fn C_DeriveKey(
@@ -620,7 +631,7 @@ export fn C_DeriveKey(
     attribute_count: pkcs.CK_ULONG,
     key_handle: ?*pkcs.CK_OBJECT_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_key_management.deriveKey(session_handle, mechanism, base_key, template, attribute_count, key_handle));
+    return rv(p11_key_management.deriveKey(&state, session_handle, mechanism, base_key, template, attribute_count, key_handle));
 }
 
 export fn C_SeedRandom(
@@ -628,7 +639,7 @@ export fn C_SeedRandom(
     seed: ?[*]pkcs.CK_BYTE,
     seed_len: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_random.seedRandom(session_handle, seed, seed_len));
+    return rv(p11_random.seedRandom(&state, session_handle, seed, seed_len));
 }
 
 export fn C_GenerateRandom(
@@ -636,19 +647,19 @@ export fn C_GenerateRandom(
     random_data: ?[*]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
 ) pkcs.CK_RV {
-    return rv(p11_random.generateRandom(session_handle, random_data, random_size));
+    return rv(p11_random.generateRandom(&state, session_handle, random_data, random_size));
 }
 
 export fn C_GetFunctionStatus(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_parallel.getFunctionStatus(session_handle));
+    return rv(p11_parallel.getFunctionStatus(&state, session_handle));
 }
 
 export fn C_CancelFunction(
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) pkcs.CK_RV {
-    return rv(p11_parallel.cancelFunction(session_handle));
+    return rv(p11_parallel.cancelFunction(&state, session_handle));
 }
 
 export fn C_WaitForSlotEvent(
@@ -656,7 +667,7 @@ export fn C_WaitForSlotEvent(
     slot: ?*pkcs.CK_SLOT_ID,
     reserved: ?*anyopaque,
 ) pkcs.CK_RV {
-    return rv(p11_slot_and_token.waitForSlotEvent(flags, slot, reserved));
+    return rv(p11_slot_and_token.waitForSlotEvent(&state, flags, slot, reserved));
 }
 
 fn rv(result: PkcsError!void) pkcs.CK_RV {

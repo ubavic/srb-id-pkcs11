@@ -1,12 +1,13 @@
 const std = @import("std");
 
+const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const state = @import("state.zig");
 const session = @import("session/session.zig");
-const hasher = @import("session/hasher.zig");
+const State = @import("ModuleState.zig");
 
 pub fn verifyInit(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -25,11 +26,14 @@ pub fn verifyInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertNoOperation();
 
-    const found_object = current_session.getObject(key) catch
+    const found_object = current_session.getObject(state.io, key) catch
         return error.KeyHandleInvalid;
 
     if (found_object.* != .public_key)
@@ -52,6 +56,7 @@ pub fn verifyInit(
 }
 
 pub fn verify(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -73,7 +78,10 @@ pub fn verify(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertOperation(operation.Type.Verify);
 
@@ -100,6 +108,7 @@ pub fn verify(
 }
 
 pub fn verifyUpdate(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -116,7 +125,10 @@ pub fn verifyUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertOperation(operation.Type.Verify);
 
@@ -133,6 +145,7 @@ pub fn verifyUpdate(
 }
 
 pub fn verifyFinal(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
@@ -151,7 +164,10 @@ pub fn verifyFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     try current_session.assertOperation(operation.Type.Verify);
 
@@ -169,6 +185,7 @@ pub fn verifyFinal(
 }
 
 pub fn verifyRecoverInit(
+    _: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -183,6 +200,7 @@ pub fn verifyRecoverInit(
 }
 
 pub fn verifyRecover(
+    _: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,

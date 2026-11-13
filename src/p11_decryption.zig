@@ -3,9 +3,10 @@ const std = @import("std");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
 const session = @import("session/session.zig");
-const state = @import("state.zig");
+const State = @import("ModuleState.zig");
 
 pub fn decryptInit(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -25,11 +26,13 @@ pub fn decryptInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
 
+    const current_session = try session.getSession(state.io, session_handle, true);
     try current_session.assertNoOperation();
 
-    const found_object = current_session.getObject(key) catch
+    const found_object = current_session.getObject(state.io, key) catch
         return error.KeyHandleInvalid;
 
     if (found_object.* != .private_key)
@@ -48,6 +51,7 @@ pub fn decryptInit(
 }
 
 pub fn decrypt(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     encrypted_data: ?[*]const pkcs.CK_BYTE,
     encrypted_data_len: pkcs.CK_ULONG,
@@ -73,7 +77,10 @@ pub fn decrypt(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, true);
 
     try current_session.assertOperation(operation.Type.Decrypt);
 
@@ -113,7 +120,7 @@ pub fn decrypt(
     if (decrypt_request.len != current_operation.key_size)
         return error.EncryptedDataLenRange;
 
-    const key_object = current_session.getObject(current_operation.private_key) catch
+    const key_object = current_session.getObject(state.io, current_operation.private_key) catch
         return error.GeneralError;
 
     const computed_data = try current_session.card.decrypt(current_session.allocator, key_object.fileName(), decrypt_request);
@@ -130,6 +137,7 @@ pub fn decrypt(
 }
 
 pub fn decryptUpdate(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     encrypted_part: ?[*]const pkcs.CK_BYTE,
     encrypted_part_len: pkcs.CK_ULONG,
@@ -148,8 +156,10 @@ pub fn decryptUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
 
+    const current_session = try session.getSession(state.io, session_handle, true);
     try current_session.assertOperation(operation.Type.Decrypt);
 
     const current_operation = &current_session.operation.decrypt;
@@ -181,6 +191,7 @@ pub fn decryptUpdate(
 }
 
 pub fn decryptFinal(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     last_part: ?[*]pkcs.CK_BYTE,
     last_part_len: ?*pkcs.CK_ULONG,
@@ -203,8 +214,10 @@ pub fn decryptFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, true);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
 
+    const current_session = try session.getSession(state.io, session_handle, true);
     try current_session.assertOperation(operation.Type.Decrypt);
 
     const current_operation = &current_session.operation.decrypt;
@@ -232,7 +245,7 @@ pub fn decryptFinal(
     if (decrypt_request.len != current_operation.key_size)
         return error.EncryptedDataLenRange;
 
-    const key_object = current_session.getObject(current_operation.private_key) catch
+    const key_object = current_session.getObject(state.io, current_operation.private_key) catch
         return error.GeneralError;
 
     const computed_data = try current_session.card.decrypt(current_session.allocator, key_object.fileName(), decrypt_request);

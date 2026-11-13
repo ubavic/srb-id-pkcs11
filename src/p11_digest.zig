@@ -1,12 +1,13 @@
 const std = @import("std");
 
+const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const state = @import("state.zig");
 const session = @import("session/session.zig");
-const hasher = @import("session/hasher.zig");
+const State = @import("ModuleState.zig");
 
 pub fn digestInit(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
 ) error{
@@ -21,7 +22,10 @@ pub fn digestInit(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
     try current_session.assertNoOperation();
 
     const digest_operation = try operation.Digest.init(mechanism);
@@ -29,6 +33,7 @@ pub fn digestInit(
 }
 
 pub fn digest(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -48,7 +53,10 @@ pub fn digest(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
     try current_session.assertOperation(operation.Type.Digest);
 
     const current_operation = &current_session.operation.digest;
@@ -86,6 +94,7 @@ pub fn digest(
 }
 
 pub fn digestUpdate(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -100,7 +109,10 @@ pub fn digestUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
     try current_session.assertOperation(operation.Type.Digest);
 
     const current_operation = &current_session.operation.digest;
@@ -115,6 +127,7 @@ pub fn digestUpdate(
 }
 
 pub fn digestKey(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
 ) error{
@@ -124,6 +137,7 @@ pub fn digestKey(
 }
 
 pub fn digestFinal(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,
@@ -140,7 +154,10 @@ pub fn digestFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
     try current_session.assertOperation(operation.Type.Digest);
 
     var current_operation = &current_session.operation.digest;

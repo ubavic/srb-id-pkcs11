@@ -1,12 +1,13 @@
 const std = @import("std");
 
-const session = @import("session/session.zig");
-const state = @import("state.zig");
-const reader = @import("smart-card/reader.zig");
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
+const reader = @import("smart-card/reader.zig");
+const session = @import("session/session.zig");
+const State = @import("ModuleState.zig");
 
 pub fn getSlotList(
+    state: *State,
     token_present: pkcs.CK_BBOOL,
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
@@ -60,6 +61,7 @@ pub fn getSlotList(
 }
 
 pub fn getSlotInfo(
+    state: *State,
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
 ) error{
@@ -103,6 +105,7 @@ pub fn getSlotInfo(
 }
 
 pub fn getTokenInfo(
+    state: *State,
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
 ) error{
@@ -158,7 +161,7 @@ pub fn getTokenInfo(
 
     var session_count: usize = 0;
     var rw_session_count: usize = 0;
-    try session.countSessions(slot_id, &session_count, &rw_session_count);
+    try session.countSessions(state.io, slot_id, &session_count, &rw_session_count);
     token_info.?.ulSessionCount = @intCast(session_count);
     token_info.?.ulRwSessionCount = @intCast(rw_session_count);
 
@@ -174,6 +177,7 @@ pub fn getTokenInfo(
 }
 
 pub fn getMechanismList(
+    state: *State,
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
@@ -242,6 +246,7 @@ pub fn getMechanismList(
 }
 
 pub fn getMechanismInfo(
+    state: *State,
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
@@ -314,6 +319,7 @@ pub fn getMechanismInfo(
 }
 
 pub fn initToken(
+    _: *State,
     _: pkcs.CK_SLOT_ID,
     _: ?*pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
@@ -325,6 +331,7 @@ pub fn initToken(
 }
 
 pub fn initPIN(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
@@ -335,6 +342,7 @@ pub fn initPIN(
 }
 
 pub fn setPIN(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     old_pin: ?[*]pkcs.CK_UTF8CHAR,
     old_pin_len: pkcs.CK_ULONG,
@@ -360,7 +368,7 @@ pub fn setPIN(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     if (!current_session.write_enabled)
         return error.SessionReadOnly;
@@ -372,10 +380,11 @@ pub fn setPIN(
 
     const padded_new_pin = try PaddedPin.construct(new_pin.?[0..new_pin_len]);
 
-    try current_session.setPin(state.allocator, &padded_old_pin, &padded_new_pin);
+    try current_session.setPin(state.allocator, state.io, &padded_old_pin, &padded_new_pin);
 }
 
 pub fn waitForSlotEvent(
+    _: *State,
     _: pkcs.CK_FLAGS,
     _: ?*pkcs.CK_SLOT_ID,
     _: ?*anyopaque,

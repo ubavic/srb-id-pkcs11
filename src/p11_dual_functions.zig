@@ -1,6 +1,8 @@
 const pkcs = @import("pkcs.zig");
+const State = @import("ModuleState.zig");
 
 pub fn digestEncryptUpdate(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -13,6 +15,7 @@ pub fn digestEncryptUpdate(
 }
 
 pub fn decryptDigestUpdate(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -25,6 +28,7 @@ pub fn decryptDigestUpdate(
 }
 
 pub fn signEncryptUpdate(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -37,6 +41,7 @@ pub fn signEncryptUpdate(
 }
 
 pub fn decryptVerifyUpdate(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,

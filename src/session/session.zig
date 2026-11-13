@@ -1,4 +1,5 @@
 const std = @import("std");
+const pcsc = @import("pcsc");
 
 const Card = @import("../smart-card/Card.zig");
 const hasher = @import("hasher.zig");
@@ -10,7 +11,7 @@ const PaddedPin = @import("../smart-card/PaddedPin.zig");
 const pkcs = @import("../pkcs.zig");
 const PublicKeyFile = @import("../smart-card/PublicKeyFile.zig");
 const reader = @import("../smart-card/reader.zig");
-const state = @import("../state.zig");
+const state = @import("../ModuleState.zig");
 
 var next_session_id: pkcs.CK_SESSION_HANDLE = 1;
 
@@ -28,23 +29,23 @@ pub const Session = struct {
     operation: operation.Operation,
     objects: []object.Object,
 
-    pub fn setPin(self: *Session, allocator: std.mem.Allocator, old_pin: *const PaddedPin, new_pin: *const PaddedPin) !void {
-        try self.login(old_pin);
+    pub fn setPin(self: *Session, allocator: std.mem.Allocator, io: std.Io, old_pin: *const PaddedPin, new_pin: *const PaddedPin) !void {
+        try self.login(io, old_pin);
         try self.card.setPin(allocator, old_pin, new_pin);
     }
 
-    pub fn login(self: *Session, pin: *const PaddedPin) !void {
-        errdefer reader.setUserType(self.reader_id, reader.UserType.None);
+    pub fn login(self: *Session, io: std.Io, pin: *const PaddedPin) !void {
+        errdefer reader.setUserType(io, self.reader_id, reader.UserType.None);
         try self.card.verifyPin(self.allocator, pin);
-        reader.setUserType(self.reader_id, reader.UserType.User);
+        reader.setUserType(io, self.reader_id, reader.UserType.User);
     }
 
-    pub fn logout(self: *Session) void {
-        reader.setUserType(self.reader_id, reader.UserType.None);
+    pub fn logout(self: *Session, io: std.Io) void {
+        reader.setUserType(io, self.reader_id, reader.UserType.None);
     }
 
-    pub fn loggedIn(self: *Session) bool {
-        return reader.getUserType(self.reader_id) != reader.UserType.None;
+    pub fn loggedIn(self: *Session, io: std.Io) bool {
+        return reader.getUserType(io, self.reader_id) != reader.UserType.None;
     }
 
     pub fn assertNoOperation(self: *Session) !void {
@@ -80,9 +81,9 @@ pub const Session = struct {
         };
     }
 
-    pub fn getObject(self: *Session, object_handle: pkcs.CK_OBJECT_HANDLE) !*object.Object {
+    pub fn getObject(self: *Session, io: std.Io, object_handle: pkcs.CK_OBJECT_HANDLE) !*object.Object {
         for (self.objects) |*current_object| {
-            if (current_object.private() and !self.loggedIn())
+            if (current_object.private() and !self.loggedIn(io))
                 continue;
 
             if (current_object.handle() == object_handle)
@@ -185,22 +186,27 @@ pub const Session = struct {
     }
 };
 
-pub fn initSessions(allocator: std.mem.Allocator) !void {
-    if (!lock.tryLock(state.io))
+pub fn initSessions(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+) !void {
+    if (!lock.tryLock(io))
         return error.FunctionFailed;
-    defer lock.unlock(state.io);
+    defer lock.unlock(io);
 
     sessions = std.AutoHashMap(pkcs.CK_SLOT_ID, Session).init(allocator);
 }
 
 pub fn newSession(
     allocator: std.mem.Allocator,
+    io: std.Io,
+    smart_card_client: *pcsc.Client,
     slot_id: pkcs.CK_SESSION_HANDLE,
     write_enabled: bool,
 ) !pkcs.CK_SESSION_HANDLE {
-    if (!lock.tryLock(state.io))
+    if (!lock.tryLock(io))
         return error.FunctionFailed;
-    defer lock.unlock(state.io);
+    defer lock.unlock(io);
 
     const session_id: pkcs.CK_SESSION_HANDLE = next_session_id;
     next_session_id += 1;
@@ -216,7 +222,7 @@ pub fn newSession(
 
     const card = try Card.connect(
         allocator,
-        &state.smart_card_client,
+        smart_card_client,
         reader_state.name,
     );
 
@@ -244,29 +250,27 @@ pub fn newSession(
 }
 
 pub fn getSession(
+    io: std.Io,
     session_handle: pkcs.CK_SESSION_HANDLE,
     comptime login_required: bool,
 ) !*Session {
-    if (!lock.tryLockShared(state.io))
+    if (!lock.tryLockShared(io))
         return error.FunctionFailed;
-    defer lock.unlockShared(state.io);
-
-    if (!state.initialized)
-        return error.CryptokiNotInitialized;
+    defer lock.unlockShared(io);
 
     const current_session = sessions.getPtr(session_handle) orelse
         return error.SessionHandleInvalid;
 
-    if (login_required and !current_session.loggedIn())
+    if (login_required and !current_session.loggedIn(io))
         return error.UserNotLoggedIn;
 
     return current_session;
 }
 
-pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSION_HANDLE) !void {
-    if (!lock.tryLock(state.io))
+pub fn closeSession(allocator: std.mem.Allocator, io: std.Io, session_handle: pkcs.CK_SESSION_HANDLE) !void {
+    if (!lock.tryLock(io))
         return error.FunctionFailed;
-    defer lock.unlock(state.io);
+    defer lock.unlock(io);
 
     const current_session = sessions.getPtr(session_handle) orelse
         return error.SessionHandleInvalid;
@@ -277,10 +281,14 @@ pub fn closeSession(allocator: std.mem.Allocator, session_handle: pkcs.CK_SESSIO
         return error.GeneralError;
 }
 
-pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) !void {
-    if (!lock.tryLock(state.io))
+pub fn closeAllSessions(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    slot_id: pkcs.CK_SLOT_ID,
+) !void {
+    if (!lock.tryLock(io))
         return error.FunctionFailed;
-    defer lock.unlock(state.io);
+    defer lock.unlock(io);
 
     var errored = false;
 
@@ -308,9 +316,14 @@ pub fn closeAllSessions(allocator: std.mem.Allocator, slot_id: pkcs.CK_SLOT_ID) 
         return error.GeneralError;
 }
 
-pub fn countSessions(slot_id: pkcs.CK_SLOT_ID, total_sessions: *usize, rw_sessions: *usize) !void {
-    lock.lockSharedUncancelable(state.io);
-    defer lock.unlockShared(state.io);
+pub fn countSessions(
+    io: std.Io,
+    slot_id: pkcs.CK_SLOT_ID,
+    total_sessions: *usize,
+    rw_sessions: *usize,
+) !void {
+    lock.lockSharedUncancelable(io);
+    defer lock.unlockShared(io);
 
     total_sessions.* = 0;
     rw_sessions.* = 0;

@@ -4,10 +4,11 @@ const pcsc = @import("pcsc");
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
 const session = @import("session/session.zig");
-const state = @import("state.zig");
+const State = @import("ModuleState.zig");
 const version = @import("options").version;
 
 pub fn initialize(
+    state: *State,
     init_args: pkcs.CK_VOID_PTR,
 ) error{
     ArgumentsBad,
@@ -48,12 +49,13 @@ pub fn initialize(
         return error.FunctionFailed;
 
     reader.reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, reader.ReaderState).init(state.allocator);
-    try session.initSessions(state.allocator);
+    try session.initSessions(state.allocator, state.io);
 
     state.initialized = true;
 }
 
 pub fn finalize(
+    state: *State,
     reserved: pkcs.CK_VOID_PTR,
 ) error{
     ArgumentsBad,
@@ -79,6 +81,7 @@ pub fn finalize(
 }
 
 pub fn getInfo(
+    state: *State,
     info: ?*pkcs.CK_INFO,
 ) error{
     ArgumentsBad,

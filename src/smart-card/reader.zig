@@ -4,7 +4,7 @@ const pcsc = @import("pcsc");
 const atr = @import("atr.zig");
 const Card = @import("Card.zig");
 const pkcs = @import("../pkcs.zig");
-const state = @import("../state.zig");
+const state = @import("../ModuleState.zig");
 const pkcs_error = @import("../pkcs_error.zig");
 
 const PkcsError = pkcs_error.PkcsError;
@@ -202,9 +202,9 @@ fn parseMultiString(allocator: std.mem.Allocator, input: [*:0]const u8) std.mem.
     return try list.toOwnedSlice(allocator);
 }
 
-pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
-    lock.lockUncancelable(state.io);
-    defer lock.unlock(state.io);
+pub fn setUserType(io: std.Io, slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
+    lock.lockUncancelable(io);
+    defer lock.unlock(io);
 
     const reader_entry = reader_states.getPtr(slot_id) orelse
         return;
@@ -212,9 +212,9 @@ pub fn setUserType(slot_id: pkcs.CK_SLOT_ID, user_type: UserType) void {
     reader_entry.user_type = user_type;
 }
 
-pub fn getUserType(slot_id: pkcs.CK_SLOT_ID) UserType {
-    lock.lockSharedUncancelable(state.io);
-    defer lock.unlockShared(state.io);
+pub fn getUserType(io: std.Io, slot_id: pkcs.CK_SLOT_ID) UserType {
+    lock.lockSharedUncancelable(io);
+    defer lock.unlockShared(io);
 
     const reader_entry = reader_states.get(slot_id) orelse
         return UserType.None;
@@ -268,17 +268,17 @@ test "set and get user types" {
     try addIfNotExists(std.testing.allocator, "reader1");
     try addIfNotExists(std.testing.allocator, "reader2");
 
-    setUserType(1, UserType.SecurityOfficer);
-    setUserType(2, UserType.User);
+    setUserType(std.testing.io, 1, UserType.SecurityOfficer);
+    setUserType(std.testing.io, 2, UserType.User);
 
-    try std.testing.expectEqual(UserType.SecurityOfficer, getUserType(1));
-    try std.testing.expectEqual(UserType.User, getUserType(2));
+    try std.testing.expectEqual(UserType.SecurityOfficer, getUserType(std.testing.io, 1));
+    try std.testing.expectEqual(UserType.User, getUserType(std.testing.io, 2));
 
-    setUserType(1, UserType.None);
-    setUserType(2, UserType.None);
+    setUserType(std.testing.io, 1, UserType.None);
+    setUserType(std.testing.io, 2, UserType.None);
 
-    try std.testing.expectEqual(UserType.None, getUserType(1));
-    try std.testing.expectEqual(UserType.None, getUserType(2));
+    try std.testing.expectEqual(UserType.None, getUserType(std.testing.io, 1));
+    try std.testing.expectEqual(UserType.None, getUserType(std.testing.io, 2));
 
     deinit(std.testing.allocator);
 }

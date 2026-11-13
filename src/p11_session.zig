@@ -2,9 +2,10 @@ const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
 const session = @import("session/session.zig");
-const state = @import("state.zig");
+const State = @import("ModuleState.zig");
 
 pub fn openSession(
+    state: *State,
     slot_id: pkcs.CK_SLOT_ID,
     flags: pkcs.CK_FLAGS,
     _: ?*anyopaque,
@@ -36,10 +37,11 @@ pub fn openSession(
         return error.ArgumentsBad;
 
     const write_enabled = (flags & pkcs.CKF_RW_SESSION) != 0;
-    session_handle.?.* = try session.newSession(state.allocator, slot_id, write_enabled);
+    session_handle.?.* = try session.newSession(state.allocator, state.io, &state.smart_card_client, slot_id, write_enabled);
 }
 
 pub fn closeSession(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) error{
     CryptokiNotInitialized,
@@ -54,10 +56,11 @@ pub fn closeSession(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    try session.closeSession(state.allocator, session_handle);
+    try session.closeSession(state.allocator, state.io, session_handle);
 }
 
 pub fn closeAllSessions(
+    state: *State,
     slot_id: pkcs.CK_SLOT_ID,
 ) error{
     CryptokiNotInitialized,
@@ -78,12 +81,13 @@ pub fn closeAllSessions(
     if (!reader.reader_states.contains(slot_id))
         return error.SlotIdInvalid;
 
-    try session.closeAllSessions(state.allocator, slot_id);
+    try session.closeAllSessions(state.allocator, state.io, slot_id);
 
     // TODO: refresh reader status;
 }
 
 pub fn getSessionInfo(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) error{
@@ -104,7 +108,7 @@ pub fn getSessionInfo(
     if (session_info == null)
         return error.ArgumentsBad;
 
-    const current_session = try session.getSession(session_handle, false);
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     if (current_session.closed)
         return error.SessionClosed;
@@ -112,7 +116,7 @@ pub fn getSessionInfo(
     session_info.?.slotID = current_session.reader_id;
     session_info.?.flags = pkcs.CKF_SERIAL_SESSION | (if (current_session.write_enabled) pkcs.CKF_RW_SESSION else 0);
 
-    const user_type = reader.getUserType(current_session.reader_id);
+    const user_type = reader.getUserType(state.io, current_session.reader_id);
     session_info.?.state = switch (user_type) {
         reader.UserType.None => if (current_session.write_enabled) pkcs.CKS_RW_PUBLIC_SESSION else pkcs.CKS_RO_PUBLIC_SESSION,
         reader.UserType.User => if (current_session.write_enabled) pkcs.CKS_RW_USER_FUNCTIONS else pkcs.CKS_RO_USER_FUNCTIONS,
@@ -124,6 +128,7 @@ pub fn getSessionInfo(
 
 // not supported in the original module
 pub fn getOperationState(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_BYTE,
     _: ?*pkcs.CK_ULONG,
@@ -135,6 +140,7 @@ pub fn getOperationState(
 
 // not supported in the original module
 pub fn setOperationState(
+    _: *State,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -147,6 +153,7 @@ pub fn setOperationState(
 }
 
 pub fn login(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
     user_type: pkcs.CK_USER_TYPE,
     pin: ?[*]const pkcs.CK_UTF8CHAR,
@@ -169,7 +176,10 @@ pub fn login(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try session.getSession(state.io, session_handle, false);
 
     // Difference form the standard.
     if (user_type != pkcs.CKU_USER)
@@ -178,18 +188,19 @@ pub fn login(
     if (pin == null)
         return error.ArgumentsBad;
 
-    if (current_session.loggedIn())
+    if (current_session.loggedIn(state.io))
         return error.UserAlreadyLoggedIn;
 
     const padded_pin = PaddedPin.construct(pin.?[0..pin_length]) catch
         return error.PinIncorrect;
 
-    try current_session.login(&padded_pin);
+    try current_session.login(state.io, &padded_pin);
 
     current_session.resetOperation();
 }
 
 pub fn logout(
+    state: *State,
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) error{
     CryptokiNotInitialized,
@@ -200,12 +211,15 @@ pub fn logout(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(session_handle, false);
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
 
-    if (!current_session.loggedIn())
+    const current_session = try session.getSession(state.io, session_handle, false);
+
+    if (!current_session.loggedIn(state.io))
         return error.UserNotLoggedIn;
 
-    current_session.logout();
+    current_session.logout(state.io);
 
     current_session.resetOperation();
 }
