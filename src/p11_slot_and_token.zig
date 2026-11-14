@@ -3,7 +3,6 @@ const std = @import("std");
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
-const session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn getSlotList(
@@ -161,7 +160,7 @@ pub fn getTokenInfo(
 
     var session_count: usize = 0;
     var rw_session_count: usize = 0;
-    try session.countSessions(state.io, slot_id, &session_count, &rw_session_count);
+    try state.sessions.countSessions(state.io, slot_id, &session_count, &rw_session_count);
     token_info.?.ulSessionCount = @intCast(session_count);
     token_info.?.ulRwSessionCount = @intCast(rw_session_count);
 
@@ -368,7 +367,7 @@ pub fn setPIN(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     if (!current_session.write_enabled)
         return error.SessionReadOnly;

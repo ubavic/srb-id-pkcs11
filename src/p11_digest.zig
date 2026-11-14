@@ -3,7 +3,6 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn digestInit(
@@ -25,7 +24,7 @@ pub fn digestInit(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     try current_session.assertNoOperation();
 
     const digest_operation = try operation.Digest.init(mechanism);
@@ -56,7 +55,7 @@ pub fn digest(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.digest);
 
     if (current_operation.multipart_operation) {
@@ -110,7 +109,7 @@ pub fn digestUpdate(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.digest);
 
     if (part == null) {
@@ -153,7 +152,7 @@ pub fn digestFinal(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     var current_operation = try current_session.assertOperation(.digest);
 
     if (data_digest_len == null) {

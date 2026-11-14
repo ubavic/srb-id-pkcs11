@@ -2,7 +2,6 @@ const std = @import("std");
 
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn decryptInit(
@@ -29,7 +28,7 @@ pub fn decryptInit(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
     try current_session.assertNoOperation();
 
     const found_object = current_session.getObject(state.io, key) catch
@@ -80,7 +79,7 @@ pub fn decrypt(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
 
     const current_operation = try current_session.assertOperation(.decrypt);
 
@@ -157,7 +156,7 @@ pub fn decryptUpdate(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.decrypt);
 
     if (part_len == null) {
@@ -213,7 +212,7 @@ pub fn decryptFinal(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.decrypt);
 
     if (last_part_len == null) {

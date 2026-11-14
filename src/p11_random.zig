@@ -2,7 +2,6 @@ const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
 const State = @import("ModuleState.zig");
-const session = @import("session/session.zig");
 
 // not supported in the original module
 pub fn seedRandom(
@@ -22,7 +21,7 @@ pub fn seedRandom(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    _ = try session.getSession(state.io, session_handle, false);
+    _ = try state.sessions.getSession(state.io, session_handle, false);
 
     return error.RandomSeedNotSupported;
 }
@@ -53,7 +52,7 @@ pub fn generateRandom(
     var response_buffer: [max_length + 2]u8 = undefined;
     defer std.crypto.secureZero(u8, &response_buffer);
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     if (random_data == null)
         return error.ArgumentsBad;

@@ -3,7 +3,7 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session/session.zig");
+const Session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn verifyInit(
@@ -29,7 +29,7 @@ pub fn verifyInit(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     try current_session.assertNoOperation();
 
@@ -81,7 +81,7 @@ pub fn verify(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.verify);
 
     defer current_session.resetOperation();
@@ -125,7 +125,7 @@ pub fn verifyUpdate(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.verify);
 
     if (part == null) {
@@ -161,7 +161,7 @@ pub fn verifyFinal(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.verify);
 
     defer current_session.resetOperation();

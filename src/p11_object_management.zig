@@ -3,7 +3,6 @@ const std = @import("std");
 const Attribute = @import("session/Attribute.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn createObject(
@@ -78,7 +77,7 @@ pub fn getAttributeValue(
     var has_attribute_type_invalid = false;
     var has_small_buffer = false;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     if (template == null)
         return error.ArgumentsBad;
@@ -167,7 +166,7 @@ pub fn findObjectsInit(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     try current_session.assertNoOperation();
 
@@ -210,7 +209,7 @@ pub fn findObjects(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.search);
 
     if (object_handles == null)
@@ -239,7 +238,7 @@ pub fn findObjectsFinal(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     _ = try current_session.assertOperation(.search);
 

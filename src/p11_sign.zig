@@ -3,7 +3,7 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session/session.zig");
+const Session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn signInit(
@@ -28,7 +28,7 @@ pub fn signInit(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
 
     if (mechanism == null)
         return error.ArgumentsBad;
@@ -84,7 +84,7 @@ pub fn sign(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.sign);
 
     if (current_operation.multipart_operation) {
@@ -152,7 +152,7 @@ pub fn signUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.sign);
 
     if (part == null) {
@@ -187,7 +187,7 @@ pub fn signFinal(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
-    const current_session = try session.getSession(state.io, session_handle, true);
+    const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.sign);
 
     if (signature_len == null) {

@@ -1,7 +1,6 @@
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
-const session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn openSession(
@@ -37,7 +36,7 @@ pub fn openSession(
         return error.ArgumentsBad;
 
     const write_enabled = (flags & pkcs.CKF_RW_SESSION) != 0;
-    session_handle.?.* = try session.newSession(state.allocator, state.io, &state.smart_card_client, slot_id, write_enabled);
+    session_handle.?.* = try state.sessions.newSession(state.allocator, state.io, &state.smart_card_client, slot_id, write_enabled);
 }
 
 pub fn closeSession(
@@ -56,7 +55,7 @@ pub fn closeSession(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    try session.closeSession(state.allocator, state.io, session_handle);
+    try state.sessions.closeSession(state.allocator, state.io, session_handle);
 }
 
 pub fn closeAllSessions(
@@ -81,7 +80,7 @@ pub fn closeAllSessions(
     if (!reader.reader_states.contains(slot_id))
         return error.SlotIdInvalid;
 
-    try session.closeAllSessions(state.allocator, state.io, slot_id);
+    try state.sessions.closeAllSessions(state.allocator, state.io, slot_id);
 
     // TODO: refresh reader status;
 }
@@ -108,7 +107,7 @@ pub fn getSessionInfo(
     if (session_info == null)
         return error.ArgumentsBad;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     if (current_session.closed)
         return error.SessionClosed;
@@ -179,7 +178,7 @@ pub fn login(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     // Difference form the standard.
     if (user_type != pkcs.CKU_USER)
@@ -214,7 +213,7 @@ pub fn logout(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     if (!current_session.loggedIn(state.io))
         return error.UserNotLoggedIn;

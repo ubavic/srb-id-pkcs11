@@ -3,7 +3,8 @@ const pcsc = @import("pcsc");
 
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
-const session = @import("session/session.zig");
+const Session = @import("session/session.zig");
+const SessionState = @import("session/SessionState.zig");
 const State = @import("ModuleState.zig");
 const version = @import("options").version;
 
@@ -49,7 +50,7 @@ pub fn initialize(
         return error.FunctionFailed;
 
     reader.reader_states = std.AutoHashMap(pkcs.CK_SLOT_ID, reader.ReaderState).init(state.allocator);
-    try session.initSessions(state.allocator, state.io);
+    state.sessions = try SessionState.init(state.allocator);
 
     state.initialized = true;
 }

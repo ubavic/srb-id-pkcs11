@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const session = @import("session.zig");
+const Session = @import("session.zig");
 
 test "operation assertion" {
-    var s = session.Session{
+    var s = Session{
         .allocator = std.testing.allocator,
         .card = undefined,
         .id = 1,

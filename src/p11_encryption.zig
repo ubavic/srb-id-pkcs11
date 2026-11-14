@@ -29,7 +29,7 @@ pub fn encryptInit(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
 
     try current_session.assertNoOperation();
 
@@ -77,7 +77,7 @@ pub fn encrypt(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.encrypt);
 
     if (current_operation.multipart_operation) {
@@ -140,7 +140,7 @@ pub fn encryptUpdate(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.encrypt);
 
     if (encrypted_part_len == null) {
@@ -191,7 +191,7 @@ pub fn encryptFinal(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const current_session = try session.getSession(state.io, session_handle, false);
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
     const current_operation = try current_session.assertOperation(.encrypt);
 
     if (last_encrypted_part_len == null) {
