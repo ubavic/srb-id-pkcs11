@@ -49,8 +49,6 @@ pub fn encryptTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) !bool {
     return mechanism.?.mechanism == pkcs.CKM_RSA_X_509;
 }
 
-pub const None = struct {};
-
 pub const Digest = struct {
     hasher: hasher.Hasher,
     multipart_operation: bool,
@@ -413,7 +411,7 @@ pub const Search = struct {
 };
 
 pub const Operation = union(enum) {
-    none: None,
+    none,
     digest: Digest,
     sign: Sign,
     verify: Verify,

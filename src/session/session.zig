@@ -49,10 +49,8 @@ pub const Session = struct {
     }
 
     pub fn assertNoOperation(self: *Session) !void {
-        return switch (self.operation) {
-            .none => {},
-            else => error.OperationActive,
-        };
+        if (self.operation != .none)
+            return error.OperationActive;
     }
 
     pub fn assertOperation(
@@ -71,9 +69,7 @@ pub const Session = struct {
 
     pub fn resetOperation(self: *Session) void {
         self.operation.deinit(self.allocator);
-        self.operation = operation.Operation{
-            .none = operation.None{},
-        };
+        self.operation = .none;
     }
 
     pub fn getObject(self: *Session, io: std.Io, object_handle: pkcs.CK_OBJECT_HANDLE) !*object.Object {
@@ -231,9 +227,7 @@ pub fn newSession(
         .write_enabled = write_enabled,
         .allocator = allocator,
         .objects = objects,
-        .operation = operation.Operation{
-            .none = operation.None{},
-        },
+        .operation = .none,
     };
 
     try new_session.loadObjects(allocator);
