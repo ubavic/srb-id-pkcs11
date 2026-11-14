@@ -55,19 +55,14 @@ pub const Session = struct {
         };
     }
 
-    pub fn assertOperation(self: *Session, kind: operation.Type) !void {
-        const active: operation.Type = switch (self.operation) {
-            .none => .None,
-            .digest => .Digest,
-            .sign => .Sign,
-            .verify => .Verify,
-            .encrypt => .Encrypt,
-            .decrypt => .Decrypt,
-            .search => .Search,
-        };
-
-        if (active != kind)
+    pub fn assertOperation(
+        self: *Session,
+        comptime kind: std.meta.Tag(operation.Operation),
+    ) !*@FieldType(operation.Operation, @tagName(kind)) {
+        if (std.meta.activeTag(self.operation) != kind)
             return error.OperationNotInitialized;
+
+        return &@field(self.operation, @tagName(kind));
     }
 
     pub fn slot(self: *Session) void {

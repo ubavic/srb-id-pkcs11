@@ -85,10 +85,7 @@ pub fn sign(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, true);
-
-    try current_session.assertOperation(operation.Type.Sign);
-
-    const current_operation = &current_session.operation.sign;
+    const current_operation = try current_session.assertOperation(.sign);
 
     if (current_operation.multipart_operation) {
         current_session.resetOperation();
@@ -156,9 +153,7 @@ pub fn signUpdate(
     defer state.lock.unlockShared(state.io);
 
     const current_session = try session.getSession(state.io, session_handle, true);
-    try current_session.assertOperation(operation.Type.Sign);
-
-    const current_operation = &current_session.operation.sign;
+    const current_operation = try current_session.assertOperation(.sign);
 
     if (part == null) {
         current_session.resetOperation();
@@ -193,9 +188,7 @@ pub fn signFinal(
     defer state.lock.unlockShared(state.io);
 
     const current_session = try session.getSession(state.io, session_handle, true);
-    try current_session.assertOperation(operation.Type.Sign);
-
-    const current_operation = &current_session.operation.sign;
+    const current_operation = try current_session.assertOperation(.sign);
 
     if (signature_len == null) {
         current_session.resetOperation();

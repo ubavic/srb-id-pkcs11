@@ -82,9 +82,7 @@ pub fn decrypt(
 
     const current_session = try session.getSession(state.io, session_handle, true);
 
-    try current_session.assertOperation(operation.Type.Decrypt);
-
-    const current_operation = &current_session.operation.decrypt;
+    const current_operation = try current_session.assertOperation(.decrypt);
 
     if (current_operation.multipart_operation) {
         current_session.resetOperation();
@@ -160,9 +158,7 @@ pub fn decryptUpdate(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, true);
-    try current_session.assertOperation(operation.Type.Decrypt);
-
-    const current_operation = &current_session.operation.decrypt;
+    const current_operation = try current_session.assertOperation(.decrypt);
 
     if (part_len == null) {
         current_session.resetOperation();
@@ -218,9 +214,7 @@ pub fn decryptFinal(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, true);
-    try current_session.assertOperation(operation.Type.Decrypt);
-
-    const current_operation = &current_session.operation.decrypt;
+    const current_operation = try current_session.assertOperation(.decrypt);
 
     if (last_part_len == null) {
         current_session.resetOperation();

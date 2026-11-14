@@ -211,10 +211,7 @@ pub fn findObjects(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-
-    try current_session.assertOperation(operation.Type.Search);
-
-    const current_operation = &current_session.operation.search;
+    const current_operation = try current_session.assertOperation(.search);
 
     if (object_handles == null)
         return error.ArgumentsBad;
@@ -244,7 +241,7 @@ pub fn findObjectsFinal(
 
     const current_session = try session.getSession(state.io, session_handle, false);
 
-    try current_session.assertOperation(operation.Type.Search);
+    _ = try current_session.assertOperation(.search);
 
     current_session.resetOperation();
 }

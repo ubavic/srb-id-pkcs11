@@ -57,9 +57,7 @@ pub fn digest(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-    try current_session.assertOperation(operation.Type.Digest);
-
-    const current_operation = &current_session.operation.digest;
+    const current_operation = try current_session.assertOperation(.digest);
 
     if (current_operation.multipart_operation) {
         current_session.resetOperation();
@@ -113,9 +111,7 @@ pub fn digestUpdate(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-    try current_session.assertOperation(operation.Type.Digest);
-
-    const current_operation = &current_session.operation.digest;
+    const current_operation = try current_session.assertOperation(.digest);
 
     if (part == null) {
         current_session.resetOperation();
@@ -158,9 +154,7 @@ pub fn digestFinal(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-    try current_session.assertOperation(operation.Type.Digest);
-
-    var current_operation = &current_session.operation.digest;
+    var current_operation = try current_session.assertOperation(.digest);
 
     if (data_digest_len == null) {
         current_session.resetOperation();

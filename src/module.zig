@@ -727,3 +727,7 @@ pub fn toRV(err: PkcsError) pkcs.CK_RV {
         PkcsError.EncryptedDataLenRange => pkcs.CKR_ENCRYPTED_DATA_LEN_RANGE,
     };
 }
+
+test {
+    _ = @import("session/tests.zig");
+}

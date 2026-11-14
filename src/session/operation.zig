@@ -49,16 +49,6 @@ pub fn encryptTypeFromMechanism(mechanism: ?*const pkcs.CK_MECHANISM) !bool {
     return mechanism.?.mechanism == pkcs.CKM_RSA_X_509;
 }
 
-pub const Type = enum {
-    None,
-    Digest,
-    Sign,
-    Verify,
-    Encrypt,
-    Decrypt,
-    Search,
-};
-
 pub const None = struct {};
 
 pub const Digest = struct {

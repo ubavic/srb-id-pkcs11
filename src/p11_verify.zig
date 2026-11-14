@@ -82,12 +82,9 @@ pub fn verify(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-
-    try current_session.assertOperation(operation.Type.Verify);
+    const current_operation = try current_session.assertOperation(.verify);
 
     defer current_session.resetOperation();
-
-    const current_operation = &current_session.operation.verify;
 
     if (data == null)
         return error.ArgumentsBad;
@@ -129,10 +126,7 @@ pub fn verifyUpdate(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-
-    try current_session.assertOperation(operation.Type.Verify);
-
-    const current_operation = &current_session.operation.verify;
+    const current_operation = try current_session.assertOperation(.verify);
 
     if (part == null) {
         current_session.resetOperation();
@@ -168,12 +162,9 @@ pub fn verifyFinal(
         return error.CryptokiNotInitialized;
 
     const current_session = try session.getSession(state.io, session_handle, false);
-
-    try current_session.assertOperation(operation.Type.Verify);
+    const current_operation = try current_session.assertOperation(.verify);
 
     defer current_session.resetOperation();
-
-    const current_operation = &current_session.operation.verify;
 
     if (signature == null)
         return error.ArgumentsBad;
