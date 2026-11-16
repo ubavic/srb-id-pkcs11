@@ -3,7 +3,7 @@ const std = @import("std");
 
 const ModuleState = @import("ModuleState.zig");
 
-pub fn newTewstingState() ModuleState {
+pub fn newTestingState() ModuleState {
     if (!builtin.is_test)
         @compileError("not testing");
 
@@ -18,7 +18,7 @@ pub fn newTewstingState() ModuleState {
     };
 }
 
-pub fn addNewSeesion(state: *ModuleState) !c_ulong {
+pub fn addNewSession(state: *ModuleState) !c_ulong {
     if (!builtin.is_test)
         @compileError("not testing");
 
