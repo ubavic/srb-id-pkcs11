@@ -89,10 +89,8 @@ test "parse certificate" {
         const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, td.file_name, ta, .unlimited);
         defer ta.free(der);
 
-        var obj = try object.CertificateObject.parse(ta, @intCast(0x8000 + i), der, id, file_name);
-        defer obj.deinit(ta);
-
-        const certificate_object = obj.certificate;
+        var certificate_object = try object.CertificateObject.parse(ta, @intCast(0x8000 + i), der, id, file_name);
+        defer certificate_object.deinit(ta);
 
         try std.testing.expectEqual(0x8000 + i, certificate_object.handle);
         try std.testing.expectEqualSlices(u8, td.serial_number, certificate_object.serial_number);
