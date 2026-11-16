@@ -4,7 +4,7 @@ const pcsc = @import("pcsc");
 const Card = @import("../smart-card/Card.zig");
 const pkcs = @import("../pkcs.zig");
 const reader = @import("../smart-card/reader.zig");
-const Session = @import("session.zig");
+const Session = @import("Session.zig");
 
 const SessionState = @This();
 

@@ -3,7 +3,6 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const Session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn verifyInit(

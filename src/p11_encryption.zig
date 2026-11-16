@@ -2,7 +2,6 @@ const std = @import("std");
 
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const session = @import("session/session.zig");
 const State = @import("ModuleState.zig");
 
 pub fn encryptInit(
