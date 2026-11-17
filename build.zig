@@ -36,7 +36,10 @@ pub fn build(b: *std.Build) void {
         .use_lld = target.result.os.tag != .macos,
     });
 
-    const lib_test = b.addTest(.{ .root_module = mod });
+    const lib_test = b.addTest(.{
+        .root_module = mod,
+        .use_llvm = true,
+    });
 
     b.installArtifact(lib);
 
@@ -44,4 +47,17 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&lib_test_run.step);
+
+    const kcov = b.addSystemCommand(&.{
+        "kcov",
+        "--clean",
+        "--include-path=src/",
+        "--exclude-pattern=tests.zig",
+        "kcov-out",
+    });
+
+    kcov.addArtifactArg(lib_test);
+
+    const coverage_step = b.step("coverage", "Generate test coverage");
+    coverage_step.dependOn(&kcov.step);
 }

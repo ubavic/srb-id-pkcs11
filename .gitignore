@@ -4,6 +4,7 @@ zig-out/
 .zig-cache/
 zig-pkg/
 .vscode/
+kcov-out/
 
 
 *.o
