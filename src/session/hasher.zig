@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Ripemd160 = @import("ripemd160.zig");
+const Ripemd160 = @import("Ripemd160.zig");
 const pkcs = @import("../pkcs.zig");
 
 pub const HasherType = enum { md5, sha1, sha256, sha384, sha512, ripemd160 };
