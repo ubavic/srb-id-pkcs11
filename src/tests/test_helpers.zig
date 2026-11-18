@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const ModuleState = @import("ModuleState.zig");
+const ModuleState = @import("../ModuleState.zig");
 
 pub fn newTestingState() ModuleState {
     if (!builtin.is_test)
@@ -24,7 +24,7 @@ pub fn addNewSession(state: *ModuleState) !c_ulong {
 
     state.sessions.next_session_id += 1;
     try state.sessions.sessions.put(state.sessions.next_session_id, .{
-        .allocator = undefined,
+        .allocator = std.testing.allocator,
         .card = undefined,
         .id = state.sessions.next_session_id,
         .objects = &.{},
@@ -35,4 +35,11 @@ pub fn addNewSession(state: *ModuleState) !c_ulong {
     });
 
     return state.sessions.next_session_id;
+}
+
+pub fn deinitTestingState(state: *ModuleState) void {
+    if (!builtin.is_test)
+        @compileError("not testing");
+
+    state.sessions.sessions.deinit();
 }

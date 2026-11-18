@@ -730,4 +730,5 @@ pub fn toRV(err: PkcsError) pkcs.CK_RV {
 
 test {
     _ = @import("session/tests.zig");
+    _ = @import("tests/tests.zig");
 }
