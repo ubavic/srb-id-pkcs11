@@ -1,94 +1,23 @@
 const std = @import("std");
 
-inline fn rotl32(x: u32, n: u5) u32 {
-    return std.math.rotl(u32, x, n);
-}
-
-inline fn F1(x: u32, y: u32, z: u32) u32 {
-    return x ^ y ^ z;
-}
-
-inline fn F2(x: u32, y: u32, z: u32) u32 {
-    return (((y ^ z) & x) ^ z);
-}
-
-inline fn F3(x: u32, y: u32, z: u32) u32 {
-    return ((x | ~y) ^ z);
-}
-
-inline fn F4(x: u32, y: u32, z: u32) u32 {
-    return (((x ^ y) & z) ^ y);
-}
-
-inline fn F5(x: u32, y: u32, z: u32) u32 {
-    return (x ^ (y | ~z));
-}
-
-inline fn rmdFunc(comptime func: anytype, a: *u32, b: u32, c: *u32, d: u32, e: u32, x: u32, s: u5, k: u32) void {
-    a.* +%= func(b, c.*, d);
-    a.* +%= x;
-    a.* +%= k;
-
-    a.* = rotl32(a.*, s) +% e;
-    c.* = rotl32(c.*, 10);
-}
-
-inline fn L1(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F1, A, B, C, D, E, X, S, 0);
-}
-
-inline fn L2(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F2, A, B, C, D, E, X, S, 0x5a827999);
-}
-
-inline fn L3(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F3, A, B, C, D, E, X, S, 0x6ed9eba1);
-}
-
-inline fn L4(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F4, A, B, C, D, E, X, S, 0x8f1bbcdc);
-}
-
-inline fn L5(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F5, A, B, C, D, E, X, S, 0xa953fd4e);
-}
-
-inline fn R1(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F5, A, B, C, D, E, X, S, 0x50a28be6);
-}
-
-inline fn R2(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F4, A, B, C, D, E, X, S, 0x5c4dd124);
-}
-
-inline fn R3(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F3, A, B, C, D, E, X, S, 0x6d703ef3);
-}
-
-inline fn R4(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F2, A, B, C, D, E, X, S, 0x7a6d76e9);
-}
-
-inline fn R5(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
-    rmdFunc(F1, A, B, C, D, E, X, S, 0);
-}
-
 pub const block_length = 64;
 pub const digest_length = 20;
+
+const Ripemd160 = @This();
 
 message: [block_length / 4]u32,
 length: u64,
 hash: [5]u32,
 
-pub fn init() @This() {
-    return @This(){
+pub fn init() Ripemd160 {
+    return .{
         .length = 0,
         .message = std.mem.zeroes([block_length / 4]u32),
         .hash = [5]u32{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 },
     };
 }
 
-pub fn update(self: *@This(), msg: []const u8) void {
+pub fn update(self: *Ripemd160, msg: []const u8) void {
     var input = msg;
     var block_buffer: [block_length / 4]u32 = undefined;
 
@@ -120,7 +49,7 @@ pub fn update(self: *@This(), msg: []const u8) void {
         @memcpy(@as([*]u8, @ptrCast(&self.message)), input);
 }
 
-pub fn final(self: *@This(), out: *[digest_length]u8) void {
+pub fn final(self: *Ripemd160, out: *[digest_length]u8) void {
     var index: usize = @intCast((self.length & 63) >> 2);
     const shift: u5 = @intCast((self.length & 3) * 8);
 
@@ -151,7 +80,7 @@ pub fn final(self: *@This(), out: *[digest_length]u8) void {
     @memcpy(out, hash_bytes[0..digest_length]);
 }
 
-fn round(self: *@This(), X: [16]u32) void {
+fn round(self: *Ripemd160, X: [16]u32) void {
     var A = self.hash[0];
     var B = self.hash[1];
     var C = self.hash[2];
@@ -331,6 +260,79 @@ fn round(self: *@This(), X: [16]u32) void {
     self.hash[3] = self.hash[4] +% a1 +% B;
     self.hash[4] = self.hash[0] +% b1 +% C;
     self.hash[0] = D;
+}
+
+inline fn rotl32(x: u32, n: u5) u32 {
+    return std.math.rotl(u32, x, n);
+}
+
+inline fn F1(x: u32, y: u32, z: u32) u32 {
+    return x ^ y ^ z;
+}
+
+inline fn F2(x: u32, y: u32, z: u32) u32 {
+    return (((y ^ z) & x) ^ z);
+}
+
+inline fn F3(x: u32, y: u32, z: u32) u32 {
+    return ((x | ~y) ^ z);
+}
+
+inline fn F4(x: u32, y: u32, z: u32) u32 {
+    return (((x ^ y) & z) ^ y);
+}
+
+inline fn F5(x: u32, y: u32, z: u32) u32 {
+    return (x ^ (y | ~z));
+}
+
+inline fn rmdFunc(comptime func: anytype, a: *u32, b: u32, c: *u32, d: u32, e: u32, x: u32, s: u5, k: u32) void {
+    a.* +%= func(b, c.*, d);
+    a.* +%= x;
+    a.* +%= k;
+
+    a.* = rotl32(a.*, s) +% e;
+    c.* = rotl32(c.*, 10);
+}
+
+inline fn L1(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F1, A, B, C, D, E, X, S, 0);
+}
+
+inline fn L2(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F2, A, B, C, D, E, X, S, 0x5a827999);
+}
+
+inline fn L3(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F3, A, B, C, D, E, X, S, 0x6ed9eba1);
+}
+
+inline fn L4(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F4, A, B, C, D, E, X, S, 0x8f1bbcdc);
+}
+
+inline fn L5(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F5, A, B, C, D, E, X, S, 0xa953fd4e);
+}
+
+inline fn R1(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F5, A, B, C, D, E, X, S, 0x50a28be6);
+}
+
+inline fn R2(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F4, A, B, C, D, E, X, S, 0x5c4dd124);
+}
+
+inline fn R3(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F3, A, B, C, D, E, X, S, 0x6d703ef3);
+}
+
+inline fn R4(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F2, A, B, C, D, E, X, S, 0x7a6d76e9);
+}
+
+inline fn R5(A: *u32, B: u32, C: *u32, D: u32, E: u32, X: u32, S: u5) void {
+    rmdFunc(F1, A, B, C, D, E, X, S, 0);
 }
 
 test "RIPEMD160" {
