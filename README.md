@@ -18,7 +18,9 @@ Functions intended for security officers (`CKU_SO`) are not planned for implemen
 
 ## Usage
 
-This module is used like any other PKCS#11 module. Read your distro’s or software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. Below are a few short examples of how this is done. You can also look at [e-documents howto](https://e-documents.ubavic.rs) (on serbian) for step by step instructions.
+This module is used like any other PKCS#11 module. Read your software’s documentation to learn how to configure the module. In most cases, you need to add an entry to the *module database* or set module's path in some config. Sometimes there is a GUI for that; other times, you must do it via the CLI. 
+
+Refer to [e-documents howto](https://e-documents.ubavic.rs) (on serbian) for step by step instructions for different use-cases. Below are given general instructions.
 
 ### On Linux
 
@@ -28,45 +30,32 @@ Download the latest `.so` file from [Releases](https://github.com/ubavic/srb-id-
 
 On some distros, `p11-kit` is a recommended way of managing modules. This higher-level utility removes the need to configure modules separately for each program. Refer to the distribution documentation for more information.
 
-#### Firefox 
-
-If you use Firefox, add a new PKCS#11 module using the **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.so` file you just downloaded. After restarting Firefox, you can use the module for signing in on websites.
-
-#### Chrome
-
-Chrome does not allow loading a PKCS#11 module through the browser settings. Instead, you must use `modutil` to add a module to the NSS database. This database is most likely located at `~/.pki/nssdb/` (or `~/.local/share/pki/nssdb`). Make sure you don't use `~` in paths, and make sure you close all browsers you have opened. For example:
-
-```bash
-modutil -dbdir sql:.pki/nssdb/ -add "Srb Id PKCS11" -libfile PATH_TO_SO
-```
-
-After starting Chrome, you will be able to use the module.
-
-#### Other
-
-Other programs, like Okular, usually use NSS databases located in `~/.pki` or `~/.mozilla`.
-
-Note that Snap/Flatpak applications (including browsers) can have issues loading module, and additional configuration may be required.
-
 ### On macOS
 
-Download the latest `.dylib` file from [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. There are separate `dylib` files for Intel (x64) and ARM Macs.
-
-In Firefox, add a new PKCS#11 module using the **Privacy & Security** settings in the browser ([documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/pkcs11)). For the *module filename*, set the path to the `.dylib` file you just downloaded. After restarting Firefox, you can use the module for signing in.
+Download the latest `.dylib` file from [Releases](https://github.com/ubavic/srb-id-pkcs11/releases) and copy it to a permanent location. Only builds for ARM macs are provided, for Intel macs you will have to compile the project yourself (see below).
 
 If your system’s security settings prevent downloaded `.dylib` files from executing, refer to Apple’s [official documentation](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac) for instructions on enabling the use of unsigned libraries. Alternatively, you may install Zig and build the project locally.
 
 ## Compilation
 
-On Linux, ensure that the [PCSC Lite](https://pcsclite.apdu.fr/) (development) library (`libpcsclite.so`) is installed on your system. Most Linux package managers provide this package. Also install `ccid` driver, and enable `pcscd` service.
-
-On Windows and macOS, PC/SC libraries should already be installed, and the service enabled by default.
-
 Build the project with:
 
-```
+```bash
 zig build
 ```
+
+### Building on Linux
+
+Ensure that the [PCSC Lite](https://pcsclite.apdu.fr/) (development) library (`libpcsclite.so`) is installed on your system. Most Linux package managers provide this package. Also install `ccid` driver, and enable `pcscd` service.
+
+## Architecture
+
+Code is organized in four layers:
+
+1. `src/module.zig` contains all exported Cryptoki functions. Each exported function is a thin wrapper that passes `*ModuleState` and maps the error union to `CK_RV`.
+2. `src/p11_*.zig` files contain the functions called from those wrappers. Functions at this level implement the Cryptoki logic.
+3. `src/session/*.zig` contains the implementation of Cryptoki concepts (session, operation, object).
+4. `src/smart-card/*.zig` contains the logic for communication with the tokens via PC/SC.
 
 ## Warranty Disclaimer
 
