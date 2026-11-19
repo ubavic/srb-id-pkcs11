@@ -718,7 +718,7 @@ pub fn deinitSearchTemplate(allocator: std.mem.Allocator, search_template: []Att
     allocator.free(search_template);
 }
 
-fn encode(buff: []u8, value: anytype) ![]u8 {
+pub fn encode(buff: []u8, value: anytype) ![]u8 {
     const T = @TypeOf(value);
 
     const value_size = switch (@typeInfo(T)) {
@@ -745,83 +745,6 @@ fn encode(buff: []u8, value: anytype) ![]u8 {
 
     @memcpy(buff[0..value_size], src);
     return buff[0..value_size];
-}
-
-test "encoding scalars" {
-    var buffer = std.mem.zeroes([16]u8);
-
-    const bool_value: pkcs.CK_BBOOL = pkcs.CK_TRUE;
-    const bool_value_slice = try encode(&buffer, bool_value);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&bool_value), bool_value_slice);
-
-    const class_value: pkcs.CK_OBJECT_CLASS = pkcs.CKO_CERTIFICATE;
-    const class_value_slice = try encode(&buffer, class_value);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&class_value), class_value_slice);
-}
-
-test "encoding zero length arrays" {
-    var buffer = std.mem.zeroes([0]u8);
-
-    const zero_array = [0]u8{};
-    const zero_array_value_slice = try encode(&buffer, zero_array);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&zero_array), zero_array_value_slice);
-
-    const zero_slice_value = try encode(&buffer, @as([]const u8, &zero_array));
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&zero_array), zero_slice_value);
-
-    const mechanism_array = [0]pkcs.CK_MECHANISM_TYPE{};
-    const mechanism_array_value = try encode(&buffer, &mechanism_array);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_array_value);
-
-    const mechanism_slice_value = try encode(&buffer, @as([]const pkcs.CK_MECHANISM_TYPE, &mechanism_array));
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_slice_value);
-}
-
-test "encoding arrays" {
-    var buffer = std.mem.zeroes([16]u8);
-
-    const byte_array = [_]u8{ 1, 2, 3 };
-    const byte_array_value_slice = try encode(&buffer, byte_array);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&byte_array), byte_array_value_slice);
-
-    const byte_array_pointer_value = try encode(&buffer, &byte_array);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&byte_array), byte_array_pointer_value);
-
-    const byte_slice_value = try encode(&buffer, @as([]const u8, &byte_array));
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&byte_array), byte_slice_value);
-
-    const mechanism_array = [_]pkcs.CK_MECHANISM_TYPE{ pkcs.CKM_ECDSA, pkcs.CKM_AES_GCM };
-    const mechanism_array_value = try encode(&buffer, &mechanism_array);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_array_value);
-
-    const mechanism_slice_value = try encode(&buffer, @as([]const pkcs.CK_MECHANISM_TYPE, &mechanism_array));
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&mechanism_array), mechanism_slice_value);
-
-    const date_array = [_]pkcs.CK_DATE{
-        .{
-            .year = .{ '1', '9', '8', '2' },
-            .month = .{ '0', '7' },
-            .day = .{ '3', '1' },
-        },
-        .{
-            .year = .{ '2', '0', '1', '4' },
-            .month = .{ '0', '5' },
-            .day = .{ '0', '6' },
-        },
-    };
-
-    const date_array_value = try encode(&buffer, &date_array);
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&date_array), date_array_value);
-
-    const date_slice_value = try encode(&buffer, @as([]const pkcs.CK_DATE, &date_array));
-    try std.testing.expectEqualSlices(u8, std.mem.asBytes(&date_array), date_slice_value);
-}
-
-test "encoding to small buffer" {
-    var buffer = std.mem.zeroes([2]u8);
-
-    const class_value: pkcs.CK_OBJECT_CLASS = pkcs.CKO_CERTIFICATE;
-    try std.testing.expectError(error.HostMemory, encode(&buffer, class_value));
 }
 
 fn allocEmptySlice(comptime T: type, allocator: std.mem.Allocator) ![]T {

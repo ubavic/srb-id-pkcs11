@@ -729,6 +729,7 @@ pub fn toRV(err: PkcsError) pkcs.CK_RV {
 }
 
 test {
-    _ = @import("session/tests.zig");
-    _ = @import("tests/tests.zig");
+    _ = @import("session/tests/_tests.zig");
+    _ = @import("tests/_tests.zig");
+    _ = @import("smart-card/tests/_tests.zig");
 }

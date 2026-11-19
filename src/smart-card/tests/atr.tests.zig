@@ -1,0 +1,72 @@
+const std = @import("std");
+
+const atr = @import("../atr.zig");
+
+test "valid ATR" {
+    const test_cases = [_]struct {
+        atr: []const u8,
+        expected: bool,
+    }{
+        .{
+            .atr = &.{},
+            .expected = false,
+        },
+        .{
+            .atr = &.{1},
+            .expected = false,
+        },
+        .{
+            .atr = &.{ 0, 0 },
+            .expected = false,
+        },
+        .{
+            .atr = &.{ 1, 2, 3 },
+            .expected = false,
+        },
+        .{
+            .atr = &.{ 0x90, 0x00, 0x00 },
+            .expected = false,
+        },
+        .{
+            .atr = &.{ 0x00, 0x00, 0x00, 0x90, 0x10 },
+            .expected = false,
+        },
+        .{
+            .atr = &.{
+                0x3B, 0xFF, 0x94, 0x00, 0x00, 0x81, 0x31, 0x80,
+                0x43, 0x80, 0x31, 0x80, 0x65, 0xB0, 0x85, 0x02,
+                0x01, 0xF3, 0x12, 0x0F, 0xFF, 0x82, 0x90, 0x00,
+                0x79,
+            },
+            .expected = true,
+        },
+        .{
+            .atr = &.{
+                0x3B, 0xF9, 0x96, 0x00, 0x00, 0x80, 0x31, 0xFE,
+                0x45, 0x53, 0x43, 0x45, 0x37, 0x20, 0x47, 0x43,
+                0x4E, 0x33, 0x5E,
+            },
+            .expected = true,
+        },
+        .{
+            .atr = &.{
+                0x3B, 0x9E, 0x96, 0x80, 0x31, 0xFE, 0x45, 0x53,
+                0x43, 0x45, 0x20, 0x38, 0x2E, 0x30, 0x2D, 0x43,
+                0x31, 0x56, 0x30, 0x0D, 0x0A, 0x6F,
+            },
+            .expected = true,
+        },
+        .{
+            .atr = &.{
+                0x3B, 0x9E, 0x96, 0x80, 0x31, 0xFE, 0x45, 0x53,
+                0x43, 0x45, 0x20, 0x38, 0x2E, 0x30, 0x2D, 0x43,
+                0x32, 0x56, 0x30, 0x0D, 0x0A, 0x6C,
+            },
+            .expected = true,
+        },
+    };
+
+    for (test_cases) |tc| {
+        try std.testing.expect(atr.validATR(tc.atr) == tc.expected);
+    }
+}

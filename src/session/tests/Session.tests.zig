@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Session = @import("Session.zig");
+const Session = @import("../Session.zig");
 
 test "operation assertion" {
     var s = Session{
