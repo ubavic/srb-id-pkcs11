@@ -5,10 +5,6 @@ const apdu = @import("apdu.zig");
 const PaddedPin = @import("PaddedPin.zig");
 const TokenInfo = @import("TokenInfo.zig");
 
-const pkcs_error = @import("../pkcs_error.zig");
-
-const PkcsError = pkcs_error.PkcsError;
-
 pub const Card = @This();
 
 smart_card: pcsc.Card,
@@ -154,7 +150,7 @@ pub fn disconnect(
     self: *Card,
 ) !void {
     self.smart_card.disconnect(.LEAVE) catch
-        return PkcsError.GeneralError;
+        return error.GeneralError;
 }
 
 pub fn initCrypto(

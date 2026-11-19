@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const PkcsError = @import("../pkcs_error.zig").PkcsError;
-
 const Index = @This();
 
 buffer: []const u8,

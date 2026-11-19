@@ -4,10 +4,6 @@ const pcsc = @import("pcsc");
 const atr = @import("atr.zig");
 const Card = @import("Card.zig");
 const pkcs = @import("../pkcs.zig");
-const state = @import("../ModuleState.zig");
-const pkcs_error = @import("../pkcs_error.zig");
-
-const PkcsError = pkcs_error.PkcsError;
 
 var next_reader_id: pkcs.CK_SLOT_ID = 1;
 

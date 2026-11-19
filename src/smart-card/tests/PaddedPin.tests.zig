@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const PaddedPin = @import("../PaddedPin.zig");
-const PkcsError = @import("../../pkcs_error.zig").PkcsError;
 
 test "pad pin" {
     const test_cases = [_]struct {
@@ -27,7 +26,7 @@ test "pad pin" {
 test "validate pin" {
     const test_cases = [_]struct {
         pin: []const u8,
-        expected: PkcsError,
+        expected: anyerror,
     }{
         .{
             .pin = "",

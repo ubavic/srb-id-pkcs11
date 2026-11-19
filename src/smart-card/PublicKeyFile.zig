@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const PkcsError = @import("../pkcs_error.zig").PkcsError;
-
 pub const PublicKeyFile = @This();
 
 id: [20]u8,

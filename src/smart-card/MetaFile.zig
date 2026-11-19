@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const PkcsError = @import("../pkcs_error.zig").PkcsError;
-
 const MetaFile = @This();
 
 class: u8,
