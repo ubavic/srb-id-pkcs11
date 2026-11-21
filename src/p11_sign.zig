@@ -151,6 +151,9 @@ pub fn signUpdate(
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
 
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
     const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.sign);
 
@@ -185,6 +188,9 @@ pub fn signFinal(
 }!void {
     state.lock.lockSharedUncancelable(state.io);
     defer state.lock.unlockShared(state.io);
+
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
 
     const current_session = try state.sessions.getSession(state.io, session_handle, true);
     const current_operation = try current_session.assertOperation(.sign);
