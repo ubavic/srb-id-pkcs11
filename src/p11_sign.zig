@@ -101,8 +101,10 @@ pub fn sign(
         return;
     }
 
-    if (signature_len.?.* < required_signature_size)
+    if (signature_len.?.* < required_signature_size) {
+        signature_len.?.* = @intCast(required_signature_size);
         return error.BufferTooSmall;
+    }
 
     defer current_session.resetOperation();
 
@@ -205,8 +207,10 @@ pub fn signFinal(
         return;
     }
 
-    if (signature_len.?.* < required_signature_size)
+    if (signature_len.?.* < required_signature_size) {
+        signature_len.?.* = @intCast(required_signature_size);
         return error.BufferTooSmall;
+    }
 
     defer current_session.resetOperation();
 

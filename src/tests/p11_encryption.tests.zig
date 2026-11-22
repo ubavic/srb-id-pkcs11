@@ -180,6 +180,38 @@ test "encrypt encrypted data size query keeps operation" {
     }
 }
 
+test "encrypt buffer too small returns required length" {
+    for (test_helpers.key_files) |key_file| {
+        var key_pair = try test_helpers.loadKeyPair(key_file);
+        defer key_pair.deinit();
+
+        var testing_state = test_helpers.newTestingState(HealthyCard);
+        defer test_helpers.deinitTestingState(&testing_state);
+
+        testing_state.initialized = true;
+        const id = try test_helpers.addNewSessionWithCard(&testing_state, HealthyCard{ .key_pair = &key_pair }, &key_pair);
+
+        var mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_RSA_PKCS };
+        try p11_encryption.encryptInit(&testing_state, id, &mechanism, test_helpers.public_key_handle);
+
+        const data: [4]u8 = .{ 0x31, 0x32, 0x33, 0x34 };
+        var encrypted_data: [KeyPair.max_size]u8 = undefined;
+        var encrypted_data_len: pkcs.CK_ULONG = key_pair.size() - 1;
+
+        const result = p11_encryption.encrypt(&testing_state, id, &data, data.len, &encrypted_data, &encrypted_data_len);
+        try std.testing.expectError(error.BufferTooSmall, result);
+        try std.testing.expectEqual(key_pair.size(), encrypted_data_len);
+        try test_helpers.expectOperation(&testing_state, id, .encrypt);
+
+        try p11_encryption.encrypt(&testing_state, id, &data, data.len, &encrypted_data, &encrypted_data_len);
+        try std.testing.expectEqual(key_pair.size(), encrypted_data_len);
+        try test_helpers.expectOperation(&testing_state, id, .none);
+
+        try test_helpers.login();
+        try expectDecryptsTo(&testing_state, id, &mechanism, encrypted_data[0..encrypted_data_len], &data);
+    }
+}
+
 test "encrypt bad arguments" {
     for (test_helpers.key_files) |key_file| {
         var key_pair = try test_helpers.loadKeyPair(key_file);
@@ -427,6 +459,42 @@ test "encryptFinal encrypted data size query keeps operation" {
         const result = p11_encryption.encryptFinal(&testing_state, id, &encrypted_data, &encrypted_data_len);
         try std.testing.expectError(error.BufferTooSmall, result);
         try test_helpers.expectOperation(&testing_state, id, .encrypt);
+    }
+}
+
+test "encryptFinal buffer too small returns required length" {
+    for (test_helpers.key_files) |key_file| {
+        var key_pair = try test_helpers.loadKeyPair(key_file);
+        defer key_pair.deinit();
+
+        var testing_state = test_helpers.newTestingState(HealthyCard);
+        defer test_helpers.deinitTestingState(&testing_state);
+
+        testing_state.initialized = true;
+        const id = try test_helpers.addNewSessionWithCard(&testing_state, HealthyCard{ .key_pair = &key_pair }, &key_pair);
+
+        var mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_RSA_PKCS };
+        try p11_encryption.encryptInit(&testing_state, id, &mechanism, test_helpers.public_key_handle);
+
+        const data: [4]u8 = .{ 0x31, 0x32, 0x33, 0x34 };
+        var encrypted_part: [KeyPair.max_size]u8 = undefined;
+        var encrypted_part_len: pkcs.CK_ULONG = encrypted_part.len;
+        try p11_encryption.encryptUpdate(&testing_state, id, &data, data.len, &encrypted_part, &encrypted_part_len);
+
+        var encrypted_data: [KeyPair.max_size]u8 = undefined;
+        var encrypted_data_len: pkcs.CK_ULONG = key_pair.size() - 1;
+
+        const result = p11_encryption.encryptFinal(&testing_state, id, &encrypted_data, &encrypted_data_len);
+        try std.testing.expectError(error.BufferTooSmall, result);
+        try std.testing.expectEqual(key_pair.size(), encrypted_data_len);
+        try test_helpers.expectOperation(&testing_state, id, .encrypt);
+
+        try p11_encryption.encryptFinal(&testing_state, id, &encrypted_data, &encrypted_data_len);
+        try std.testing.expectEqual(key_pair.size(), encrypted_data_len);
+        try test_helpers.expectOperation(&testing_state, id, .none);
+
+        try test_helpers.login();
+        try expectDecryptsTo(&testing_state, id, &mechanism, encrypted_data[0..encrypted_data_len], &data);
     }
 }
 

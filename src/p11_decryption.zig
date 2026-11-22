@@ -99,8 +99,10 @@ pub fn decrypt(
         return;
     }
 
-    if (data_len.?.* < required_data_size)
+    if (data_len.?.* < required_data_size) {
+        data_len.?.* = @intCast(required_data_size);
         return error.BufferTooSmall;
+    }
 
     defer current_session.resetOperation();
 
@@ -226,8 +228,10 @@ pub fn decryptFinal(
         return;
     }
 
-    if (last_part_len.?.* < required_data_size)
+    if (last_part_len.?.* < required_data_size) {
+        last_part_len.?.* = @intCast(required_data_size);
         return error.BufferTooSmall;
+    }
 
     defer current_session.resetOperation();
 

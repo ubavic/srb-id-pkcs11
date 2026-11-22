@@ -199,6 +199,40 @@ test "decrypt data size query keeps operation" {
     }
 }
 
+test "decrypt buffer too small returns required length" {
+    for (test_helpers.key_files) |key_file| {
+        var key_pair = try test_helpers.loadKeyPair(key_file);
+        defer key_pair.deinit();
+
+        var testing_state = test_helpers.newTestingState(HealthyCard);
+        defer test_helpers.deinitTestingState(&testing_state);
+
+        testing_state.initialized = true;
+        const id = try test_helpers.addNewSessionWithCard(&testing_state, HealthyCard{ .key_pair = &key_pair }, &key_pair);
+        try test_helpers.login();
+
+        var mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_RSA_PKCS };
+        const message: [4]u8 = .{ 0x31, 0x32, 0x33, 0x34 };
+        var encrypted_buffer: [KeyPair.max_size]u8 = undefined;
+        const encrypted_data = try encryptData(&testing_state, id, &mechanism, &message, &encrypted_buffer);
+
+        try p11_decryption.decryptInit(&testing_state, id, &mechanism, test_helpers.private_key_handle);
+
+        var data: [KeyPair.max_size]u8 = undefined;
+        var data_len: pkcs.CK_ULONG = key_pair.size() - 1;
+
+        const result = p11_decryption.decrypt(&testing_state, id, encrypted_data.ptr, encrypted_data.len, &data, &data_len);
+        try std.testing.expectError(error.BufferTooSmall, result);
+        try std.testing.expectEqual(key_pair.size(), data_len);
+        try test_helpers.expectOperation(&testing_state, id, .decrypt);
+
+        try p11_decryption.decrypt(&testing_state, id, encrypted_data.ptr, encrypted_data.len, &data, &data_len);
+        try std.testing.expectEqualSlices(u8, &message, data[0..data_len]);
+        try std.testing.expectEqual(1, test_helpers.getSession(&testing_state, id).card.decrypt_requests);
+        try test_helpers.expectOperation(&testing_state, id, .none);
+    }
+}
+
 test "decrypt bad arguments" {
     for (test_helpers.key_files) |key_file| {
         var key_pair = try test_helpers.loadKeyPair(key_file);
@@ -553,6 +587,43 @@ test "decryptFinal data size query keeps operation" {
         const result = p11_decryption.decryptFinal(&testing_state, id, &last_part, &last_part_len);
         try std.testing.expectError(error.BufferTooSmall, result);
         try test_helpers.expectOperation(&testing_state, id, .decrypt);
+    }
+}
+
+test "decryptFinal buffer too small returns required length" {
+    for (test_helpers.key_files) |key_file| {
+        var key_pair = try test_helpers.loadKeyPair(key_file);
+        defer key_pair.deinit();
+
+        var testing_state = test_helpers.newTestingState(HealthyCard);
+        defer test_helpers.deinitTestingState(&testing_state);
+
+        testing_state.initialized = true;
+        const id = try test_helpers.addNewSessionWithCard(&testing_state, HealthyCard{ .key_pair = &key_pair }, &key_pair);
+        try test_helpers.login();
+
+        var mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_RSA_PKCS };
+        const message: [4]u8 = .{ 0x31, 0x32, 0x33, 0x34 };
+        var encrypted_buffer: [KeyPair.max_size]u8 = undefined;
+        const encrypted_data = try encryptData(&testing_state, id, &mechanism, &message, &encrypted_buffer);
+
+        try p11_decryption.decryptInit(&testing_state, id, &mechanism, test_helpers.private_key_handle);
+
+        var part: [KeyPair.max_size]u8 = undefined;
+        var part_len: pkcs.CK_ULONG = part.len;
+        try p11_decryption.decryptUpdate(&testing_state, id, encrypted_data.ptr, encrypted_data.len, &part, &part_len);
+
+        var last_part: [KeyPair.max_size]u8 = undefined;
+        var last_part_len: pkcs.CK_ULONG = key_pair.size() - 1;
+
+        const result = p11_decryption.decryptFinal(&testing_state, id, &last_part, &last_part_len);
+        try std.testing.expectError(error.BufferTooSmall, result);
+        try std.testing.expectEqual(key_pair.size(), last_part_len);
+        try test_helpers.expectOperation(&testing_state, id, .decrypt);
+
+        try p11_decryption.decryptFinal(&testing_state, id, &last_part, &last_part_len);
+        try std.testing.expectEqualSlices(u8, &message, last_part[0..last_part_len]);
+        try test_helpers.expectOperation(&testing_state, id, .none);
     }
 }
 

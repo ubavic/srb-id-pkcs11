@@ -191,6 +191,39 @@ test "sign signature size query keeps operation" {
     }
 }
 
+test "sign buffer too small returns required length" {
+    for (test_helpers.key_files) |key_file| {
+        var key_pair = try test_helpers.loadKeyPair(key_file);
+        defer key_pair.deinit();
+
+        var testing_state = test_helpers.newTestingState(HealthyCard);
+        defer test_helpers.deinitTestingState(&testing_state);
+
+        testing_state.initialized = true;
+        const id = try test_helpers.addNewSessionWithCard(&testing_state, HealthyCard{ .key_pair = &key_pair }, &key_pair);
+        try test_helpers.login();
+
+        var mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_SHA256_RSA_PKCS };
+        try p11_sign.signInit(&testing_state, id, &mechanism, test_helpers.private_key_handle);
+
+        var data: [4]u8 = .{ 0x31, 0x32, 0x33, 0x34 };
+        var signature: [KeyPair.max_size]u8 = undefined;
+        var signature_len: pkcs.CK_ULONG = key_pair.size() - 1;
+
+        const result = p11_sign.sign(&testing_state, id, &data, data.len, &signature, &signature_len);
+        try std.testing.expectError(error.BufferTooSmall, result);
+        try std.testing.expectEqual(key_pair.size(), signature_len);
+        try test_helpers.expectOperation(&testing_state, id, .sign);
+
+        try p11_sign.sign(&testing_state, id, &data, data.len, &signature, &signature_len);
+        try std.testing.expectEqual(key_pair.size(), signature_len);
+        try test_helpers.expectOperation(&testing_state, id, .none);
+
+        try p11_verify.verifyInit(&testing_state, id, &mechanism, test_helpers.public_key_handle);
+        try p11_verify.verify(&testing_state, id, &data, data.len, &signature, signature_len);
+    }
+}
+
 test "sign bad arguments" {
     for (test_helpers.key_files) |key_file| {
         var key_pair = try test_helpers.loadKeyPair(key_file);
@@ -408,6 +441,41 @@ test "signFinal signature size query keeps operation" {
         const result = p11_sign.signFinal(&testing_state, id, &signature, &signature_len);
         try std.testing.expectError(error.BufferTooSmall, result);
         try test_helpers.expectOperation(&testing_state, id, .sign);
+    }
+}
+
+test "signFinal buffer too small returns required length" {
+    for (test_helpers.key_files) |key_file| {
+        var key_pair = try test_helpers.loadKeyPair(key_file);
+        defer key_pair.deinit();
+
+        var testing_state = test_helpers.newTestingState(HealthyCard);
+        defer test_helpers.deinitTestingState(&testing_state);
+
+        testing_state.initialized = true;
+        const id = try test_helpers.addNewSessionWithCard(&testing_state, HealthyCard{ .key_pair = &key_pair }, &key_pair);
+        try test_helpers.login();
+
+        var mechanism = pkcs.CK_MECHANISM{ .mechanism = pkcs.CKM_RSA_PKCS };
+        try p11_sign.signInit(&testing_state, id, &mechanism, test_helpers.private_key_handle);
+
+        var data: [4]u8 = .{ 0x31, 0x32, 0x33, 0x34 };
+        try p11_sign.signUpdate(&testing_state, id, &data, data.len);
+
+        var signature: [KeyPair.max_size]u8 = undefined;
+        var signature_len: pkcs.CK_ULONG = key_pair.size() - 1;
+
+        const result = p11_sign.signFinal(&testing_state, id, &signature, &signature_len);
+        try std.testing.expectError(error.BufferTooSmall, result);
+        try std.testing.expectEqual(key_pair.size(), signature_len);
+        try test_helpers.expectOperation(&testing_state, id, .sign);
+
+        try p11_sign.signFinal(&testing_state, id, &signature, &signature_len);
+        try std.testing.expectEqual(key_pair.size(), signature_len);
+        try test_helpers.expectOperation(&testing_state, id, .none);
+
+        try p11_verify.verifyInit(&testing_state, id, &mechanism, test_helpers.public_key_handle);
+        try p11_verify.verify(&testing_state, id, &data, data.len, &signature, signature_len);
     }
 }
 

@@ -95,8 +95,10 @@ pub fn encrypt(
         return;
     }
 
-    if (encrypted_data_len.?.* < required_encrypted_data_size)
+    if (encrypted_data_len.?.* < required_encrypted_data_size) {
+        encrypted_data_len.?.* = @intCast(required_encrypted_data_size);
         return error.BufferTooSmall;
+    }
 
     defer current_session.resetOperation();
 
@@ -204,8 +206,10 @@ pub fn encryptFinal(
         return;
     }
 
-    if (last_encrypted_part_len.?.* < required_encrypted_data_size)
+    if (last_encrypted_part_len.?.* < required_encrypted_data_size) {
+        last_encrypted_part_len.?.* = @intCast(required_encrypted_data_size);
         return error.BufferTooSmall;
+    }
 
     defer current_session.resetOperation();
 
