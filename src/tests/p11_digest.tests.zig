@@ -282,3 +282,10 @@ test "digestFinal" {
     try std.testing.expectEqualSlices(u8, &expected_digest, &buff);
     try std.testing.expectEqual(.none, new_session.operation);
 }
+
+test "digestKey not supported" {
+    var testing_state = test_helpers.newTestingState(HealthyCard);
+    defer test_helpers.deinitTestingState(&testing_state);
+
+    try std.testing.expectError(error.FunctionNotSupported, p11_digest.digestKey(&testing_state, 0, 0));
+}
