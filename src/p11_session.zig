@@ -80,8 +80,6 @@ pub fn closeAllSessions(
         return error.SlotIdInvalid;
 
     try state.sessions.closeAllSessions(state.allocator, state.io, slot_id);
-
-    // TODO: refresh reader status;
 }
 
 pub fn getSessionInfo(
