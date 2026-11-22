@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const KeyPair = @import("KeyPair.zig");
+const KeyPair = @import("KeyPair.helper.zig");
 const ModuleState = @import("../ModuleState.zig").ModuleState;
 const object = @import("../session/object.zig");
 const operation = @import("../session/operation.zig");

@@ -53,7 +53,7 @@ pub fn build(b: *std.Build) void {
         "kcov",
         "--clean",
         "--include-path=src/",
-        "--exclude-pattern=tests.zig",
+        "--exclude-pattern=tests.zig,helper.zig",
         "kcov-out",
     });
 

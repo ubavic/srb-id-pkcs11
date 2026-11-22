@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const HealthyCard = @import("HealthyCard.zig");
+const HealthyCard = @import("HealthyCard.helper.zig");
 const pkcs = @import("../pkcs.zig");
 const p11_digest = @import("../p11_digest.zig");
-const test_helpers = @import("test_helpers.zig");
+const test_helpers = @import("test.helper.zig");
 
 test "digestInit cryptoki initialization" {
     var testing_state = test_helpers.newTestingState(HealthyCard);

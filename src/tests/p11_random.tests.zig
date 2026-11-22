@@ -1,9 +1,9 @@
 const std = @import("std");
 
-const FailureCard = @import("FailureCard.zig").FailureCard;
-const HealthyCard = @import("HealthyCard.zig");
+const FailureCard = @import("FailureCard.helper.zig").FailureCard;
+const HealthyCard = @import("HealthyCard.helper.zig");
 const p11_random = @import("../p11_random.zig");
-const test_helpers = @import("test_helpers.zig");
+const test_helpers = @import("test.helper.zig");
 
 /// The most random bytes requested from the card at once.
 const segment_size = 128;

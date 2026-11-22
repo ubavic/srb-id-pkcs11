@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const HealthyCard = @import("HealthyCard.zig");
+const HealthyCard = @import("HealthyCard.helper.zig");
 const PaddedPin = @import("../smart-card/PaddedPin.zig");
 
 /// Card that fails after N successful calls, useful for making sure

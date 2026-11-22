@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const HealthyCard = @import("HealthyCard.zig");
-const KeyPair = @import("KeyPair.zig");
+const HealthyCard = @import("HealthyCard.helper.zig");
+const KeyPair = @import("KeyPair.helper.zig");
 const p11_decryption = @import("../p11_decryption.zig");
 const p11_encryption = @import("../p11_encryption.zig");
 const pkcs = @import("../pkcs.zig");
-const test_helpers = @import("test_helpers.zig");
+const test_helpers = @import("test.helper.zig");
 
 fn expectDecryptsTo(
     state: anytype,

@@ -1,12 +1,12 @@
 const std = @import("std");
 
-const FailureCard = @import("FailureCard.zig").FailureCard;
-const HealthyCard = @import("HealthyCard.zig");
-const KeyPair = @import("KeyPair.zig");
+const FailureCard = @import("FailureCard.helper.zig").FailureCard;
+const HealthyCard = @import("HealthyCard.helper.zig");
+const KeyPair = @import("KeyPair.helper.zig");
 const p11_sign = @import("../p11_sign.zig");
 const p11_verify = @import("../p11_verify.zig");
 const pkcs = @import("../pkcs.zig");
-const test_helpers = @import("test_helpers.zig");
+const test_helpers = @import("test.helper.zig");
 
 test "signInit cryptoki initialization" {
     var testing_state = test_helpers.newTestingState(HealthyCard);

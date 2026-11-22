@@ -1,11 +1,11 @@
 const std = @import("std");
 
-const HealthyCard = @import("HealthyCard.zig");
-const KeyPair = @import("KeyPair.zig");
+const HealthyCard = @import("HealthyCard.helper.zig");
+const KeyPair = @import("KeyPair.helper.zig");
 const p11_sign = @import("../p11_sign.zig");
 const p11_verify = @import("../p11_verify.zig");
 const pkcs = @import("../pkcs.zig");
-const test_helpers = @import("test_helpers.zig");
+const test_helpers = @import("test.helper.zig");
 
 fn signData(
     state: anytype,

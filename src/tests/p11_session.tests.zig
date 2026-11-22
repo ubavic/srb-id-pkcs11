@@ -1,13 +1,13 @@
 const std = @import("std");
 
-const FailureCard = @import("FailureCard.zig").FailureCard;
-const HealthyCard = @import("HealthyCard.zig");
+const FailureCard = @import("FailureCard.helper.zig").FailureCard;
+const HealthyCard = @import("HealthyCard.helper.zig");
 const p11_digest = @import("../p11_digest.zig");
 const p11_session = @import("../p11_session.zig");
 const p11_sign = @import("../p11_sign.zig");
 const pkcs = @import("../pkcs.zig");
 const reader = @import("../smart-card/reader.zig");
-const test_helpers = @import("test_helpers.zig");
+const test_helpers = @import("test.helper.zig");
 
 const pin = "1234";
 

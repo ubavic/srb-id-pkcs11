@@ -3,7 +3,7 @@
 
 const std = @import("std");
 
-const KeyPair = @import("KeyPair.zig");
+const KeyPair = @import("KeyPair.helper.zig");
 const PaddedPin = @import("../smart-card/PaddedPin.zig");
 const TokenInfo = @import("../smart-card/TokenInfo.zig");
 
