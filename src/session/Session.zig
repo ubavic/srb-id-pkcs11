@@ -56,10 +56,6 @@ pub fn Session(comptime Card: type) type {
             return &@field(self.operation, @tagName(kind));
         }
 
-        pub fn slot(self: *Self) void {
-            return self.card.reader_id;
-        }
-
         pub fn resetOperation(self: *Self) void {
             self.operation.deinit(self.allocator);
             self.operation = .none;
