@@ -81,27 +81,31 @@ pub fn Session(comptime Card: type) type {
             defer self.card.endTransaction(tx);
 
             const index_content = try self.card.readFile(allocator, &.{ 0x8F, 0xFF });
-            defer allocator.free(index_content);
+            defer allocator.free(index_content.data);
 
-            var index = try Index.init(index_content);
+            var index = try Index.init(index_content.data);
 
             var object_list = std.ArrayList(object.Object).initCapacity(allocator, index.length) catch
                 return error.HostMemory;
-            errdefer object_list.deinit(allocator);
+            errdefer {
+                for (object_list.items) |*current_object|
+                    current_object.deinit(allocator);
+                object_list.deinit(allocator);
+            }
 
             var handle: pkcs.CK_OBJECT_HANDLE = 0x80000000;
             while (index.next()) |meta_file_name| {
                 const meta_file_content = try self.card.readFile(allocator, &meta_file_name);
-                defer allocator.free(meta_file_content);
+                defer allocator.free(meta_file_content.data);
 
-                const meta_file = try MetaFile.parse(meta_file_content);
+                const meta_file = try MetaFile.parse(meta_file_content.data);
 
                 switch (meta_file.class) {
                     0x01 => {
                         const compressed_certificate_content = try self.card.readFile(allocator, &meta_file.file_name);
-                        defer allocator.free(compressed_certificate_content);
+                        defer allocator.free(compressed_certificate_content.data);
 
-                        const certificate_data = try object.CertificateObject.decompressCertificate(allocator, compressed_certificate_content);
+                        const certificate_data = try object.CertificateObject.decompressCertificate(allocator, compressed_certificate_content.data);
                         defer allocator.free(certificate_data);
 
                         const cert_object = object.CertificateObject.parse(
@@ -110,6 +114,7 @@ pub fn Session(comptime Card: type) type {
                             certificate_data,
                             meta_file.id,
                             meta_file.file_name,
+                            compressed_certificate_content.size,
                         ) catch
                             continue;
 
@@ -119,23 +124,27 @@ pub fn Session(comptime Card: type) type {
                         handle += 8;
                     },
                     0x02 => {
-                        const pub_key_file_content: []const u8 = try self.card.readFile(allocator, &meta_file.file_name);
-                        defer allocator.free(pub_key_file_content);
+                        const pub_key_file_content = try self.card.readFile(allocator, &meta_file.file_name);
+                        defer allocator.free(pub_key_file_content.data);
 
                         var pub_key_file = PublicKeyFile{
                             .id = meta_file.id,
                             .pub_key_file_name = meta_file.file_name,
                         };
-                        pub_key_file.parse(pub_key_file_content) catch
+                        pub_key_file.parse(pub_key_file_content.data) catch
                             continue;
 
-                        const public_key_object = try object.PublicKeyObject.createPublicKeyObject(allocator, pub_key_file, handle);
+                        // The private key is fully described by the public key file.
+                        // Select its file for the size, and do not read it.
+                        const private_key_size = try self.card.getSize(allocator, &pub_key_file.priv_key_file_name);
+
+                        const public_key_object = try object.PublicKeyObject.createPublicKeyObject(allocator, pub_key_file, handle, pub_key_file_content.size);
                         object_list.append(allocator, .{ .public_key = public_key_object }) catch
                             return error.HostMemory;
 
                         handle += 8;
 
-                        const private_key_object = try object.PrivateKeyObject.createPrivateKeyObject(allocator, pub_key_file, handle);
+                        const private_key_object = try object.PrivateKeyObject.createPrivateKeyObject(allocator, pub_key_file, handle, private_key_size);
                         object_list.append(allocator, .{ .private_key = private_key_object }) catch
                             return error.HostMemory;
 

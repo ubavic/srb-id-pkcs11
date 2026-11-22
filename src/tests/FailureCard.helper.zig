@@ -47,9 +47,14 @@ pub fn FailureCard(comptime Parent: type) type {
             return false;
         }
 
-        pub fn readFile(self: *Self, allocator: std.mem.Allocator, file_name: []const u8) ![]u8 {
+        pub fn readFile(self: *Self, allocator: std.mem.Allocator, file_name: []const u8) !struct { data: []u8, size: usize } {
             if (self.shouldFail()) return self.err;
             return self.parent.readFile(allocator, file_name);
+        }
+
+        pub fn getSize(self: *Self, allocator: std.mem.Allocator, file_name: []const u8) !usize {
+            if (self.shouldFail()) return self.err;
+            return self.parent.getSize(allocator, file_name);
         }
 
         pub fn readTokenInfo(self: *Self, allocator: std.mem.Allocator) !@TypeOf(self.parent.readTokenInfo(allocator) catch unreachable) {

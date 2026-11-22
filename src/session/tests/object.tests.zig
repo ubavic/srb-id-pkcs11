@@ -90,9 +90,10 @@ test "parse certificate" {
         const der = try std.Io.Dir.readFileAlloc(std.Io.Dir.cwd(), tio, td.file_name, ta, .unlimited);
         defer ta.free(der);
 
-        var certificate_object = try object.CertificateObject.parse(ta, @intCast(0x8000 + i), der, id, file_name);
+        var certificate_object = try object.CertificateObject.parse(ta, @intCast(0x8000 + i), der, id, file_name, 1234);
         defer certificate_object.deinit(ta);
 
+        try std.testing.expectEqual(1234, certificate_object.size);
         try std.testing.expectEqual(0x8000 + i, certificate_object.handle);
         try std.testing.expectEqualSlices(u8, td.serial_number, certificate_object.serial_number);
         try std.testing.expectEqualSlices(u8, &id, &certificate_object.id);
@@ -169,6 +170,27 @@ test "encoding arrays" {
 
     const date_slice_value = try object.encode(&buffer, @as([]const pkcs.CK_DATE, &date_array));
     try std.testing.expectEqualSlices(u8, std.mem.asBytes(&date_array), date_slice_value);
+}
+
+test "key object size" {
+    const ta = std.testing.allocator;
+    const PublicKeyFile = @import("../../smart-card/PublicKeyFile.zig");
+
+    const key_file = PublicKeyFile{
+        .id = @splat(0x01),
+        .pub_key_file_name = .{ 0x60, 0x04 },
+        .priv_key_file_name = .{ 0x60, 0x05 },
+        .modulus_len = 1,
+        .exponent_len = 1,
+    };
+
+    var public_key = object.Object{ .public_key = try .createPublicKeyObject(ta, key_file, 1, 90) };
+    defer public_key.deinit(ta);
+    try std.testing.expectEqual(90, public_key.size());
+
+    var private_key = object.Object{ .private_key = try .createPrivateKeyObject(ta, key_file, 2, 512) };
+    defer private_key.deinit(ta);
+    try std.testing.expectEqual(512, private_key.size());
 }
 
 test "encoding to small buffer" {

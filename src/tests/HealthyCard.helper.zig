@@ -28,12 +28,18 @@ pub fn connect(_: std.mem.Allocator, _: anytype, _: [*:0]const u8) !HealthyCard 
 }
 
 /// The card holds only an empty index, every other file is missing.
-pub fn readFile(_: *HealthyCard, allocator: std.mem.Allocator, file_name: []const u8) ![]u8 {
+pub fn readFile(_: *HealthyCard, allocator: std.mem.Allocator, file_name: []const u8) !struct { data: []u8, size: usize } {
     if (!std.mem.eql(u8, file_name, &index_file_name))
         return error.DeviceError;
 
-    return allocator.dupe(u8, &.{ 0x00, 0x00 }) catch
+    const data = allocator.dupe(u8, &.{ 0x00, 0x00 }) catch
         return error.HostMemory;
+
+    return .{ .data = data, .size = data.len };
+}
+
+pub fn getSize(_: *const HealthyCard, _: std.mem.Allocator, _: []const u8) !usize {
+    return 0;
 }
 
 pub fn readTokenInfo(_: *HealthyCard, _: std.mem.Allocator) !TokenInfo {

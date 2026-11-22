@@ -7,9 +7,15 @@ const TokenInfo = @import("TokenInfo.zig");
 
 pub const Card = @This();
 
+pub const File = struct {
+    data: []u8,
+    /// Size reported by the selection command, before the file is read.
+    size: usize,
+};
+
 smart_card: pcsc.Card,
 
-fn selectFile(
+fn select(
     self: *const Card,
     allocator: std.mem.Allocator,
     name: []const u8,
@@ -41,6 +47,18 @@ fn selectFile(
         return null;
 
     return std.mem.readInt(u16, response[2..4], .big);
+}
+
+/// Returns the size reported by selecting an elementary file.
+pub fn getSize(
+    self: *const Card,
+    allocator: std.mem.Allocator,
+    name: []const u8,
+) !usize {
+    const size = try self.select(allocator, name, 0, 0) orelse
+        return error.DeviceError;
+
+    return size;
 }
 
 fn transmit(
@@ -97,10 +115,11 @@ pub fn readFile(
     self: *Card,
     allocator: std.mem.Allocator,
     file_name: []const u8,
-) ![]u8 {
+) !File {
     var offset: u16 = 0;
-    var length = try self.selectFile(allocator, file_name, 0, 0) orelse
+    const size = try self.select(allocator, file_name, 0, 0) orelse
         return error.DeviceError;
+    var length: u16 = @intCast(size);
 
     var list = std.ArrayList(u8).initCapacity(allocator, length) catch
         return error.HostMemory;
@@ -124,7 +143,7 @@ pub fn readFile(
     const slice = list.toOwnedSlice(allocator) catch
         return error.HostMemory;
 
-    return slice;
+    return .{ .data = slice, .size = size };
 }
 
 pub fn readTokenInfo(
@@ -134,7 +153,7 @@ pub fn readTokenInfo(
     try initCrypto(self, allocator);
 
     const file_name = [_]u8{ 0x70, 0xf3 };
-    const size = try self.selectFile(allocator, &file_name, 0, 0);
+    const size = try self.select(allocator, &file_name, 0, 0);
 
     if (size == null)
         return error.GeneralError;
@@ -158,7 +177,7 @@ pub fn initCrypto(
     allocator: std.mem.Allocator,
 ) !void {
     const file_name = [_]u8{ 0xA0, 0x00, 0x00, 0x00, 0x63, 0x50, 0x4B, 0x43, 0x53, 0x2D, 0x31, 0x35 };
-    _ = try self.selectFile(allocator, &file_name, 0x04, 0);
+    _ = try self.select(allocator, &file_name, 0x04, 0);
 }
 
 pub fn startTransaction(

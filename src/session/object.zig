@@ -37,6 +37,14 @@ pub const Object = union(enum) {
         };
     }
 
+    pub fn size(self: *const Object) usize {
+        return switch (self.*) {
+            .certificate => |o| o.size,
+            .private_key => |o| o.size,
+            .public_key => |o| o.size,
+        };
+    }
+
     pub fn getAttribute(self: *const Object, buffer: []u8, attribute_type: pkcs.CK_ATTRIBUTE_TYPE) !Attribute {
         const value = try switch (self.*) {
             .certificate => |o| o.getAttributeValue(buffer, attribute_type),
@@ -94,6 +102,7 @@ pub const Object = union(enum) {
 
 pub const CertificateObject = struct {
     file_name: [2]u8,
+    size: usize,
     id: [id_size]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
@@ -215,6 +224,7 @@ pub const CertificateObject = struct {
         buffer: []const u8,
         id: [20]u8,
         file_name: [2]u8,
+        size: usize,
     ) !CertificateObject {
         const cert = std.crypto.Certificate{ .buffer = buffer, .index = 0 };
 
@@ -256,6 +266,7 @@ pub const CertificateObject = struct {
 
         return .{
             .file_name = file_name,
+            .size = size,
             .handle = certificate_handle,
             .class = pkcs.CKO_CERTIFICATE,
             .token = pkcs.CK_TRUE,
@@ -342,6 +353,7 @@ pub const CertificateObject = struct {
 
 pub const PrivateKeyObject = struct {
     file_name: [2]u8,
+    size: usize,
     id: [id_size]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
@@ -476,6 +488,7 @@ pub const PrivateKeyObject = struct {
         allocator: std.mem.Allocator,
         public_key_file: PublicKeyFile,
         private_key_handle: pkcs.CK_OBJECT_HANDLE,
+        size: usize,
     ) !PrivateKeyObject {
         const private_key_label = try allocEmptySlice(u8, allocator);
         errdefer allocator.free(private_key_label);
@@ -496,6 +509,7 @@ pub const PrivateKeyObject = struct {
 
         return .{
             .file_name = public_key_file.priv_key_file_name,
+            .size = size,
             .handle = private_key_handle,
             .class = pkcs.CKO_PRIVATE_KEY,
             .token = pkcs.CK_TRUE,
@@ -533,6 +547,7 @@ pub const PrivateKeyObject = struct {
 
 pub const PublicKeyObject = struct {
     file_name: [2]u8,
+    size: usize,
     id: [id_size]u8,
     handle: pkcs.CK_OBJECT_HANDLE,
     class: pkcs.CK_OBJECT_CLASS,
@@ -657,6 +672,7 @@ pub const PublicKeyObject = struct {
         allocator: std.mem.Allocator,
         public_key_file: PublicKeyFile,
         public_key_handle: pkcs.CK_OBJECT_HANDLE,
+        size: usize,
     ) !PublicKeyObject {
         const public_key_label = try allocEmptySlice(u8, allocator);
         errdefer allocator.free(public_key_label);
@@ -677,6 +693,7 @@ pub const PublicKeyObject = struct {
 
         return .{
             .file_name = public_key_file.pub_key_file_name,
+            .size = size,
             .handle = public_key_handle,
             .class = pkcs.CKO_PUBLIC_KEY,
             .token = pkcs.CK_TRUE,

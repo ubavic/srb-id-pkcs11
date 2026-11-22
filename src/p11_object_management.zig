@@ -40,14 +40,31 @@ pub fn destroyObject(
 }
 
 pub fn getObjectSize(
-    _: anytype,
-    _: pkcs.CK_SESSION_HANDLE,
-    _: pkcs.CK_OBJECT_HANDLE,
-    _: ?*pkcs.CK_ULONG,
+    state: anytype,
+    session_handle: pkcs.CK_SESSION_HANDLE,
+    object_handle: pkcs.CK_OBJECT_HANDLE,
+    size: ?*pkcs.CK_ULONG,
 ) error{
-    FunctionNotSupported,
+    ArgumentsBad,
+    CryptokiNotInitialized,
+    FunctionFailed,
+    ObjectHandleInvalid,
+    SessionHandleInvalid,
 }!void {
-    return error.FunctionNotSupported;
+    state.lock.lockSharedUncancelable(state.io);
+    defer state.lock.unlockShared(state.io);
+
+    if (!state.initialized)
+        return error.CryptokiNotInitialized;
+
+    const current_session = try state.sessions.getSession(state.io, session_handle, false);
+
+    if (size == null)
+        return error.ArgumentsBad;
+
+    const selected_object = try current_session.getObject(state.io, object_handle);
+
+    size.?.* = @intCast(selected_object.size());
 }
 
 pub fn getAttributeValue(

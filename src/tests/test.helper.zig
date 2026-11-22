@@ -12,6 +12,8 @@ const reader = @import("../smart-card/reader.zig");
 pub const slot_id: pkcs.CK_SLOT_ID = 1;
 pub const public_key_handle: pkcs.CK_OBJECT_HANDLE = 0x80000000;
 pub const private_key_handle: pkcs.CK_OBJECT_HANDLE = 0x80000008;
+pub const public_key_size: usize = 90;
+pub const private_key_size: usize = 512;
 
 pub const key_files = [_][]const u8{
     "testdata/1024.key",
@@ -80,10 +82,10 @@ pub fn addNewSessionWithCard(state: anytype, card: anytype, key_pair: *const Key
     const objects = try allocator.alloc(object.Object, 2);
     errdefer allocator.free(objects);
 
-    objects[0] = .{ .public_key = try .createPublicKeyObject(allocator, key_file, public_key_handle) };
+    objects[0] = .{ .public_key = try .createPublicKeyObject(allocator, key_file, public_key_handle, public_key_size) };
     errdefer objects[0].deinit(allocator);
 
-    objects[1] = .{ .private_key = try .createPrivateKeyObject(allocator, key_file, private_key_handle) };
+    objects[1] = .{ .private_key = try .createPrivateKeyObject(allocator, key_file, private_key_handle, private_key_size) };
     errdefer objects[1].deinit(allocator);
 
     return addSession(state, card, objects);

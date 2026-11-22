@@ -568,19 +568,19 @@ const SearchTestObjects = struct {
         errdefer for (objects[0..created]) |*o|
             o.deinit(allocator);
 
-        const o0 = try object.PublicKeyObject.createPublicKeyObject(allocator, file_a, handle_public_a);
+        const o0 = try object.PublicKeyObject.createPublicKeyObject(allocator, file_a, handle_public_a, 0);
         objects[0] = .{ .public_key = o0 };
         created += 1;
 
-        const o1 = try object.PrivateKeyObject.createPrivateKeyObject(allocator, file_a, handle_private_a);
+        const o1 = try object.PrivateKeyObject.createPrivateKeyObject(allocator, file_a, handle_private_a, 0);
         objects[1] = .{ .private_key = o1 };
         created += 1;
 
-        const o2 = try object.PublicKeyObject.createPublicKeyObject(allocator, file_b, handle_public_b);
+        const o2 = try object.PublicKeyObject.createPublicKeyObject(allocator, file_b, handle_public_b, 0);
         objects[2] = .{ .public_key = o2 };
         created += 1;
 
-        const o3 = try object.PrivateKeyObject.createPrivateKeyObject(allocator, file_b, handle_private_b);
+        const o3 = try object.PrivateKeyObject.createPrivateKeyObject(allocator, file_b, handle_private_b, 0);
         objects[3] = .{ .private_key = o3 };
         created += 1;
 
