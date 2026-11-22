@@ -44,6 +44,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     const lib_test_run = b.addRunArtifact(lib_test);
+    lib_test_run.setCwd(b.path("."));
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&lib_test_run.step);
@@ -56,6 +57,7 @@ pub fn build(b: *std.Build) void {
         "kcov-out",
     });
 
+    kcov.setCwd(b.path("."));
     kcov.addArtifactArg(lib_test);
 
     const coverage_step = b.step("coverage", "Generate test coverage");

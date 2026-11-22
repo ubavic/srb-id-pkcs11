@@ -1,11 +1,12 @@
 const std = @import("std");
 
+const HealthyCard = @import("HealthyCard.zig");
 const pkcs = @import("../pkcs.zig");
 const p11_digest = @import("../p11_digest.zig");
 const test_helpers = @import("test_helpers.zig");
 
 test "digestInit cryptoki initialization" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     const result = p11_digest.digestInit(&testing_state, 0, null);
@@ -13,7 +14,7 @@ test "digestInit cryptoki initialization" {
 }
 
 test "digestInit invalid session handle" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -23,7 +24,7 @@ test "digestInit invalid session handle" {
 }
 
 test "digestInit null mechanism" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -34,7 +35,7 @@ test "digestInit null mechanism" {
 }
 
 test "digest cryptoki initialization" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     const result = p11_digest.digest(&testing_state, 0, null, 0, null, null);
@@ -42,7 +43,7 @@ test "digest cryptoki initialization" {
 }
 
 test "digest invalid session handle" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -52,7 +53,7 @@ test "digest invalid session handle" {
 }
 
 test "digest fails on multipart operation" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -74,7 +75,7 @@ test "digest fails on multipart operation" {
 }
 
 test "digest bad arguments" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -98,7 +99,7 @@ test "digest bad arguments" {
 }
 
 test "digest return expected buffer size" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -117,7 +118,7 @@ test "digest return expected buffer size" {
 }
 
 test "digest" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -141,7 +142,7 @@ test "digest" {
 }
 
 test "digestUpdate cryptoki initialization" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     const result = p11_digest.digestUpdate(&testing_state, 0, null, 0);
@@ -149,7 +150,7 @@ test "digestUpdate cryptoki initialization" {
 }
 
 test "digestUpdate invalid session handle" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -159,7 +160,7 @@ test "digestUpdate invalid session handle" {
 }
 
 test "digestUpdate invalid operation" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -170,7 +171,7 @@ test "digestUpdate invalid operation" {
 }
 
 test "digestUpdate invalid part" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -187,7 +188,7 @@ test "digestUpdate invalid part" {
 }
 
 test "digestFinal cryptoki initialization" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     const result = p11_digest.digestFinal(&testing_state, 0, null, null);
@@ -195,7 +196,7 @@ test "digestFinal cryptoki initialization" {
 }
 
 test "digestFinal invalid session handle" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -205,7 +206,7 @@ test "digestFinal invalid session handle" {
 }
 
 test "digestFinal invalid operation" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -216,7 +217,7 @@ test "digestFinal invalid operation" {
 }
 
 test "digestFinal bad arguments" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -237,7 +238,7 @@ test "digestFinal bad arguments" {
 }
 
 test "digestFinal return expected buffer size" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;
@@ -258,7 +259,7 @@ test "digestFinal return expected buffer size" {
 }
 
 test "digestFinal" {
-    var testing_state = test_helpers.newTestingState();
+    var testing_state = test_helpers.newTestingState(HealthyCard);
     defer test_helpers.deinitTestingState(&testing_state);
 
     testing_state.initialized = true;

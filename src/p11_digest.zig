@@ -3,10 +3,9 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const State = @import("ModuleState.zig");
 
 pub fn digestInit(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
 ) error{
@@ -32,7 +31,7 @@ pub fn digestInit(
 }
 
 pub fn digest(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -91,7 +90,7 @@ pub fn digest(
 }
 
 pub fn digestUpdate(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -122,7 +121,7 @@ pub fn digestUpdate(
 }
 
 pub fn digestKey(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
 ) error{
@@ -132,7 +131,7 @@ pub fn digestKey(
 }
 
 pub fn digestFinal(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data_digest: ?[*]pkcs.CK_BYTE,
     data_digest_len: ?*pkcs.CK_ULONG,

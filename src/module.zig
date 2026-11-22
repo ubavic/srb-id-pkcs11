@@ -15,9 +15,11 @@ const p11_session = @import("p11_session.zig");
 const p11_sign = @import("p11_sign.zig");
 const p11_slot_and_token = @import("p11_slot_and_token.zig");
 const p11_verify = @import("p11_verify.zig");
-const State = @import("ModuleState.zig");
 
-var state: State = undefined;
+const Card = @import("smart-card/Card.zig");
+const ModuleState = @import("ModuleState.zig").ModuleState;
+
+var state: ModuleState(Card) = undefined;
 
 export fn C_GetFunctionList(function_list: ?*?*pkcs.CK_FUNCTION_LIST) pkcs.CK_RV {
     if (function_list == null)

@@ -3,10 +3,9 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const State = @import("ModuleState.zig");
 
 pub fn verifyInit(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -55,7 +54,7 @@ pub fn verifyInit(
 }
 
 pub fn verify(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -104,7 +103,7 @@ pub fn verify(
 }
 
 pub fn verifyUpdate(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -138,7 +137,7 @@ pub fn verifyUpdate(
 }
 
 pub fn verifyFinal(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,
@@ -175,7 +174,7 @@ pub fn verifyFinal(
 }
 
 pub fn verifyRecoverInit(
-    _: *State,
+    _: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -190,7 +189,7 @@ pub fn verifyRecoverInit(
 }
 
 pub fn verifyRecover(
-    _: *State,
+    _: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]const pkcs.CK_BYTE,
     signature_len: pkcs.CK_ULONG,

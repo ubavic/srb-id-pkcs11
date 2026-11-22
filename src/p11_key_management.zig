@@ -1,9 +1,7 @@
 const pkcs = @import("pkcs.zig");
 
-const State = @import("ModuleState.zig");
-
 pub fn generateKey(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: ?[*]pkcs.CK_ATTRIBUTE,
@@ -16,7 +14,7 @@ pub fn generateKey(
 }
 
 pub fn generateKeyPair(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: ?[*]pkcs.CK_ATTRIBUTE,
@@ -32,7 +30,7 @@ pub fn generateKeyPair(
 }
 
 pub fn deriveKey(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,
@@ -47,7 +45,7 @@ pub fn deriveKey(
 
 // not supported in the original module
 pub fn wrapKey(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,
@@ -62,7 +60,7 @@ pub fn wrapKey(
 
 // not supported in the original module
 pub fn unwrapKey(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,

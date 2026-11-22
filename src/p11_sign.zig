@@ -3,10 +3,9 @@ const std = @import("std");
 const hasher = @import("session/hasher.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const State = @import("ModuleState.zig");
 
 pub fn signInit(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -56,7 +55,7 @@ pub fn signInit(
 }
 
 pub fn sign(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -135,7 +134,7 @@ pub fn sign(
 }
 
 pub fn signUpdate(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -168,7 +167,7 @@ pub fn signUpdate(
 }
 
 pub fn signFinal(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     signature: ?[*]pkcs.CK_BYTE,
     signature_len: ?*pkcs.CK_ULONG,
@@ -233,7 +232,7 @@ pub fn signFinal(
 }
 
 pub fn signRecoverInit(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?*pkcs.CK_MECHANISM,
     _: pkcs.CK_OBJECT_HANDLE,
@@ -244,7 +243,7 @@ pub fn signRecoverInit(
 }
 
 pub fn signRecover(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,

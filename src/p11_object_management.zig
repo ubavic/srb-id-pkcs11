@@ -3,10 +3,9 @@ const std = @import("std");
 const Attribute = @import("session/Attribute.zig");
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const State = @import("ModuleState.zig");
 
 pub fn createObject(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_ATTRIBUTE,
     _: pkcs.CK_ULONG,
@@ -18,7 +17,7 @@ pub fn createObject(
 }
 
 pub fn copyObject(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
     _: ?[*]pkcs.CK_ATTRIBUTE,
@@ -31,7 +30,7 @@ pub fn copyObject(
 }
 
 pub fn destroyObject(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
 ) error{
@@ -41,7 +40,7 @@ pub fn destroyObject(
 }
 
 pub fn getObjectSize(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
     _: ?*pkcs.CK_ULONG,
@@ -52,7 +51,7 @@ pub fn getObjectSize(
 }
 
 pub fn getAttributeValue(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handle: pkcs.CK_OBJECT_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
@@ -136,7 +135,7 @@ pub fn getAttributeValue(
 }
 
 pub fn setAttributeValue(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: pkcs.CK_OBJECT_HANDLE,
     _: ?[*]pkcs.CK_ATTRIBUTE,
@@ -148,7 +147,7 @@ pub fn setAttributeValue(
 }
 
 pub fn findObjectsInit(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     template: ?[*]pkcs.CK_ATTRIBUTE,
     count: pkcs.CK_ULONG,
@@ -189,7 +188,7 @@ pub fn findObjectsInit(
 }
 
 pub fn findObjects(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     object_handles: ?[*]pkcs.CK_OBJECT_HANDLE,
     max_object_count: pkcs.CK_ULONG,
@@ -224,7 +223,7 @@ pub fn findObjects(
 }
 
 pub fn findObjectsFinal(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) error{
     CryptokiNotInitialized,

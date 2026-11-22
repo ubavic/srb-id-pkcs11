@@ -3,10 +3,9 @@ const std = @import("std");
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
-const State = @import("ModuleState.zig");
 
 pub fn getSlotList(
-    state: *State,
+    state: anytype,
     token_present: pkcs.CK_BBOOL,
     slot_list: ?[*]pkcs.CK_SLOT_ID,
     slot_count: ?*pkcs.CK_ULONG,
@@ -60,7 +59,7 @@ pub fn getSlotList(
 }
 
 pub fn getSlotInfo(
-    state: *State,
+    state: anytype,
     slot_ID: pkcs.CK_SLOT_ID,
     slot_info: ?*pkcs.CK_SLOT_INFO,
 ) error{
@@ -104,7 +103,7 @@ pub fn getSlotInfo(
 }
 
 pub fn getTokenInfo(
-    state: *State,
+    state: anytype,
     slot_id: pkcs.CK_SLOT_ID,
     token_info: ?*pkcs.CK_TOKEN_INFO,
 ) error{
@@ -176,7 +175,7 @@ pub fn getTokenInfo(
 }
 
 pub fn getMechanismList(
-    state: *State,
+    state: anytype,
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_list: ?[*]pkcs.CK_MECHANISM_TYPE,
     count: ?*pkcs.CK_ULONG,
@@ -245,7 +244,7 @@ pub fn getMechanismList(
 }
 
 pub fn getMechanismInfo(
-    state: *State,
+    state: anytype,
     slot_id: pkcs.CK_SLOT_ID,
     mechanism_type: pkcs.CK_MECHANISM_TYPE,
     mechanism_info: ?*pkcs.CK_MECHANISM_INFO,
@@ -318,7 +317,7 @@ pub fn getMechanismInfo(
 }
 
 pub fn initToken(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SLOT_ID,
     _: ?*pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
@@ -330,7 +329,7 @@ pub fn initToken(
 }
 
 pub fn initPIN(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_UTF8CHAR,
     _: pkcs.CK_ULONG,
@@ -341,7 +340,7 @@ pub fn initPIN(
 }
 
 pub fn setPIN(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     old_pin: ?[*]pkcs.CK_UTF8CHAR,
     old_pin_len: pkcs.CK_ULONG,
@@ -383,7 +382,7 @@ pub fn setPIN(
 }
 
 pub fn waitForSlotEvent(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_FLAGS,
     _: ?*pkcs.CK_SLOT_ID,
     _: ?*anyopaque,

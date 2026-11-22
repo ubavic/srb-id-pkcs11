@@ -1,10 +1,9 @@
 const PaddedPin = @import("smart-card/PaddedPin.zig");
 const pkcs = @import("pkcs.zig");
 const reader = @import("smart-card/reader.zig");
-const State = @import("ModuleState.zig");
 
 pub fn openSession(
-    state: *State,
+    state: anytype,
     slot_id: pkcs.CK_SLOT_ID,
     flags: pkcs.CK_FLAGS,
     _: ?*anyopaque,
@@ -40,7 +39,7 @@ pub fn openSession(
 }
 
 pub fn closeSession(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) error{
     CryptokiNotInitialized,
@@ -59,7 +58,7 @@ pub fn closeSession(
 }
 
 pub fn closeAllSessions(
-    state: *State,
+    state: anytype,
     slot_id: pkcs.CK_SLOT_ID,
 ) error{
     CryptokiNotInitialized,
@@ -86,7 +85,7 @@ pub fn closeAllSessions(
 }
 
 pub fn getSessionInfo(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     session_info: ?*pkcs.CK_SESSION_INFO,
 ) error{
@@ -127,7 +126,7 @@ pub fn getSessionInfo(
 
 // not supported in the original module
 pub fn getOperationState(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_BYTE,
     _: ?*pkcs.CK_ULONG,
@@ -139,7 +138,7 @@ pub fn getOperationState(
 
 // not supported in the original module
 pub fn setOperationState(
-    _: *State,
+    _: anytype,
     _: pkcs.CK_SESSION_HANDLE,
     _: ?[*]const pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -152,7 +151,7 @@ pub fn setOperationState(
 }
 
 pub fn login(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     user_type: pkcs.CK_USER_TYPE,
     pin: ?[*]const pkcs.CK_UTF8CHAR,
@@ -199,7 +198,7 @@ pub fn login(
 }
 
 pub fn logout(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
 ) error{
     CryptokiNotInitialized,

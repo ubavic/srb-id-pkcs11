@@ -2,10 +2,9 @@ const std = @import("std");
 
 const operation = @import("session/operation.zig");
 const pkcs = @import("pkcs.zig");
-const State = @import("ModuleState.zig");
 
 pub fn encryptInit(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     mechanism: ?*pkcs.CK_MECHANISM,
     key: pkcs.CK_OBJECT_HANDLE,
@@ -52,7 +51,7 @@ pub fn encryptInit(
 }
 
 pub fn encrypt(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     data: ?[*]const pkcs.CK_BYTE,
     data_len: pkcs.CK_ULONG,
@@ -117,7 +116,7 @@ pub fn encrypt(
 }
 
 pub fn encryptUpdate(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     part: ?[*]const pkcs.CK_BYTE,
     part_len: pkcs.CK_ULONG,
@@ -169,7 +168,7 @@ pub fn encryptUpdate(
 }
 
 pub fn encryptFinal(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     last_encrypted_part: ?[*]pkcs.CK_BYTE,
     last_encrypted_part_len: ?*pkcs.CK_ULONG,

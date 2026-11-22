@@ -1,11 +1,10 @@
 const std = @import("std");
 
 const pkcs = @import("pkcs.zig");
-const State = @import("ModuleState.zig");
 
 // not supported in the original module
 pub fn seedRandom(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     _: ?[*]pkcs.CK_BYTE,
     _: pkcs.CK_ULONG,
@@ -27,7 +26,7 @@ pub fn seedRandom(
 }
 
 pub fn generateRandom(
-    state: *State,
+    state: anytype,
     session_handle: pkcs.CK_SESSION_HANDLE,
     random_data: ?[*]pkcs.CK_BYTE,
     random_size: pkcs.CK_ULONG,
