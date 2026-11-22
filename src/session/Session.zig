@@ -162,6 +162,9 @@ pub fn Session(comptime Card: type) type {
             for (self.objects) |*o|
                 o.deinit(allocator);
 
+            allocator.free(self.objects);
+            self.objects = &.{};
+
             self.card.disconnect() catch {};
         }
     };

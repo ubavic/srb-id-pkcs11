@@ -11,7 +11,9 @@ const HealthyCard = @This();
 
 /// Key stored on the card. Signing and decryption fail without it.
 key_pair: ?*const KeyPair = null,
-connected: bool = true,
+/// Incremented on disconnect. Lives outside the card, because the card
+/// is destroyed together with its session.
+disconnects: ?*usize = null,
 open_transactions: usize = 0,
 sign_requests: usize = 0,
 decrypt_requests: usize = 0,
@@ -19,8 +21,18 @@ random_requests: usize = 0,
 
 pub const Transaction = struct {};
 
-pub fn readFile(_: *HealthyCard, allocator: std.mem.Allocator, _: []const u8) ![]u8 {
-    return allocator.alloc(u8, 0) catch
+const index_file_name = [_]u8{ 0x8F, 0xFF };
+
+pub fn connect(_: std.mem.Allocator, _: anytype, _: [*:0]const u8) !HealthyCard {
+    return .{};
+}
+
+/// The card holds only an empty index, every other file is missing.
+pub fn readFile(_: *HealthyCard, allocator: std.mem.Allocator, file_name: []const u8) ![]u8 {
+    if (!std.mem.eql(u8, file_name, &index_file_name))
+        return error.DeviceError;
+
+    return allocator.dupe(u8, &.{ 0x00, 0x00 }) catch
         return error.HostMemory;
 }
 
@@ -29,7 +41,8 @@ pub fn readTokenInfo(_: *HealthyCard, _: std.mem.Allocator) !TokenInfo {
 }
 
 pub fn disconnect(self: *HealthyCard) !void {
-    self.connected = false;
+    if (self.disconnects) |disconnects|
+        disconnects.* += 1;
 }
 
 pub fn initCrypto(_: *const HealthyCard, _: std.mem.Allocator) !void {}

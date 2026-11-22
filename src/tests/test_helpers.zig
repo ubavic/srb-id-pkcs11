@@ -110,15 +110,25 @@ pub fn getSession(state: anytype, session_handle: c_ulong) @TypeOf(state.session
         @panic("session does not exist");
 }
 
-/// Logs in the user on the testing slot, for all sessions.
-pub fn login() !void {
-    try reader.reader_states.put(slot_id, .{
+pub const ReaderOptions = struct {
+    slot_id: pkcs.CK_SLOT_ID = slot_id,
+    card_present: bool = true,
+    recognized: bool = true,
+    user_type: reader.UserType = .None,
+};
+
+pub fn addReader(options: ReaderOptions) !void {
+    try reader.reader_states.put(options.slot_id, .{
         .name = "Testing reader",
         .active = true,
-        .card_present = true,
-        .recognized = true,
-        .user_type = .User,
+        .card_present = options.card_present,
+        .recognized = options.recognized,
+        .user_type = options.user_type,
     });
+}
+
+pub fn login() !void {
+    try addReader(.{ .user_type = .User });
 }
 
 pub fn expectOperation(
