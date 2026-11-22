@@ -50,6 +50,14 @@ pub fn addNewSession(state: anytype) !c_ulong {
     return addSession(state, undefined, &.{});
 }
 
+/// Adds a session with `card` but without objects.
+pub fn addNewSessionWithoutKeys(state: anytype, card: anytype) !c_ulong {
+    if (!builtin.is_test)
+        @compileError("not testing");
+
+    return addSession(state, card, &.{});
+}
+
 /// Adds a session holding public and private key objects of `key_pair`.
 /// `card` should hold the same key pair.
 pub fn addNewSessionWithCard(state: anytype, card: anytype, key_pair: *const KeyPair) !c_ulong {

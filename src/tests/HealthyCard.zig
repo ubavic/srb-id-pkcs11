@@ -15,6 +15,7 @@ connected: bool = true,
 open_transactions: usize = 0,
 sign_requests: usize = 0,
 decrypt_requests: usize = 0,
+random_requests: usize = 0,
 
 pub const Transaction = struct {};
 
@@ -42,11 +43,15 @@ pub fn endTransaction(self: *HealthyCard, _: Transaction) void {
     self.open_transactions -= 1;
 }
 
-pub fn readRandom(_: *const HealthyCard, _: std.mem.Allocator, length: u8, out_buffer: []u8) ![]const u8 {
+/// Every byte of the response is the request number (starting with 1),
+/// so tests can tell responses apart.
+pub fn readRandom(self: *HealthyCard, _: std.mem.Allocator, length: u8, out_buffer: []u8) ![]const u8 {
     if (out_buffer.len < @as(usize, length) + 2)
         return error.HostMemory;
 
-    @memset(out_buffer[0..length], 0xA5);
+    self.random_requests += 1;
+
+    @memset(out_buffer[0..length], @truncate(self.random_requests));
     out_buffer[length] = 0x90;
     out_buffer[length + 1] = 0x00;
 
