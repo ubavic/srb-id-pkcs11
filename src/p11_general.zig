@@ -70,10 +70,19 @@ pub fn finalize(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    state.smart_card_client.deinit() catch
+    if (!reader.lock.tryLock(state.io))
         return error.FunctionFailed;
+    defer reader.lock.unlock(state.io);
+
+    var iterator = reader.reader_states.iterator();
+    while (iterator.next()) |entry|
+        state.sessions.closeAllSessions(state.allocator, state.io, entry.key_ptr.*) catch {};
+
+    state.sessions.sessions.deinit();
 
     reader.deinit(state.allocator);
+
+    state.smart_card_client.deinit() catch {};
 
     state.initialized = false;
 }
@@ -84,9 +93,11 @@ pub fn getInfo(
 ) error{
     ArgumentsBad,
     CryptokiNotInitialized,
+    FunctionFailed,
 }!void {
-    state.lock.lockSharedUncancelable(state.io);
-    defer state.lock.unlockShared(state.io);
+    if (!state.lock.tryLock(state.io))
+        return error.FunctionFailed;
+    defer state.lock.unlock(state.io);
 
     if (!state.initialized)
         return error.CryptokiNotInitialized;

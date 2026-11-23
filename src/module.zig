@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const pkcs = @import("pkcs.zig");
 const pkcs_error = @import("pkcs_error.zig");
 const PkcsError = pkcs_error.PkcsError;
@@ -19,7 +21,10 @@ const p11_verify = @import("p11_verify.zig");
 const Card = @import("smart-card/Card.zig");
 const ModuleState = @import("ModuleState.zig").ModuleState;
 
-var state: ModuleState(Card) = undefined;
+var state: ModuleState(Card) = .{
+    .initialized = false,
+    .allocator = std.heap.page_allocator,
+};
 
 export fn C_GetFunctionList(function_list: ?*?*pkcs.CK_FUNCTION_LIST) pkcs.CK_RV {
     if (function_list == null)

@@ -3,6 +3,7 @@ test {
     _ = @import("p11_digest.tests.zig");
     _ = @import("p11_dual_functions.tests.zig");
     _ = @import("p11_encryption.tests.zig");
+    _ = @import("p11_general.tests.zig");
     _ = @import("p11_key_management.tests.zig");
     _ = @import("p11_object_management.tests.zig");
     _ = @import("p11_parallel.tests.zig");

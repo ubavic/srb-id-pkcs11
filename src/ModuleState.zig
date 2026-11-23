@@ -5,11 +5,11 @@ const SessionState = @import("session/SessionState.zig").SessionState;
 
 pub fn ModuleState(comptime Card: type) type {
     return struct {
-        lock: std.Io.RwLock = std.Io.RwLock.init,
         initialized: bool,
         allocator: std.mem.Allocator,
-        io: std.Io,
-        smart_card_client: pcsc.Client,
-        sessions: SessionState(Card),
+        lock: std.Io.RwLock = std.Io.RwLock.init,
+        io: std.Io = std.Io.Threaded.global_single_threaded.io(),
+        smart_card_client: pcsc.Client = undefined,
+        sessions: SessionState(Card) = undefined,
     };
 }

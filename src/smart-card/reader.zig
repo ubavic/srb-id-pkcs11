@@ -5,7 +5,7 @@ const atr = @import("atr.zig");
 const Card = @import("Card.zig");
 const pkcs = @import("../pkcs.zig");
 
-var next_reader_id: pkcs.CK_SLOT_ID = 1;
+pub var next_reader_id: pkcs.CK_SLOT_ID = 1;
 
 // Only is used to to enable that `C_GetSlotList` returns list
 // on the first call if it called with non NULL slot_list
