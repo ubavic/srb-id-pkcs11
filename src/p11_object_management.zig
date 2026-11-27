@@ -78,6 +78,7 @@ pub fn getAttributeValue(
     AttributeTypeInvalid,
     BufferTooSmall,
     CryptokiNotInitialized,
+    GeneralError,
     FunctionFailed,
     HostMemory,
     ObjectHandleInvalid,
@@ -89,7 +90,6 @@ pub fn getAttributeValue(
     if (!state.initialized)
         return error.CryptokiNotInitialized;
 
-    const has_attribute_sensitive = false;
     var has_attribute_type_invalid = false;
     var has_small_buffer = false;
 
@@ -104,11 +104,14 @@ pub fn getAttributeValue(
     const selected_object = try current_session.getObject(state.io, object_handle);
 
     for (0..count) |i| {
-        const attribute_size = selected_object.getAttributeSize(template.?[i].type) catch {
-            template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
-            has_attribute_type_invalid = true;
-            continue;
-        };
+        const attribute_size = selected_object.getAttributeSize(template.?[i].type) catch |err|
+            switch (err) {
+                error.AttributeTypeInvalid => {
+                    template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
+                    has_attribute_type_invalid = true;
+                    continue;
+                },
+            };
 
         if (template.?[i].pValue == null) {
             template.?[i].ulValueLen = @intCast(attribute_size);
@@ -117,32 +120,28 @@ pub fn getAttributeValue(
 
         if (template.?[i].ulValueLen < attribute_size) {
             has_small_buffer = true;
-            template.?[i].ulValueLen = @intCast(attribute_size);
+            template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
             continue;
         }
 
         const target_buffer: [*]u8 = @ptrCast(template.?[i].pValue.?);
 
-        const object_attribute = selected_object.getAttribute(target_buffer[0..attribute_size], template.?[i].type) catch |err| {
+        const object_attribute = selected_object.getAttribute(target_buffer[0..attribute_size], template.?[i].type) catch |err|
             switch (err) {
-                // error.AttributeSensitive => {
-                //     has_attribute_sensitive = true;
-                //     continue; // TODO: check this
-                // },
                 error.AttributeTypeInvalid => {
                     template.?[i].ulValueLen = pkcs.CK_UNAVAILABLE_INFORMATION;
                     has_attribute_type_invalid = true;
                     continue;
                 },
-                else => return err,
-            }
-        };
+                error.HostMemory => {
+                    // Since we already confirmed that buffer size if big enough,
+                    // getAttribute should never return HostMemory error
+                    return error.GeneralError;
+                },
+            };
 
         template.?[i].ulValueLen = @intCast(object_attribute.value.len);
     }
-
-    if (has_attribute_sensitive)
-        return error.AttributeSensitive;
 
     if (has_attribute_type_invalid)
         return error.AttributeTypeInvalid;

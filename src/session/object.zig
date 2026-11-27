@@ -351,6 +351,10 @@ pub const CertificateObject = struct {
     }
 };
 
+// CK_ATTRIBUTE contains pointers to arrays, so encoding can be more complicated
+// To keep thing simple,
+// we constraint unwrap_template and wrap_template to zero length
+
 pub const PrivateKeyObject = struct {
     file_name: [2]u8,
     size: usize,
@@ -380,7 +384,7 @@ pub const PrivateKeyObject = struct {
     always_sensitive: pkcs.CK_BBOOL,
     never_extractable: pkcs.CK_BBOOL,
     wrap_with_trusted: pkcs.CK_BBOOL,
-    unwrap_template: []pkcs.CK_ATTRIBUTE,
+    unwrap_template: [0]pkcs.CK_ATTRIBUTE,
     always_authenticate: pkcs.CK_BBOOL,
     public_key_info: []u8,
     modulus: []u8,
@@ -397,8 +401,6 @@ pub const PrivateKeyObject = struct {
 
         std.crypto.secureZero(u8, self.subject);
         allocator.free(self.subject);
-
-        allocator.free(self.unwrap_template);
 
         std.crypto.secureZero(u8, self.public_key_info);
         allocator.free(self.public_key_info);
@@ -504,8 +506,6 @@ pub const PrivateKeyObject = struct {
         errdefer allocator.free(priv_public_key_info);
         const private_allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE = try allocEmptySlice(pkcs.CK_MECHANISM_TYPE, allocator);
         errdefer allocator.free(private_allowed_mechanisms);
-        const unwrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
-        errdefer allocator.free(unwrap_template);
 
         return .{
             .file_name = public_key_file.priv_key_file_name,
@@ -536,7 +536,7 @@ pub const PrivateKeyObject = struct {
             .always_sensitive = pkcs.CK_TRUE,
             .never_extractable = pkcs.CK_TRUE,
             .wrap_with_trusted = if (public_key_file.allow_encrypt) pkcs.CK_TRUE else pkcs.CK_FALSE,
-            .unwrap_template = unwrap_template,
+            .unwrap_template = .{},
             .always_authenticate = pkcs.CK_FALSE,
             .public_key_info = priv_public_key_info,
             .modulus = private_key_modulus,
@@ -570,7 +570,7 @@ pub const PublicKeyObject = struct {
     verify_recover: pkcs.CK_BBOOL,
     wrap: pkcs.CK_BBOOL,
     trusted: pkcs.CK_BBOOL,
-    wrap_template: []pkcs.CK_ATTRIBUTE,
+    wrap_template: [0]pkcs.CK_ATTRIBUTE,
     public_key_info: []u8,
     modulus: []u8,
     modulus_bits: pkcs.CK_ULONG,
@@ -590,10 +590,6 @@ pub const PublicKeyObject = struct {
 
         std.crypto.secureZero(u8, self.public_key_info);
         allocator.free(self.public_key_info);
-
-        // TODO: secure zero
-        // for now we don't put here anything
-        allocator.free(self.wrap_template);
 
         std.crypto.secureZero(u8, self.modulus);
         allocator.free(self.modulus);
@@ -688,8 +684,6 @@ pub const PublicKeyObject = struct {
         errdefer allocator.free(pub_public_key_info);
         const public_allowed_mechanisms: []pkcs.CK_MECHANISM_TYPE = try allocEmptySlice(pkcs.CK_MECHANISM_TYPE, allocator);
         errdefer allocator.free(public_allowed_mechanisms);
-        const wrap_template: []pkcs.CK_ATTRIBUTE = try allocEmptySlice(pkcs.CK_ATTRIBUTE, allocator);
-        errdefer allocator.free(wrap_template);
 
         return .{
             .file_name = public_key_file.pub_key_file_name,
@@ -716,7 +710,7 @@ pub const PublicKeyObject = struct {
             .verify_recover = pkcs.CK_FALSE,
             .wrap = pkcs.CK_FALSE,
             .trusted = pkcs.CK_FALSE,
-            .wrap_template = wrap_template,
+            .wrap_template = .{},
             .public_key_info = pub_public_key_info,
             .modulus = public_key_modulus,
             .modulus_bits = @intCast(public_key_modulus.len * 8),
